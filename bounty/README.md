@@ -17,7 +17,7 @@ What can be played is one battle under invented test rules: `cargo run -p bounty
 | `crates/bounty-tools` | developer tools: fixed-seed battle runs and their comparison (`make balance`) |
 | `docs/spec/` | the specification, see below |
 | `prototype/` | synthetic battle rules, scenarios and expected results for testing the engine |
-| `content/reference/` | the first rules and troops taken from a reimplementation of the original; not yet fought under |
+| `content/reference/` | the first rules and troops taken from a reimplementation of the original; implemented in part |
 | `content/demo/` | a small synthetic expedition used as an integration test |
 | `balance/` | the fixed set of cases and seeds for before/after comparisons, and recorded baselines |
 | `schemas/` | JSON schemas of the map and save file |

@@ -183,6 +183,20 @@ maintainer for these three troops so that the reference rules can be tested in C
 | U-06 | A stack is out of control when health of one x count is more than the hero's leadership (equal is still in control). It keeps its turns and counts as an enemy of its own side, until losses bring it back under; checked before every stack acts. | No leadership in battle. | Who moves it during the player's turn is the reference's choice (its computer player). |
 | | Random numbers: a 64-bit generator, state x 25214903917 + 11, the top 32 bits taken modulo the size of the range; a range of one number draws nothing. | A 32-bit generator with rejection. | The modulo favours low numbers slightly; kept as the reference has it. |
 
+### Adopted where the reference is silent or impractical
+
+- **Waiting.** In the reference a stack that waits is passed over and comes up again after the other stacks of its side;
+  nothing there says what a second wait does. Here, as in the prototype, a stack may wait once before it has moved, acts
+  after the others of its side, and a second wait ends its turn. Status: `adopted_deviation`.
+- **Seeding.** The reference derives a battle's first random state from the world's seed and the encounter's identity.
+  There is no world yet; a battle here starts from the state the scenario or the suite gives it.
+
+### Implemented so far
+
+Turn order by sides with the renewal of flags, the step rule, flight, shots, damage scaled by skill with the count from
+before the exchange, and the reference generator. Not yet: morale and loss of control, so a battle under
+`reference-v0.1` does not yet give the reference's results for an army those rules touch.
+
 ### The two morale rules
 
 The reference documents two ways to find a stack's morale and says which content uses which:
