@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "id": "demo-meadow",
+  "width": 12,
+  "height": 8,
+  "terrain_legend": {
+    "~": {
+      "id": "water",
+      "passable": false
+    },
+    ".": {
+      "id": "plain",
+      "passable": true
+    }
+  },
+  "rows": [
+    "~~~~~~~~~~~~",
+    "~..........~",
+    "~..........~",
+    "~..........~",
+    "~..........~",
+    "~..........~",
+    "~..........~",
+    "~~~~~~~~~~~~"
+  ],
+  "objects": [
+    {
+      "id": "demo-town",
+      "kind": "town",
+      "x": 1,
+      "y": 1
+    },
+    {
+      "id": "demo-guard",
+      "kind": "encounter",
+      "x": 4,
+      "y": 1
+    },
+    {
+      "id": "demo-captain",
+      "kind": "encounter",
+      "x": 8,
+      "y": 1
+    },
+    {
+      "id": "demo-objective",
+      "kind": "objective",
+      "x": 8,
+      "y": 5
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "status": "design_only_no_importer_implemented",
+  "supported_editions": [],
+  "edition_detection": "explicit source file SHA-256 signatures, registered by the developer",
+  "write_source_files": false,
+  "auto_download": false,
+  "publish_extracted_data": false,
+  "source_file_limit_bytes": 67108864,
+  "decoded_total_limit_bytes": 268435456,
+  "provenance_fields": [
+    "source_file_hashes",
+    "adapter_version",
+    "extracted_fields",
+    "port_defined_fields",
+    "unsupported_fields"
+  ],
+  "note": "Empty edition list is intentional; no user DOS distribution was supplied or tested."
+}

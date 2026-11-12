@@ -1,0 +1,412 @@
+{
+  "schema_version": 1,
+  "id": "demo-expedition-v1",
+  "status": "synthetic_integration_fixture_not_dos_rules",
+  "map_path": "map.json",
+  "battle_rules_path": "../../prototype/rules.json",
+  "start": {
+    "map_id": "demo-meadow",
+    "x": 1,
+    "y": 1,
+    "gold": 100,
+    "leadership": 120,
+    "elapsed_ticks": 0,
+    "army": [
+      {
+        "id": "p0",
+        "troop_id": "warden",
+        "count": 10,
+        "injury": 0
+      }
+    ],
+    "contract": null,
+    "clues": []
+  },
+  "clock": {
+    "ticks_per_day": 4,
+    "days_per_week": 5,
+    "deadline_ticks": 24,
+    "movement_ticks": 1,
+    "search_ticks": 4,
+    "success_on_exact_deadline": "victory",
+    "weekly_income": 20,
+    "upkeep_per_living_creature": 1
+  },
+  "town": {
+    "object_id": "demo-town",
+    "stock": {
+      "warden": 10
+    },
+    "price_per_creature": {
+      "warden": 20
+    }
+  },
+  "encounters": [
+    {
+      "object_id": "demo-guard",
+      "enemy_troop": "warden",
+      "enemy_count": 1,
+      "battle_rng_state": 1,
+      "gold_reward": 30,
+      "grants_clue": false
+    },
+    {
+      "object_id": "demo-captain",
+      "enemy_troop": "warden",
+      "enemy_count": 2,
+      "battle_rng_state": 2,
+      "gold_reward": 60,
+      "grants_clue": true
+    }
+  ],
+  "battle_layout": {
+    "player": {
+      "x": 1,
+      "y": 2
+    },
+    "enemy": {
+      "x": 2,
+      "y": 2
+    },
+    "obstacles": []
+  },
+  "objective": {
+    "object_id": "demo-objective",
+    "hidden_until_clue": true,
+    "search_requires_clue": false
+  },
+  "recovery": {
+    "destination_object_id": "demo-town",
+    "gold": "floor(current_gold/2)",
+    "ticks": 4,
+    "warden_count": 4,
+    "retains_contract_and_clues": true
+  },
+  "tests": [
+    {
+      "id": "complete-route",
+      "commands": [
+        {
+          "kind": "take_contract",
+          "id": "demo-captain"
+        },
+        {
+          "kind": "recruit",
+          "troop_id": "warden",
+          "quantity": 2
+        },
+        {
+          "kind": "move",
+          "dx": 1,
+          "dy": 0
+        },
+        {
+          "kind": "move",
+          "dx": 1,
+          "dy": 0
+        },
+        {
+          "kind": "move",
+          "dx": 1,
+          "dy": 0
+        },
+        {
+          "kind": "resolve_battle",
+          "pilot": "approach-v1"
+        },
+        {
+          "kind": "move",
+          "dx": 1,
+          "dy": 0
+        },
+        {
+          "kind": "move",
+          "dx": 1,
+          "dy": 0
+        },
+        {
+          "kind": "move",
+          "dx": 1,
+          "dy": 0
+        },
+        {
+          "kind": "move",
+          "dx": 1,
+          "dy": 0
+        },
+        {
+          "kind": "resolve_battle",
+          "pilot": "approach-v1"
+        },
+        {
+          "kind": "move",
+          "dx": 0,
+          "dy": 1
+        },
+        {
+          "kind": "move",
+          "dx": 0,
+          "dy": 1
+        },
+        {
+          "kind": "move",
+          "dx": 0,
+          "dy": 1
+        },
+        {
+          "kind": "move",
+          "dx": 0,
+          "dy": 1
+        },
+        {
+          "kind": "search"
+        }
+      ],
+      "expected": {
+        "status": "victory",
+        "elapsed_ticks": 15,
+        "gold": 150,
+        "warden_count": 12,
+        "clues": [
+          "demo-objective"
+        ]
+      }
+    },
+    {
+      "id": "surrender-first-encounter",
+      "commands": [
+        {
+          "kind": "recruit",
+          "troop_id": "warden",
+          "quantity": 2
+        },
+        {
+          "kind": "move",
+          "dx": 1,
+          "dy": 0
+        },
+        {
+          "kind": "move",
+          "dx": 1,
+          "dy": 0
+        },
+        {
+          "kind": "move",
+          "dx": 1,
+          "dy": 0
+        },
+        {
+          "kind": "surrender"
+        }
+      ],
+      "expected": {
+        "status": "adventure",
+        "elapsed_ticks": 7,
+        "gold": 30,
+        "warden_count": 4,
+        "x": 1,
+        "y": 1,
+        "guard_cleared": false
+      }
+    },
+    {
+      "id": "timeout-at-town",
+      "commands": [
+        {
+          "kind": "wait_tick"
+        },
+        {
+          "kind": "wait_tick"
+        },
+        {
+          "kind": "wait_tick"
+        },
+        {
+          "kind": "wait_tick"
+        },
+        {
+          "kind": "wait_tick"
+        },
+        {
+          "kind": "wait_tick"
+        },
+        {
+          "kind": "wait_tick"
+        },
+        {
+          "kind": "wait_tick"
+        },
+        {
+          "kind": "wait_tick"
+        },
+        {
+          "kind": "wait_tick"
+        },
+        {
+          "kind": "wait_tick"
+        },
+        {
+          "kind": "wait_tick"
+        },
+        {
+          "kind": "wait_tick"
+        },
+        {
+          "kind": "wait_tick"
+        },
+        {
+          "kind": "wait_tick"
+        },
+        {
+          "kind": "wait_tick"
+        },
+        {
+          "kind": "wait_tick"
+        },
+        {
+          "kind": "wait_tick"
+        },
+        {
+          "kind": "wait_tick"
+        },
+        {
+          "kind": "wait_tick"
+        },
+        {
+          "kind": "wait_tick"
+        },
+        {
+          "kind": "wait_tick"
+        },
+        {
+          "kind": "wait_tick"
+        },
+        {
+          "kind": "wait_tick"
+        }
+      ],
+      "expected": {
+        "status": "timeout",
+        "elapsed_ticks": 24,
+        "gold": 110,
+        "warden_count": 10
+      }
+    },
+    {
+      "id": "success-on-deadline",
+      "commands": [
+        {
+          "kind": "take_contract",
+          "id": "demo-captain"
+        },
+        {
+          "kind": "recruit",
+          "troop_id": "warden",
+          "quantity": 2
+        },
+        {
+          "kind": "move",
+          "dx": 1,
+          "dy": 0
+        },
+        {
+          "kind": "move",
+          "dx": 1,
+          "dy": 0
+        },
+        {
+          "kind": "move",
+          "dx": 1,
+          "dy": 0
+        },
+        {
+          "kind": "resolve_battle",
+          "pilot": "approach-v1"
+        },
+        {
+          "kind": "move",
+          "dx": 1,
+          "dy": 0
+        },
+        {
+          "kind": "move",
+          "dx": 1,
+          "dy": 0
+        },
+        {
+          "kind": "move",
+          "dx": 1,
+          "dy": 0
+        },
+        {
+          "kind": "move",
+          "dx": 1,
+          "dy": 0
+        },
+        {
+          "kind": "resolve_battle",
+          "pilot": "approach-v1"
+        },
+        {
+          "kind": "move",
+          "dx": 0,
+          "dy": 1
+        },
+        {
+          "kind": "move",
+          "dx": 0,
+          "dy": 1
+        },
+        {
+          "kind": "move",
+          "dx": 0,
+          "dy": 1
+        },
+        {
+          "kind": "move",
+          "dx": 0,
+          "dy": 1
+        },
+        {
+          "kind": "wait_tick"
+        },
+        {
+          "kind": "wait_tick"
+        },
+        {
+          "kind": "wait_tick"
+        },
+        {
+          "kind": "wait_tick"
+        },
+        {
+          "kind": "wait_tick"
+        },
+        {
+          "kind": "wait_tick"
+        },
+        {
+          "kind": "wait_tick"
+        },
+        {
+          "kind": "wait_tick"
+        },
+        {
+          "kind": "wait_tick"
+        },
+        {
+          "kind": "search"
+        }
+      ],
+      "expected": {
+        "status": "victory",
+        "elapsed_ticks": 24,
+        "gold": 158,
+        "warden_count": 12,
+        "clues": [
+          "demo-objective"
+        ]
+      }
+    }
+  ]
+}

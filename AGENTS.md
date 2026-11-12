@@ -6,7 +6,7 @@ that game only.
 
 | Folder | Contents |
 |---|---|
-| `bounty/` | Bounty, a tribute to King's Bounty (1990). Crates under `bounty/crates/`; only the application may use graphics and sound |
+| `bounty/` | Bounty, a tribute to King's Bounty (1990). Crates under `bounty/crates/`; only the application may use graphics and sound; see `bounty/AGENTS.md` |
 | `tools/` | scripts used by the hooks and CI |
 | `docs/REPOSITORY.md` | GitHub settings, rulesets, CI and Dependabot |
 

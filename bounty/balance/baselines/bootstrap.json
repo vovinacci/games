@@ -1,0 +1,9 @@
+{
+  "schema_version": 2,
+  "baseline_id": "engineering-unrecorded-v2",
+  "suite_id": "engineering-smoke-v2",
+  "status": "not_recorded",
+  "measured": false,
+  "report_path": null,
+  "reason": "The pack contains no Rust engine or observed outcomes. First measured result requires execution and explicit review."
+}

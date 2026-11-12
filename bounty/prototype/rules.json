@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "id": "prototype-v0.1",
+  "status": "synthetic_not_original_game_data",
+  "board": {
+    "width": 6,
+    "height": 5,
+    "max_stacks_per_side": 5
+  },
+  "rng": {
+    "algorithm": "prototype-lcg32-v1",
+    "multiplier": 1664525,
+    "increment": 1013904223,
+    "bits": 32,
+    "sampling": "inclusive_rejection",
+    "constant_range_consumes_draw": false
+  },
+  "activation_order": "player_slots_then_enemy_slots_then_deferred_insertion_order",
+  "movement": {
+    "neighbours": 8,
+    "step_cost": 1,
+    "diagonal_requires_clear_orthogonals": true
+  },
+  "damage": {
+    "method": "one_inclusive_roll_times_current_count",
+    "retaliation_uses_survivors": true,
+    "injury_persists_during_battle": true,
+    "injury_heals_after_battle": true
+  },
+  "round_limit": 200,
+  "round_limit_outcome": "budget_exceeded",
+  "hero_magic": {
+    "player_enabled": true,
+    "enemy_enabled": false,
+    "casts_per_round": 1
+  },
+  "troops": [
+    {
+      "id": "warden",
+      "name": "Warden",
+      "hp": 10,
+      "movement": 2,
+      "melee_min": 2,
+      "melee_max": 4,
+      "shots": 0,
+      "flights_per_activation": 0,
+      "recruit_cost": 20
+    },
+    {
+      "id": "slinger",
+      "name": "Slinger",
+      "hp": 6,
+      "movement": 2,
+      "melee_min": 1,
+      "melee_max": 2,
+      "ranged_min": 2,
+      "ranged_max": 3,
+      "shots": 4,
+      "flights_per_activation": 0,
+      "recruit_cost": 30
+    },
+    {
+      "id": "skyrider",
+      "name": "Skyrider",
+      "hp": 8,
+      "movement": 3,
+      "melee_min": 2,
+      "melee_max": 3,
+      "shots": 0,
+      "flights_per_activation": 1,
+      "recruit_cost": 50
+    }
+  ],
+  "spells": [
+    {
+      "id": "blast",
+      "target": "living_enemy",
+      "effect": "damage",
+      "amount": 18
+    },
+    {
+      "id": "mend",
+      "target": "living_friendly_with_injury",
+      "effect": "remove_injury",
+      "amount": 12,
+      "resurrects": false
+    }
+  ]
+}

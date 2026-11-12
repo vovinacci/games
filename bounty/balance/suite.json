@@ -1,0 +1,63 @@
+{
+  "schema_version": 2,
+  "suite_id": "engineering-smoke-v2",
+  "status": "not_executed",
+  "purpose": "synthetic_engine_regression_not_kb_balance",
+  "ruleset_id": "prototype-v0.1",
+  "rules_path": "../prototype/rules.json",
+  "scenarios_path": "../prototype/battles.json",
+  "metrics_path": "metrics.json",
+  "baseline_path": "baselines/bootstrap.json",
+  "pilot": {
+    "id": "approach-v1",
+    "status": "specified_not_implemented",
+    "definition": "../docs/spec/04-AI-AND-BALANCE.md"
+  },
+  "battle_seeds": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+  ],
+  "policy_randomness": "none",
+  "round_limit": 200,
+  "cases": [
+    {
+      "id": "melee_exchange",
+      "allowed_outcomes": [
+        "player_win",
+        "enemy_win"
+      ],
+      "purpose": "engine_regression"
+    },
+    {
+      "id": "blocked_shooter",
+      "allowed_outcomes": [
+        "player_win",
+        "enemy_win"
+      ],
+      "purpose": "engine_regression"
+    },
+    {
+      "id": "flight_barrier",
+      "allowed_outcomes": [
+        "player_win",
+        "enemy_win"
+      ],
+      "purpose": "engine_regression"
+    },
+    {
+      "id": "unreachable_melee",
+      "allowed_outcomes": [
+        "budget_exceeded"
+      ],
+      "purpose": "expected_diagnostic"
+    }
+  ],
+  "planned_runs": 32,
+  "note": "Run only implemented cases during construction and report coverage; all four required at engineering-slice completion."
+}

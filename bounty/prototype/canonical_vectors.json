@@ -1,0 +1,60 @@
+{
+  "format": "bounty-cjson-v1",
+  "vectors": [
+    {
+      "id": "sorted-keys",
+      "value": {
+        "z": 1,
+        "a": [
+          true,
+          null,
+          -2
+        ]
+      },
+      "canonical_utf8": "{\"a\":[true,null,-2],\"z\":1}",
+      "sha256": "0107a880a0af8c40a9635aaeb35b92733f8fde14011f1eab94ac47298df8a8ea"
+    },
+    {
+      "id": "escapes",
+      "value": {
+        "s": "quote \" slash / backslash \\ newline\n tab\t"
+      },
+      "canonical_utf8": "{\"s\":\"quote \\\" slash / backslash \\\\ newline\\u000a tab\\u0009\"}",
+      "sha256": "d9c4cb40205ead10c50274ea42746dd56604fb1329532244501bce555f835c39"
+    },
+    {
+      "id": "unicode-value",
+      "value": {
+        "name": "\u041a\u0438\u0457\u0432"
+      },
+      "canonical_utf8": "{\"name\":\"\u041a\u0438\u0457\u0432\"}",
+      "sha256": "88e5cad6aea79ef9f1a4442bf4cdd647e12f46fe19c9cfc89a1799662fd3fbaa"
+    },
+    {
+      "id": "integer-bounds",
+      "value": {
+        "lo": -9223372036854775808,
+        "hi": 18446744073709551615
+      },
+      "canonical_utf8": "{\"hi\":18446744073709551615,\"lo\":-9223372036854775808}",
+      "sha256": "1d52f755e4452563f1ae5bcd88fa50ea5d6a5bd4064d3a247476bc9145bc62cf"
+    },
+    {
+      "id": "array-order",
+      "value": [
+        3,
+        1,
+        2
+      ],
+      "canonical_utf8": "[3,1,2]",
+      "sha256": "51bda7ab4e44726cde71fcb6e4b515357059bb6b6dd5146d1fc50f73f11678c6"
+    }
+  ],
+  "reject_examples": [
+    "duplicate object keys",
+    "float 1.5",
+    "non-ASCII object key",
+    "unpaired Unicode surrogate",
+    "integer greater than 2^64-1"
+  ]
+}
