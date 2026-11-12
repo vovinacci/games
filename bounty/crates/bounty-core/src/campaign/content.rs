@@ -360,10 +360,8 @@ fn place(map: &Map, id: &str, kind: ObjectKind, what: &str) -> Result<Cell, Cont
 /// The clock of a file, with every length of time between one tick and [`MAX_TICKS`]. The bound keeps the sums
 /// of ticks far from overflowing, and no expedition is that long.
 fn clock(file: &ClockFile) -> Result<Clock, ContentError> {
-    let week_ticks = file
-        .ticks_per_day
-        .checked_mul(file.days_per_week)
-        .unwrap_or(u32::MAX);
+    // A product too large for the type saturates, and is then refused below as too long.
+    let week_ticks = file.ticks_per_day.saturating_mul(file.days_per_week);
     let lengths = [
         week_ticks,
         file.deadline_ticks,

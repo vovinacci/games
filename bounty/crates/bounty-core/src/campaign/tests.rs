@@ -223,6 +223,20 @@ fn broken_content_is_refused() {
         invalid(expedition(r#""enemy_count": 1"#, r#""enemy_count": 0"#)),
         "an empty band"
     );
+    let deadline = r#""deadline_ticks": 24"#;
+    assert!(
+        invalid(expedition(deadline, r#""deadline_ticks": 4000000000"#)),
+        "a deadline too far"
+    );
+    let day = r#""ticks_per_day": 4"#;
+    assert!(
+        invalid(expedition(day, r#""ticks_per_day": 4000000000"#)),
+        "a week that overflows"
+    );
+    assert!(
+        invalid(expedition(r#""search_ticks": 4"#, r#""search_ticks": 0"#)),
+        "a search that takes no time"
+    );
     assert!(unsupported(expedition(
         r#""search_requires_clue": false"#,
         r#""search_requires_clue": true"#
