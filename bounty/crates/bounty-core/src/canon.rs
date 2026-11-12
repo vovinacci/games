@@ -86,13 +86,7 @@ impl Value {
     /// # Errors
     /// As [`Value::to_bytes`].
     pub fn digest(&self) -> Result<String, CanonError> {
-        let hash = Sha256::digest(self.to_bytes()?);
-        let mut hex = String::with_capacity(64);
-        for byte in hash {
-            hex.push(hex_digit(byte >> 4));
-            hex.push(hex_digit(byte));
-        }
-        Ok(hex)
+        Ok(sha256_hex(&self.to_bytes()?))
     }
 
     fn write(&self, out: &mut String) -> Result<(), CanonError> {
@@ -135,6 +129,18 @@ impl Value {
         }
         Ok(())
     }
+}
+
+/// Lowercase hex SHA-256 of exactly these bytes. For a file this is its transport hash, which is not the digest of
+/// the value the file holds.
+#[must_use]
+pub fn sha256_hex(bytes: &[u8]) -> String {
+    let mut hex = String::with_capacity(64);
+    for byte in Sha256::digest(bytes) {
+        hex.push(hex_digit(byte >> 4));
+        hex.push(hex_digit(byte));
+    }
+    hex
 }
 
 fn hex_digit(nibble: u8) -> char {

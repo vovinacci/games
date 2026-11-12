@@ -12,12 +12,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "bounty-ai"
+version = "0.0.0"
+dependencies = [
+ "bounty-core",
+]
+
+[[package]]
 name = "bounty-core"
 version = "0.0.0"
 dependencies = [
  "serde",
  "serde_json",
  "sha2",
+]
+
+[[package]]
+name = "bounty-tools"
+version = "0.0.0"
+dependencies = [
+ "bounty-ai",
+ "bounty-core",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

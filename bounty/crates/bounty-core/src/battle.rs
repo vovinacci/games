@@ -76,6 +76,8 @@ impl Outcome {
 pub enum Action {
     /// End the activation.
     Pass,
+    /// Strike a living enemy stack in one of the eight neighbouring cells. Ends the activation.
+    Melee { target: String },
 }
 
 /// A request to change the battle. It names what should happen, never the result.
@@ -98,6 +100,12 @@ pub enum RuleError {
     Stale { command: u64, battle: u64 },
     /// The actor is not the stack whose turn it is (or no such stack).
     NotActive { actor: String },
+    /// The action needs a movement point and the stack has none left.
+    NoMovement,
+    /// The target is not a living enemy stack.
+    NotAnEnemy { target: String },
+    /// The target is not in a neighbouring cell.
+    NotAdjacent { target: String },
 }
 
 impl fmt::Display for RuleError {
@@ -111,6 +119,9 @@ impl fmt::Display for RuleError {
                 )
             }
             Self::NotActive { actor } => write!(f, "it is not the turn of {actor:?}"),
+            Self::NoMovement => f.write_str("no movement points left"),
+            Self::NotAnEnemy { target } => write!(f, "{target:?} is not a living enemy stack"),
+            Self::NotAdjacent { target } => write!(f, "{target:?} is not in a neighbouring cell"),
         }
     }
 }
@@ -120,10 +131,81 @@ impl std::error::Error for RuleError {}
 /// Something that happened, in the order it happened. Holds IDs and numbers, never text for the screen.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Event {
-    RoundStarted { round: u32 },
-    ActivationStarted { stack: String },
-    ActivationEnded { stack: String },
-    BattleEnded { outcome: Outcome },
+    RoundStarted {
+        round: u32,
+    },
+    ActivationStarted {
+        stack: String,
+    },
+    ActivationEnded {
+        stack: String,
+    },
+    /// One blow, with everything that went into it and what it left behind.
+    Damage {
+        attacker: String,
+        target: String,
+        /// The damage roll for one creature.
+        roll: u32,
+        /// Attacking creatures at the moment of the blow.
+        attackers: u32,
+        /// `roll` times `attackers`.
+        damage: u64,
+        /// Creatures the target lost.
+        losses: u32,
+        /// The target after the blow.
+        count: u32,
+        injury: u32,
+        /// The blow was the target of an attack striking back.
+        retaliation: bool,
+    },
+    /// The stack lost its last creature and left the board.
+    StackRemoved {
+        stack: String,
+    },
+    BattleEnded {
+        outcome: Outcome,
+    },
+}
+
+/// A stack of `count` creatures with `hp` health each, `injury` of it missing from one of them, takes `damage`.
+/// Returns the count and injury afterwards; a dead stack is `(0, 0)`.
+#[must_use]
+pub fn health_after(hp: u32, count: u32, injury: u32, damage: u64) -> (u32, u32) {
+    let hp = u64::from(hp);
+    let health = (u64::from(count) * hp).saturating_sub(u64::from(injury));
+    let left = health.saturating_sub(damage);
+    if left == 0 || hp == 0 {
+        return (0, 0);
+    }
+    let count = left.div_ceil(hp);
+    // `left` is at most the health before, so both numbers fit where they came from.
+    (count as u32, (count * hp - left) as u32)
+}
+
+/// Where damage rolls come from: the battle's generator in play, a fixed list in tests.
+type Rolls<'a> = &'a mut dyn FnMut(&mut Lcg32, u32, u32) -> u32;
+
+/// A stack together with what its troop is.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct StackView {
+    pub stack: Stack,
+    pub troop: Troop,
+}
+
+/// What a player of either side can see: the board, the stacks, whose turn it is and what that stack may do. A
+/// computer player is given this and nothing else, so it cannot look at the random generator.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Observation {
+    pub revision: u64,
+    pub round: u32,
+    pub width: u32,
+    pub height: u32,
+    /// Every stack, dead ones included, player slots first.
+    pub stacks: Vec<StackView>,
+    pub obstacles: Vec<Cell>,
+    pub active: Option<Activation>,
+    /// As [`Battle::legal_actions`].
+    pub legal: Vec<Action>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -255,20 +337,81 @@ impl Battle {
         self.outcome
     }
 
+    /// Charges of each hero spell the player side has left.
+    #[must_use]
+    pub const fn hero_charges(&self) -> &BTreeMap<String, u32> {
+        &self.hero_charges
+    }
+
+    /// The battle as a player sees it.
+    #[must_use]
+    pub fn observe(&self) -> Observation {
+        let view = |s: &Stack| StackView {
+            stack: s.clone(),
+            troop: self.troop(s).clone(),
+        };
+        Observation {
+            revision: self.revision,
+            round: self.round,
+            width: self.rules.board.width,
+            height: self.rules.board.height,
+            stacks: self.stacks.iter().map(view).collect(),
+            obstacles: self.obstacles.clone(),
+            active: self.active.clone(),
+            legal: self.legal_actions(),
+        }
+    }
+
     /// Carries out a command, or refuses it and leaves the battle exactly as it was.
     ///
     /// # Errors
     /// [`RuleError`] saying why the command is not allowed now.
     pub fn apply(&mut self, command: &Command) -> Result<Vec<Event>, RuleError> {
+        self.apply_with(command, &mut |rng, lo, hi| rng.range(lo, hi))
+    }
+
+    fn apply_with(&mut self, command: &Command, rolls: Rolls<'_>) -> Result<Vec<Event>, RuleError> {
         let mut next = self.clone();
         let mut events = Vec::new();
-        next.carry_out(command, &mut events)?;
+        next.carry_out(command, rolls, &mut events)?;
         next.revision += 1;
         *self = next;
         Ok(events)
     }
 
-    fn carry_out(&mut self, command: &Command, events: &mut Vec<Event>) -> Result<(), RuleError> {
+    /// What the active stack may do now, in a fixed order: attacks by target ID, then Pass. Empty once the battle
+    /// is over. Every command built from one of these is accepted; the screen and the computer players take their
+    /// choices from here, not from rules of their own.
+    #[must_use]
+    pub fn legal_actions(&self) -> Vec<Action> {
+        let Some(active) = &self.active else {
+            return Vec::new();
+        };
+        let Some(actor) = self.stack(&active.stack) else {
+            return Vec::new();
+        };
+        let mut actions = Vec::new();
+        if active.movement > 0 {
+            let mut targets: Vec<&Stack> = self
+                .stacks
+                .iter()
+                .filter(|s| s.alive() && s.side != actor.side && adjacent(s.cell, actor.cell))
+                .collect();
+            targets.sort_by(|a, b| a.id.cmp(&b.id));
+            actions.extend(targets.into_iter().map(|s| Action::Melee {
+                target: s.id.clone(),
+            }));
+        }
+        actions.push(Action::Pass);
+        actions
+    }
+
+    fn carry_out(
+        &mut self,
+        command: &Command,
+        rolls: Rolls<'_>,
+        events: &mut Vec<Event>,
+    ) -> Result<(), RuleError> {
         if self.outcome.is_some() {
             return Err(RuleError::BattleOver);
         }
@@ -278,19 +421,126 @@ impl Battle {
                 battle: self.revision,
             });
         }
-        if self
-            .active
-            .as_ref()
-            .is_none_or(|a| a.stack != command.actor)
-        {
+        let Some(active) = self.active.clone().filter(|a| a.stack == command.actor) else {
             return Err(RuleError::NotActive {
                 actor: command.actor.clone(),
             });
-        }
-        match command.action {
+        };
+        match &command.action {
             Action::Pass => self.end_activation(events),
+            Action::Melee { target } => {
+                if active.movement == 0 {
+                    return Err(RuleError::NoMovement);
+                }
+                let (Some(attacker), Some(defender)) =
+                    (self.index(&active.stack), self.index(target))
+                else {
+                    return Err(RuleError::NotAnEnemy {
+                        target: target.clone(),
+                    });
+                };
+                let (a, d) = (&self.stacks[attacker], &self.stacks[defender]);
+                if !d.alive() || d.side == a.side {
+                    return Err(RuleError::NotAnEnemy {
+                        target: target.clone(),
+                    });
+                }
+                if !adjacent(a.cell, d.cell) {
+                    return Err(RuleError::NotAdjacent {
+                        target: target.clone(),
+                    });
+                }
+                self.melee(attacker, defender, rolls, events);
+            }
         }
         Ok(())
+    }
+
+    fn index(&self, id: &str) -> Option<usize> {
+        self.stacks.iter().position(|s| s.id == id)
+    }
+
+    /// The attacker strikes; a defender that survives and has not struck back this round does so once, with the
+    /// creatures it has left. Then the attacker's activation ends.
+    fn melee(
+        &mut self,
+        attacker: usize,
+        defender: usize,
+        rolls: Rolls<'_>,
+        events: &mut Vec<Event>,
+    ) {
+        self.strike(attacker, defender, false, rolls, events);
+        if self.outcome.is_none()
+            && self.stacks[defender].alive()
+            && !self.stacks[defender].retaliated
+        {
+            self.stacks[defender].retaliated = true;
+            self.strike(defender, attacker, true, rolls, events);
+        }
+        if self.outcome.is_none() {
+            self.end_activation(events);
+        }
+    }
+
+    /// One melee blow: one roll from the attacker's range, times its creatures.
+    fn strike(
+        &mut self,
+        from: usize,
+        to: usize,
+        retaliation: bool,
+        rolls: Rolls<'_>,
+        events: &mut Vec<Event>,
+    ) {
+        let troop = &self.rules.troops[self.stacks[from].troop];
+        let (lo, hi) = (troop.melee_min, troop.melee_max);
+        let roll = rolls(&mut self.rng, lo, hi);
+        let damage = u64::from(roll) * u64::from(self.stacks[from].count);
+        self.hurt(from, to, roll, damage, retaliation, events);
+    }
+
+    /// Takes `damage` off a stack. Removes it when it dies and ends the battle when it was its side's last.
+    fn hurt(
+        &mut self,
+        from: usize,
+        to: usize,
+        roll: u32,
+        damage: u64,
+        retaliation: bool,
+        events: &mut Vec<Event>,
+    ) {
+        let hp = self.rules.troops[self.stacks[to].troop].hp;
+        let attackers = self.stacks[from].count;
+        let attacker = self.stacks[from].id.clone();
+        let target = &mut self.stacks[to];
+        let before = target.count;
+        (target.count, target.injury) = health_after(hp, target.count, target.injury, damage);
+        let (id, count, injury, side) =
+            (target.id.clone(), target.count, target.injury, target.side);
+        events.push(Event::Damage {
+            attacker,
+            target: id.clone(),
+            roll,
+            attackers,
+            damage,
+            losses: before - count,
+            count,
+            injury,
+            retaliation,
+        });
+        if count > 0 {
+            return;
+        }
+        self.queue.retain(|queued| *queued != id);
+        self.deferred.retain(|queued| *queued != id);
+        events.push(Event::StackRemoved { stack: id });
+        if !self.stacks.iter().any(|s| s.alive() && s.side == side) {
+            let outcome = if side == Side::Enemy {
+                Outcome::PlayerWin
+            } else {
+                Outcome::EnemyWin
+            };
+            self.finish(outcome, events);
+        }
     }
 
     fn end_activation(&mut self, events: &mut Vec<Event>) {
@@ -427,6 +677,11 @@ impl Battle {
         // Every key above is ASCII and every number a u32 or u64, so the encoding cannot fail.
         self.to_canon().digest().unwrap_or_default()
     }
+}
+
+/// In one of the eight cells around, not the same cell.
+const fn adjacent(a: Cell, b: Cell) -> bool {
+    a.x.abs_diff(b.x) <= 1 && a.y.abs_diff(b.y) <= 1 && (a.x != b.x || a.y != b.y)
 }
 
 #[cfg(test)]

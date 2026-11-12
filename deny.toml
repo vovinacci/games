@@ -16,6 +16,9 @@ confidence-threshold = 0.9
 [bans]
 multiple-versions = "warn"
 wildcards = "deny"
+# A crate of this repository is used by path, with no version: that is not a wildcard. Holds because no crate here
+# is published.
+allow-wildcard-paths = true
 
 [sources]
 unknown-registry = "deny"

@@ -11,6 +11,8 @@ Nothing to play yet. What exists is the specification and the first crates.
 | Path | Contents |
 |---|---|
 | `crates/bounty-core` | rules and state; no graphics, sound or clock |
+| `crates/bounty-ai` | computer players: they see what a player sees and answer with a command |
+| `crates/bounty-tools` | developer tools: fixed-seed battle runs and their comparison (`make balance`) |
 | `docs/spec/` | the specification, see below |
 | `prototype/` | synthetic battle rules, scenarios and expected results for testing the engine |
 | `content/demo/` | a small synthetic expedition used as an integration test |
