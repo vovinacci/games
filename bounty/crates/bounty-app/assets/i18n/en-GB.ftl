@@ -2,6 +2,7 @@
 
 title = Bounty
 prototype-note = Test rules, not those of the original game
+modern-note = Variant rules: the remake's, with this game's own changes
 reference-note = Rules from another remake of the original, not yet checked against it
 header-battle = Battle: { $id }, seed { $seed }
 round = Round { $n }
@@ -27,7 +28,9 @@ stat-movement = Movement left: { $n }
 stat-shots = Shots left: { $n }
 stat-flights = Flights left: { $n }
 stat-leadership = Hero's leadership: { $n }
+stat-fighting = Fighting: { $n } of { $count }, as far as the leadership reaches
 stat-morale = Morale: { $morale }
+morale-because = Lowered by: { $names }
 morale-low = low, damage halved
 morale-normal = normal
 morale-high = high, damage and half again

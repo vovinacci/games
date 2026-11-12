@@ -6,6 +6,7 @@ use bounty_core::content::{ContentError, Profile, Rules, Scenario, scenarios_fro
 const RULES: &str = include_str!("../../../prototype/rules.json");
 const BATTLES: &str = include_str!("../../../prototype/battles.json");
 const REFERENCE_RULES: &str = include_str!("../../../content/reference/rules.json");
+const MODERN_RULES: &str = include_str!("../../../content/modern/rules.json");
 const REFERENCE_BATTLES: &str = include_str!("../../../content/reference/battles.json");
 
 /// The prototype rules. The file is part of the program and checked by the tests, so it loads.
@@ -17,7 +18,8 @@ pub fn rules() -> Rules {
     Rules::from_json(RULES).expect("the compiled-in rules load")
 }
 
-/// The rules called `name` on the command line: `prototype` or `reference`.
+/// The rules called `name` on the command line: `prototype`, `reference`, or `modern`, the variant of the
+/// reference rules, which plays the reference's battles.
 ///
 /// # Errors
 /// Another name; the message lists the two.
@@ -30,8 +32,9 @@ pub fn rules_named(name: &str) -> Result<Rules, String> {
         "reference" => {
             Ok(Rules::from_json(REFERENCE_RULES).expect("the compiled-in reference rules load"))
         }
+        "modern" => Ok(Rules::from_json(MODERN_RULES).expect("the compiled-in variant rules load")),
         other => Err(format!(
-            "no rules {other:?}; there are: prototype, reference"
+            "no rules {other:?}; there are: prototype, reference, modern"
         )),
     }
 }
@@ -93,7 +96,16 @@ mod tests {
         assert!(
             rules_named("classic")
                 .unwrap_err()
-                .contains("prototype, reference")
+                .contains("prototype, reference, modern")
+        );
+        let modern = rules_named("modern").unwrap();
+        assert_eq!(
+            (modern.id.as_str(), first_scenario(&modern)),
+            ("modern-v0.1", "even_fight")
+        );
+        assert!(
+            scenario(&modern, "loss_of_control_deep").is_ok(),
+            "the variant plays the reference's battles"
         );
     }
 }

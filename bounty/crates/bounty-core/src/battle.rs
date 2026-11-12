@@ -500,6 +500,33 @@ impl Battle {
             .and_then(|i| self.morale_at(i))
     }
 
+    /// The stacks that bring a stack's morale down to Low, by ID; empty when its morale is not Low. For telling
+    /// the player why.
+    #[must_use]
+    pub fn morale_lowered_by(&self, id: &str) -> Vec<String> {
+        let Some(stack) = self.index(id).filter(|&i| self.stacks[i].alive()) else {
+            return Vec::new();
+        };
+        if self.morale_at(stack) != Some(Morale::Low) {
+            return Vec::new();
+        }
+        let low = self
+            .pairings(stack)
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|&(_, morale)| morale == Morale::Low);
+        low.map(|(other, _)| self.stacks[other].id.clone())
+            .collect()
+    }
+
+    /// How many creatures of a living stack would fight now: all of them, or fewer where the rules let the
+    /// hero's leadership cap them.
+    #[must_use]
+    pub fn fighting(&self, id: &str) -> Option<u32> {
+        let stack = self.index(id).filter(|&i| self.stacks[i].alive())?;
+        Some(self.fighters(stack, self.stacks[stack].count))
+    }
+
     /// Charges of each hero spell the player side has left.
     #[must_use]
     pub const fn hero_charges(&self) -> &BTreeMap<String, u32> {
@@ -985,41 +1012,59 @@ impl Battle {
         let Profile::Reference(reference) = &self.rules.profile else {
             return None;
         };
+        let found: Vec<Morale> = self
+            .pairings(stack)?
+            .into_iter()
+            .map(|(_, morale)| morale)
+            .collect();
+        Some(if reference.switches.army_view_morale {
+            if found.contains(&Morale::Low) {
+                Morale::Low
+            } else if found.iter().all(|&morale| morale == Morale::High) {
+                Morale::High
+            } else {
+                Morale::Normal
+            }
+        } else {
+            let rank = |morale: &Morale| match morale {
+                Morale::Normal => 0,
+                Morale::Low => 1,
+                Morale::High => 2,
+            };
+            found.into_iter().min_by_key(rank).unwrap_or(Morale::High)
+        })
+    }
+
+    /// The pairings a stack's morale is made of: each stack of its side the rule looks at, with what the chart
+    /// gives for the pair, read the way the rule reads it. `None` where the stack has no morale.
+    fn pairings(&self, stack: usize) -> Option<Vec<(usize, Morale)>> {
+        let Profile::Reference(reference) = &self.rules.profile else {
+            return None;
+        };
         let me = &self.stacks[stack];
         if me.side != Side::Player || self.leadership.is_none() || me.out_of_control {
             return None;
         }
         let group = |s: &Stack| self.rules.troops[s.troop].morale_group;
         let mine = group(me)?;
+        let army_view = reference.switches.army_view_morale;
         let side = self
             .stacks
             .iter()
-            .filter(|s| s.alive() && s.side == me.side);
-        if reference.switches.army_view_morale {
-            let others: Vec<Morale> = side
-                .filter(|other| other.id != me.id)
-                .filter_map(|other| group(other).map(|theirs| reference.morale_chart[mine][theirs]))
-                .collect();
-            return Some(if others.contains(&Morale::Low) {
-                Morale::Low
-            } else if others.iter().all(|&found| found == Morale::High) {
-                Morale::High
-            } else {
-                Morale::Normal
+            .enumerate()
+            .filter(|(_, s)| s.alive() && s.side == me.side);
+        let pairs = side
+            .filter(|&(i, _)| !(army_view && i == stack))
+            .filter_map(|(i, other)| {
+                let theirs = group(other)?;
+                let (row, column) = if army_view {
+                    (mine, theirs)
+                } else {
+                    (theirs, mine)
+                };
+                Some((i, reference.morale_chart[row][column]))
             });
-        }
-        let rank = |morale: Morale| match morale {
-            Morale::Normal => 0,
-            Morale::Low => 1,
-            Morale::High => 2,
-        };
-        let found = side
-            .filter_map(|other| group(other).map(|theirs| reference.morale_chart[theirs][mine]));
-        Some(
-            found
-                .min_by_key(|&morale| rank(morale))
-                .unwrap_or(Morale::High),
-        )
+        Some(pairs.collect())
     }
 
     /// Brings back under control every stack whose losses have taken it within the hero's leadership. Looked at

@@ -2,6 +2,7 @@
 
 title = Bounty
 prototype-note = Пробні правила, не правила оригінальної гри
+modern-note = Змінені правила: відтворені, з власними змінами
 reference-note = Правила з іншого відтворення оригіналу, ще не звірені з ним
 header-battle = Бій: { $id }, зерно { $seed }
 round = Раунд { $n }
@@ -27,7 +28,9 @@ stat-movement = Залишок руху: { $n }
 stat-shots = Залишок пострілів: { $n }
 stat-flights = Залишок польотів: { $n }
 stat-leadership = Лідерство героя: { $n }
+stat-fighting = Б'ються: { $n } з { $count }, на скільки вистачає лідерства
 stat-morale = Бойовий дух: { $morale }
+morale-because = Знижують: { $names }
 morale-low = низький, шкода вдвічі менша
 morale-normal = звичайний
 morale-high = високий, шкода в півтора раза більша

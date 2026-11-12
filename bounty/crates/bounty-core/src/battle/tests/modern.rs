@@ -374,3 +374,55 @@ fn with_the_cap_a_stack_over_the_leadership_fights_with_what_the_leadership_cove
             .out_of_control
     );
 }
+
+// What the screen tells the player: who lowers a stack's morale, and how many of a stack fight.
+#[test]
+fn the_battle_says_who_lowers_morale_and_how_many_fight() {
+    let army = || {
+        vec![
+            stack("p0", "sprites", 20, 1, 2),
+            stack("p1", "wolves", 11, 1, 3),
+            stack("e0", "wolves", 50, 2, 2),
+        ]
+    };
+    // The variant as its file has it: army-view morale, and the leadership caps the fighters.
+    let variant = fight(
+        Arc::new(Rules::from_json(MODERN).unwrap()),
+        Some(30),
+        army(),
+    );
+    assert_eq!(
+        variant.morale_lowered_by("p1"),
+        ["p0"],
+        "the Wolves are Low because of the Sprites"
+    );
+    assert_eq!(
+        variant.morale_lowered_by("p0"),
+        Vec::<String>::new(),
+        "the Sprites are Normal"
+    );
+    // Eleven Wolves are 33 health, the leadership covers ten; twenty Sprites are 20 health, all fight.
+    assert_eq!(
+        (
+            variant.fighting("p1"),
+            variant.fighting("p0"),
+            variant.fighting("e0")
+        ),
+        (Some(10), Some(20), Some(50))
+    );
+    assert_eq!(
+        (
+            variant.fighting("ghost"),
+            variant.morale_lowered_by("ghost")
+        ),
+        (None, Vec::new())
+    );
+
+    // Under the reference's rule the Sprites are the ones at Low, and the Wolves the cause; nothing caps a stack.
+    let reference = fight(modern(&[]), Some(1000), army());
+    assert_eq!(reference.morale_lowered_by("p0"), ["p1"]);
+    assert_eq!(reference.morale_lowered_by("p1"), Vec::<String>::new());
+    assert_eq!(reference.fighting("p1"), Some(11));
+    // The enemy has no morale, so nothing lowers it.
+    assert_eq!(reference.morale_lowered_by("e0"), Vec::<String>::new());
+}
