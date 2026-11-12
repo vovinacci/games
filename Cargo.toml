@@ -2,7 +2,7 @@
 # nothing is published to crates.io.
 [workspace]
 resolver = "3"
-members = ["bounty/crates/bounty-ai", "bounty/crates/bounty-core", "bounty/crates/bounty-tools"]
+members = ["bounty/crates/bounty-ai", "bounty/crates/bounty-core", "bounty/crates/bounty-tools", "gamekit"]
 
 [workspace.package]
 edition = "2024"
@@ -14,9 +14,15 @@ publish = false
 [workspace.dependencies]
 bounty-ai = { path = "bounty/crates/bounty-ai" }
 bounty-core = { path = "bounty/crates/bounty-core" }
+fluent-bundle = "0.16.0"
+gamekit = { path = "gamekit" }
+# Without the default "audio" feature: no game plays a sound yet, and sound needs ALSA to build on Linux.
+macroquad = { version = "0.4.16", default-features = false }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
 sha2 = "0.11.1"
+sys-locale = "0.3.2"
+unic-langid = "0.9.6"
 
 # Light optimization for our code, full optimization for dependencies. Still fast to compile.
 [profile.dev]
