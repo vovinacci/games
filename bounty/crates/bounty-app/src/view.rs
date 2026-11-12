@@ -2,7 +2,7 @@
 //! The layout is the fixed one of `docs/spec/CONTENT-AND-ASSETS.md`: header, board, sidebar, log.
 
 use bounty_core::battle::{Action, Battle, Observation, Stack};
-use bounty_core::content::{Cell, Profile, Side, Troop};
+use bounty_core::content::{Cell, MODERN_RULESET, Profile, Side, Troop};
 use gamekit::t;
 use gamekit::text::{measure, text_at, text_centered_fit, text_fit};
 use macroquad::prelude::*;
@@ -86,8 +86,10 @@ fn header(battle: &Battle, shown: &Shown<'_>) {
         LIGHTGRAY,
     );
     // The rules in use are not the original game's; the screen says so, always, and says which they are.
-    let note = match battle.rules().profile {
+    let rules = battle.rules();
+    let note = match rules.profile {
         Profile::Prototype => t!("prototype-note"),
+        Profile::Reference(_) if rules.id == MODERN_RULESET => t!("modern-note"),
         Profile::Reference(_) => t!("reference-note"),
     };
     text_fit(&note, SIDEBAR.x, 32.0, SIDEBAR.w, 18.0, CURSOR);
@@ -141,10 +143,12 @@ fn board(battle: &Battle, seen: &Observation, cursor: Cell) {
     }
     let active = battle.active().map(|a| a.stack.as_str());
     for stack in battle.stacks().iter().filter(|s| s.alive()) {
+        let fighting = battle.fighting(&stack.id).unwrap_or(stack.count);
         token(
             stack,
             battle.troop(stack),
             active == Some(stack.id.as_str()),
+            fighting,
         );
     }
     let at = corner(cursor);
@@ -153,7 +157,7 @@ fn board(battle: &Battle, seen: &Observation, cursor: Cell) {
 
 /// A stack on the board. The shape tells the kind (square: fights hand to hand, circle: shoots, triangle: flies),
 /// and a filled shape is the player's while a hollow one is the enemy's, so neither depends on colour alone.
-fn token(stack: &Stack, troop: &Troop, active: bool) {
+fn token(stack: &Stack, troop: &Troop, active: bool, fighting: u32) {
     let at = corner(stack.cell);
     let centre = at + vec2(CELL / 2.0, 28.0);
     let (color, filled) = if stack.side == Side::Player {
@@ -192,10 +196,16 @@ fn token(stack: &Stack, troop: &Troop, active: bool) {
         text_at("!", at.x + CELL - 20.0, at.y + 26.0, 28.0, TARGET);
         text_at("!", at.x + 10.0, at.y + 26.0, 28.0, TARGET);
     }
-    let count = if stack.injury > 0 {
-        format!("{} -{}", stack.count, stack.injury)
+    // "10/11": ten of the eleven fight, the hero's leadership reaching no further.
+    let number = if fighting < stack.count {
+        format!("{fighting}/{}", stack.count)
     } else {
         stack.count.to_string()
+    };
+    let count = if stack.injury > 0 {
+        format!("{number} -{}", stack.injury)
+    } else {
+        number
     };
     let middle = at.x + CELL / 2.0;
     text_centered_fit(&count, middle, at.y + 68.0, CELL - 8.0, 20.0, WHITE);
@@ -257,12 +267,30 @@ fn sidebar(battle: &Battle, seen: &Observation, cursor: Cell) {
     if troop.flights_per_activation > 0 {
         line(&t!("stat-flights", n = active.flights), 18.0, LIGHTGRAY);
     }
+    // How many of the stack fight, where the hero's leadership does not reach all of them.
+    if let Some(fighting) = battle.fighting(&stack.id).filter(|&n| n < stack.count) {
+        line(
+            &t!("stat-fighting", n = fighting, count = stack.count),
+            18.0,
+            TARGET,
+        );
+    }
     if let Some(morale) = battle.morale(&stack.id) {
         line(
             &t!("stat-morale", morale = morale_text(morale)),
             18.0,
             LIGHTGRAY,
         );
+        // Low morale comes from the company the stack keeps: say whose.
+        let lowered_by = battle.morale_lowered_by(&stack.id);
+        if !lowered_by.is_empty() {
+            let names: Vec<String> = lowered_by.iter().map(|id| stack_name(battle, id)).collect();
+            line(
+                &t!("morale-because", names = names.join(", ")),
+                18.0,
+                LIGHTGRAY,
+            );
+        }
     }
     if let Some(leadership) = battle.leadership() {
         line(&t!("stat-leadership", n = leadership), 18.0, LIGHTGRAY);

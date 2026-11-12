@@ -6,8 +6,9 @@ game balance.
 
 What can be played is one battle: `cargo run -p bounty-app` under invented test rules, or
 `cargo run -p bounty-app -- --rules reference` under the first rules taken from another remake of the original (three
-troops; `--scenario morale_sprites_wolves`, `loss_of_control` or `overmatch` for other battles). The campaign is still
-to come.
+troops; `--scenario morale_sprites_wolves`, `loss_of_control`, `loss_of_control_deep` or `overmatch` for other battles),
+or with `--rules modern` under those rules with this game's own changes, which play the same battles. The campaign is
+still to come.
 
 ## Layout
 

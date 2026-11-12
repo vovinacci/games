@@ -50,8 +50,11 @@ repeat) is a defect to fix, not a result.
   spelling) and `uk.ftl`. Never hard-code on-screen text; tests check the keys. A stack is always named with its side
   and in one form ("your Wardens", "ваші Вартові"), and sentences are built so that the name is never declined.
 - The screen offers only what `Battle::legal_actions` lists (`control.rs`); it has no rules of its own.
-- `--rules reference` plays under the reference rules (battles in `content/reference/battles.json`); without it the
-  prototype's. The header always says which rules are in use.
+- `--rules reference` plays under the reference rules (battles in `content/reference/battles.json`), `--rules modern`
+  under the variant on the same battles; without it the prototype's. The header always says which rules are in use.
+- What the rules do to a stack is told where it is shown: its morale with the stacks that lower it, and how many of it
+  fight where the leadership does not reach all (`Battle::morale_lowered_by`, `Battle::fighting`). The screen asks the
+  battle; it works nothing out by itself.
 - Check a changed screen in both languages by screenshot, not by eye on a window:
   `cargo run -p bounty-app -- --lang uk --scenario flight_barrier --steps 3 --shot shot.png`. `--steps` lets the pilot
   play that many commands first. With `--shot` the user's settings are neither read nor written.
