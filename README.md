@@ -1,5 +1,8 @@
 # Games
 
+[![CI](https://github.com/vovinacci/games/actions/workflows/ci.yml/badge.svg)](https://github.com/vovinacci/games/actions/workflows/ci.yml)
+[![Licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
+
 Small games written in Rust, for the fun of making and playing them. One repository, one cargo workspace; every game is
 built and released on its own.
 

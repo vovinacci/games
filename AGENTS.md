@@ -8,6 +8,7 @@ that game only.
 |---|---|
 | `bounty/` | Bounty, a tribute to King's Bounty (1990). Crates under `bounty/crates/`; only the application may use graphics and sound |
 | `tools/` | scripts used by the hooks and CI |
+| `docs/REPOSITORY.md` | GitHub settings, rulesets, CI and Dependabot |
 
 ## Rules for every change
 
