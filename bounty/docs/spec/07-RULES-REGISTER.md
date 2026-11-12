@@ -207,8 +207,8 @@ How loss of control is carried out here:
 - It has no morale.
 - Control comes back, and only comes back: a stack that starts within the leadership stays in control, as in the
   reference, which sets the mark when the battle is set up and only ever clears it.
-- The rules do not say who commands it. The reference hands its turn to its computer player; here the pilot plays it in
-  the runs, and the screen is to do the same.
+- The rules do not say who commands it. The reference hands its turn to its computer player; here the pilot plays it, in
+  the runs and on screen, where the stack is marked and the sidebar says that it moves by itself.
 
 ### The two morale rules
 

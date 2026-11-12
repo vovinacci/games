@@ -2,6 +2,7 @@
 
 title = Bounty
 prototype-note = Пробні правила, не правила оригінальної гри
+reference-note = Правила з іншого відтворення оригіналу, ще не звірені з ним
 header-battle = Бій: { $id }, зерно { $seed }
 round = Раунд { $n }
 
@@ -9,6 +10,9 @@ round = Раунд { $n }
 troop-warden = Вартові
 troop-slinger = Пращники
 troop-skyrider = Небесні вершники
+troop-sprites = Феї
+troop-wolves = Вовки
+troop-archers = Лучники
 name-player = ваші { $troop }
 name-enemy = ворожі { $troop }
 spell-blast = Вибух
@@ -22,6 +26,12 @@ stat-health = Здоров'я кожної: { $hp }, поранення: { $inju
 stat-movement = Залишок руху: { $n }
 stat-shots = Залишок пострілів: { $n }
 stat-flights = Залишок польотів: { $n }
+stat-leadership = Лідерство героя: { $n }
+stat-morale = Бойовий дух: { $morale }
+morale-low = низький, шкода вдвічі менша
+morale-normal = звичайний
+morale-high = високий, шкода в півтора раза більша
+out-of-control = Загін не слухається: б'ється з усіма і ходить сам
 actions = Можливі дії
 key-move = Стрілки: рухати курсор
 key-act = Enter: { $what }
@@ -39,8 +49,11 @@ key-quit = Esc: вийти
 
 # Журнал
 log-round = Починається раунд { $n }
-log-damage = Атака: { $attacker }, ціль: { $target }. Шкода { $roll } x { $attackers } = { $damage }, втрати: { $losses }
-log-retaliation = Удар у відповідь: { $attacker }, ціль: { $target }. Шкода { $roll } x { $attackers } = { $damage }, втрати: { $losses }
+log-damage = Атака: { $attacker }, ціль: { $target }. Шкода { $damage } (кидок { $roll }, істот: { $attackers }{ $morale }), втрати: { $losses }
+log-retaliation = Удар у відповідь: { $attacker }, ціль: { $target }. Шкода { $damage } (кидок { $roll }, істот: { $attackers }{ $morale }), втрати: { $losses }
+log-morale-low = , низький бойовий дух
+log-morale-high = , високий бойовий дух
+log-control = Загін знову слухається: { $name }
 log-spell-damage = { $spell }, ціль: { $target }. Шкода { $damage }, втрати: { $losses }
 log-removed = Загін знищено: { $name }
 log-moved = Перейшли: { $name }

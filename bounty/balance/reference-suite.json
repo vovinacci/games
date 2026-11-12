@@ -1,0 +1,62 @@
+{
+  "schema_version": 2,
+  "suite_id": "reference-smoke-v1",
+  "status": "cases_for_the_reference_rules",
+  "purpose": "regression_of_reference_derived_rules_not_a_claim_about_the_original",
+  "ruleset_id": "reference-v0.1",
+  "rules_path": "../content/reference/rules.json",
+  "scenarios_path": "../content/reference/battles.json",
+  "metrics_path": "reference-metrics.json",
+  "pilot": {
+    "id": "approach-v1",
+    "status": "implemented",
+    "definition": "../docs/spec/04-AI-AND-BALANCE.md"
+  },
+  "battle_seeds": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+  ],
+  "policy_randomness": "none",
+  "round_limit": 200,
+  "cases": [
+    {
+      "id": "even_fight",
+      "allowed_outcomes": [
+        "player_win",
+        "enemy_win"
+      ],
+      "purpose": "equal armies of all three troops; the player strikes first and has a hero"
+    },
+    {
+      "id": "morale_sprites_wolves",
+      "allowed_outcomes": [
+        "player_win",
+        "enemy_win"
+      ],
+      "purpose": "equal armies in which the player's Sprites have Low morale and the enemy's have none"
+    },
+    {
+      "id": "loss_of_control",
+      "allowed_outcomes": [
+        "player_win",
+        "enemy_win"
+      ],
+      "purpose": "the player's Wolves start out of control"
+    },
+    {
+      "id": "overmatch",
+      "allowed_outcomes": [
+        "player_win"
+      ],
+      "purpose": "a fight the player must win"
+    }
+  ],
+  "planned_runs": 32,
+  "note": "No baseline_path yet: the first numbers are looked at before a baseline is recorded."
+}

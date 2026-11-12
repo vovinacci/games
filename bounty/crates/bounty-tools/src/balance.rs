@@ -27,8 +27,10 @@ pub struct Suite {
     pub rules_path: PathBuf,
     pub scenarios_path: PathBuf,
     pub metrics_path: PathBuf,
-    /// The recorded report that runs are compared with.
-    pub baseline_path: PathBuf,
+    /// The recorded report that runs are compared with. `None` for a suite whose first numbers have not been
+    /// accepted yet: such a suite can be run, and there is nothing to compare it with.
+    #[serde(default)]
+    pub baseline_path: Option<PathBuf>,
     pub pilot: Pilot,
     pub battle_seeds: Vec<u32>,
     pub cases: Vec<Case>,
@@ -472,7 +474,7 @@ pub(crate) mod tests {
         let path = suite_path()
             .parent()
             .unwrap()
-            .join(&loaded.suite.baseline_path);
+            .join(loaded.suite.baseline_path.as_ref().unwrap());
         let baseline: Report = serde_json::from_str(&fs::read_to_string(path).unwrap()).unwrap();
         let comparison = crate::compare::compare(&baseline, &run(&loaded, &[], "test").unwrap());
         assert!(
@@ -481,6 +483,34 @@ pub(crate) mod tests {
             comparison.text()
         );
         assert_eq!(comparison.compared, 32);
+    }
+
+    // The cases for the reference rules run to an end without problems. They have no baseline yet, so there is
+    // nothing to compare them with; the one case with a fixed answer is checked here.
+    #[test]
+    fn the_reference_suite_runs_without_problems() {
+        let path = suite_path().with_file_name("reference-suite.json");
+        let loaded = load(&path).unwrap();
+        assert_eq!(loaded.suite.baseline_path, None);
+        let report = run(&loaded, &[], "test").unwrap();
+        assert_eq!(report.problems, Vec::<String>::new());
+        assert_eq!(
+            (report.coverage.planned, report.coverage.executed),
+            (32, 32)
+        );
+        assert_eq!(report.identity.ruleset_id, "reference-v0.1");
+        let overmatch = report
+            .summary
+            .iter()
+            .find(|c| c.case_id == "overmatch")
+            .unwrap();
+        assert_eq!(overmatch.outcomes["player_win"], 8);
+        assert_eq!(overmatch.casualties["player"], 0);
+        assert_eq!(
+            report,
+            run(&loaded, &[], "test").unwrap(),
+            "a second run gives the same report"
+        );
     }
 
     // AT-073, AT-074: an outcome the case does not allow is a problem, not a quiet row.

@@ -1,7 +1,7 @@
-//! Bounty: for now one battle of the synthetic prototype rules, the player's stacks by keyboard or mouse, the
-//! enemy's by the plain pilot.
+//! Bounty: for now one battle, under the synthetic prototype rules or the first rules taken from a remake of the
+//! original. The player's stacks by keyboard or mouse, the enemy's by the plain pilot.
 //!
-//! Developer flags: `--scenario <id>` and `--seed <n>` pick the battle; `--lang <id>` the language; `--steps <n>`
+//! Developer flags: `--rules prototype|reference` picks the rules, `--scenario <id>` and `--seed <n>` the battle; `--lang <id>` the language; `--steps <n>`
 //! lets the pilot play that many commands for both sides first; `--shot <file.png>` saves a screenshot and quits.
 //! With `--shot` the user's settings are neither read nor written and the dedication is skipped.
 
@@ -22,7 +22,8 @@ use macroquad::prelude::*;
 
 use crate::settings::Store;
 
-/// Seconds the enemy takes over each of its commands, so that a player can follow them.
+/// Seconds the pilot takes over each command of the enemy, or of a stack out of control, so that a player can
+/// follow them.
 const ENEMY_PACE: f32 = 0.45;
 
 struct Game {
@@ -87,17 +88,9 @@ impl Game {
             .battle
             .active()
             .and_then(|a| self.battle.stack(&a.stack));
-        if let Some(stack) = active.filter(|s| s.side == Side::Player) {
+        if let Some(stack) = active.filter(|s| s.side == Side::Player && !s.out_of_control) {
             self.cursor = stack.cell;
         }
-    }
-
-    fn players_turn(&self) -> bool {
-        let active = self
-            .battle
-            .active()
-            .and_then(|a| self.battle.stack(&a.stack));
-        active.is_some_and(|s| s.side == Side::Player)
     }
 
     /// The pilot's command for whoever's turn it is.
@@ -118,7 +111,7 @@ impl Game {
             }
             return;
         }
-        if !self.players_turn() {
+        if !view::player_commands(&self.battle) {
             self.waited += get_frame_time();
             if self.waited >= ENEMY_PACE {
                 self.pilot();
@@ -240,7 +233,7 @@ async fn run(options: Options, rules: Arc<Rules>, scenario: Scenario) {
 }
 
 /// Reads the command line; a message for the user when something on it cannot be used.
-fn options() -> Result<Options, String> {
+fn options(rules: &Rules) -> Result<Options, String> {
     let number = |flag: &str| match dev::arg_after(flag) {
         Some(text) => text
             .parse::<u32>()
@@ -255,7 +248,8 @@ fn options() -> Result<Options, String> {
         return Err(format!("--shot {path}: {problem}"));
     }
     Ok(Options {
-        scenario: dev::arg_after("--scenario").unwrap_or_else(|| "blocked_shooter".to_owned()),
+        scenario: dev::arg_after("--scenario")
+            .unwrap_or_else(|| content::first_scenario(rules).to_owned()),
         seed: number("--seed")?,
         language: dev::arg_after("--lang"),
         steps: number("--steps")?.unwrap_or(0),
@@ -264,13 +258,14 @@ fn options() -> Result<Options, String> {
 }
 
 fn main() {
-    let rules = Arc::new(content::rules());
-    let start = options().and_then(|options| {
+    let rules = dev::arg_after("--rules").unwrap_or_else(|| "prototype".to_owned());
+    let start = content::rules_named(&rules).and_then(|rules| {
+        let options = options(&rules)?;
         let scenario = content::scenario(&rules, &options.scenario).map_err(|e| e.to_string())?;
-        Ok((options, scenario))
+        Ok((options, Arc::new(rules), scenario))
     });
     match start {
-        Ok((options, scenario)) => {
+        Ok((options, rules, scenario)) => {
             macroquad::Window::from_config(screen::window("Bounty"), run(options, rules, scenario));
         }
         Err(message) => {

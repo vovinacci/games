@@ -22,9 +22,11 @@ ascii-check: ## Check that code and config are ASCII (see tools/check_ascii.sh)
 	git ls-files -z | grep -zE '(\.(rs|toml|py|nix|sh)|Makefile|\.editorconfig)$$' | xargs -0 tools/check_ascii.sh
 
 .PHONY: balance
-balance: ## Bounty: play the fixed battles and write the report to target/bounty-balance.json
+balance: ## Bounty: play the fixed battles of both suites; reports in target/bounty-balance*.json
 	cargo run --quiet --release -p bounty-tools -- balance run --suite bounty/balance/suite.json \
 		--out target/bounty-balance.json --revision "$$(git describe --always --dirty)" $(BALANCE_ARGS)
+	cargo run --quiet --release -p bounty-tools -- balance run --suite bounty/balance/reference-suite.json \
+		--out target/bounty-balance-reference.json --revision "$$(git describe --always --dirty)" $(BALANCE_ARGS)
 
 .PHONY: balance-check
 balance-check: balance ## Bounty: compare the fresh report with the recorded baseline; any battle that moved fails

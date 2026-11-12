@@ -1,0 +1,10 @@
+{
+  "schema_version": 2,
+  "metric_set_id": "small-battle-metrics-v2",
+  "reference_prices": {
+    "sprites": 15,
+    "wolves": 40,
+    "archers": 250
+  },
+  "note": "Prices for valuing losses: the troops' recruit costs in content/reference/rules.json, frozen here. The other definitions are those of metrics.json."
+}
