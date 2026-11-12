@@ -2,6 +2,7 @@
 //! computer players and the tools all go through this crate.
 
 pub mod battle;
+pub mod campaign;
 pub mod canon;
 pub mod content;
 pub mod replay;

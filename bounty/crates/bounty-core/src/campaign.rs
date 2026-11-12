@@ -1,0 +1,593 @@
+//! An expedition: the hero on the map, the clock, the purse, the army, and the commands that change them.
+//!
+//! The same discipline as a battle. The only way to change an [`Expedition`] is [`Expedition::apply`]; a command
+//! that is refused changes nothing; what happened is told as events, in order, with IDs and numbers and no text for
+//! the screen. One clock owns time: every command that takes time goes through `pass`, which settles each week
+//! once and stops at the deadline.
+
+mod content;
+
+use std::collections::{BTreeMap, BTreeSet};
+use std::fmt;
+use std::sync::Arc;
+
+pub use content::{
+    ArmyStart, BattleLayout, Clock, Encounter, ExpeditionDef, Map, MapObject, ObjectKind, Recovery,
+    Terrain,
+};
+
+use crate::canon::Value;
+use crate::content::Cell;
+
+/// How an expedition stands.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Status {
+    /// The hero is on the map and may act.
+    Adventure,
+    /// The objective was found.
+    Victory,
+    /// The deadline came first.
+    Timeout,
+    /// A week's upkeep could not be paid.
+    Insolvent,
+}
+
+impl Status {
+    /// The name used in reports, saves and digests.
+    #[must_use]
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Adventure => "adventure",
+            Self::Victory => "victory",
+            Self::Timeout => "timeout",
+            Self::Insolvent => "insolvent",
+        }
+    }
+}
+
+/// A stack of the hero's army between battles. Injury is healed outside battle, so there is none to keep.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ArmyStack {
+    /// Stable for the whole expedition.
+    pub id: String,
+    pub troop_id: String,
+    pub count: u32,
+}
+
+/// What the hero is asked to do.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Action {
+    /// One step north, south, east or west.
+    Move { dx: i32, dy: i32 },
+    /// Let one tick pass.
+    WaitTick,
+    /// Buy creatures in the town.
+    Recruit { troop_id: String, quantity: u32 },
+    /// Take the contract on an encounter, in the town.
+    TakeContract { id: String },
+    /// Search the ground where the hero stands for the objective.
+    Search,
+}
+
+/// A request to change the expedition. It names what should happen, never the price or the result.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Command {
+    /// The revision the sender saw; a command made for another state is refused.
+    pub revision: u64,
+    pub action: Action,
+}
+
+/// Why a command was refused.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Refused {
+    /// The expedition has ended.
+    Over,
+    /// The command was made for another revision.
+    Stale { command: u64, expedition: u64 },
+    /// Not one step north, south, east or west.
+    NotAStep,
+    /// The step leads off the map or onto ground that cannot be walked.
+    CannotEnter,
+    /// An enemy band stands there. Fighting it is not implemented yet.
+    EncounterAhead { id: String },
+    /// Only possible in the town.
+    NotInTown,
+    /// The town does not sell this troop.
+    NotSold { troop_id: String },
+    /// Nothing asked for.
+    NoQuantity,
+    /// More than the town has left.
+    OutOfStock { stock: u32 },
+    /// More than the purse holds.
+    CannotAfford { cost: u64, gold: u64 },
+    /// The stack's whole health would exceed the hero's leadership.
+    OverLeadership { health: u64, leadership: u32 },
+    /// Every slot of the army holds another troop.
+    ArmyFull,
+    /// No such band to take a contract on, or it is already beaten.
+    NoSuchContract { id: String },
+}
+
+impl fmt::Display for Refused {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Over => f.write_str("the expedition is over"),
+            Self::Stale {
+                command,
+                expedition,
+            } => {
+                write!(
+                    f,
+                    "command is for revision {command}, the expedition is at {expedition}"
+                )
+            }
+            Self::NotAStep => f.write_str("not one step north, south, east or west"),
+            Self::CannotEnter => {
+                f.write_str("the step leads off the map or onto ground that cannot be walked")
+            }
+            Self::EncounterAhead { id } => write!(
+                f,
+                "{id:?} stands there, and fighting is not implemented yet"
+            ),
+            Self::NotInTown => f.write_str("only possible in the town"),
+            Self::NotSold { troop_id } => write!(f, "the town does not sell {troop_id:?}"),
+            Self::NoQuantity => f.write_str("nothing asked for"),
+            Self::OutOfStock { stock } => write!(f, "the town has only {stock} left"),
+            Self::CannotAfford { cost, gold } => {
+                write!(f, "that costs {cost}, the purse holds {gold}")
+            }
+            Self::OverLeadership { health, leadership } => {
+                write!(
+                    f,
+                    "a stack of {health} health is more than the leadership of {leadership}"
+                )
+            }
+            Self::ArmyFull => f.write_str("every slot of the army holds another troop"),
+            Self::NoSuchContract { id } => write!(f, "no contract to take on {id:?}"),
+        }
+    }
+}
+
+impl std::error::Error for Refused {}
+
+/// Something that happened, in the order it happened.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Event {
+    Moved {
+        from: Cell,
+        to: Cell,
+    },
+    /// The clock went on, from one tick to another.
+    TimePassed {
+        from: u32,
+        to: u32,
+    },
+    /// A week ended: income came in, then upkeep went out. `gold` is the purse afterwards.
+    WeekSettled {
+        week: u32,
+        income: u64,
+        upkeep: u64,
+        gold: u64,
+    },
+    Recruited {
+        troop_id: String,
+        quantity: u32,
+        cost: u64,
+    },
+    ContractTaken {
+        id: String,
+    },
+    Searched {
+        found: bool,
+    },
+    Ended {
+        status: Status,
+    },
+}
+
+/// How a stretch of time ended.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Passed {
+    /// All of it passed and the expedition goes on.
+    All,
+    /// The deadline was reached on its last tick: what the command was for still happens.
+    AtDeadline,
+    /// The deadline cut it short: what the command was for does not happen.
+    CutShort,
+    /// A week could not be paid.
+    Insolvent,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Expedition {
+    def: Arc<ExpeditionDef>,
+    /// Goes up by one with every accepted command.
+    revision: u64,
+    hero: Cell,
+    /// Ticks elapsed since the start.
+    ticks: u32,
+    gold: u64,
+    /// In slot order.
+    army: Vec<ArmyStack>,
+    /// What the town has left, by troop ID.
+    stock: BTreeMap<String, u32>,
+    /// The band whose contract the hero holds.
+    contract: Option<String>,
+    /// Objects whose place a clue has named.
+    clues: BTreeSet<String>,
+    /// Bands that are beaten.
+    cleared: BTreeSet<String>,
+    status: Status,
+}
+
+impl Expedition {
+    /// The expedition at its start.
+    #[must_use]
+    pub fn start(def: Arc<ExpeditionDef>) -> Self {
+        let army = def.start_army.iter();
+        let army = army
+            .map(|s| ArmyStack {
+                id: s.id.clone(),
+                troop_id: s.troop_id.clone(),
+                count: s.count,
+            })
+            .collect();
+        Self {
+            hero: def.start,
+            gold: def.start_gold,
+            stock: def.stock.clone(),
+            army,
+            def,
+            revision: 0,
+            ticks: 0,
+            contract: None,
+            clues: BTreeSet::new(),
+            cleared: BTreeSet::new(),
+            status: Status::Adventure,
+        }
+    }
+
+    #[must_use]
+    pub fn def(&self) -> &ExpeditionDef {
+        &self.def
+    }
+
+    #[must_use]
+    pub const fn revision(&self) -> u64 {
+        self.revision
+    }
+
+    #[must_use]
+    pub const fn hero(&self) -> Cell {
+        self.hero
+    }
+
+    #[must_use]
+    pub const fn ticks(&self) -> u32 {
+        self.ticks
+    }
+
+    #[must_use]
+    pub const fn gold(&self) -> u64 {
+        self.gold
+    }
+
+    #[must_use]
+    pub fn army(&self) -> &[ArmyStack] {
+        &self.army
+    }
+
+    /// What the town has left of a troop.
+    #[must_use]
+    pub fn stock(&self, troop_id: &str) -> u32 {
+        self.stock.get(troop_id).copied().unwrap_or(0)
+    }
+
+    #[must_use]
+    pub fn contract(&self) -> Option<&str> {
+        self.contract.as_deref()
+    }
+
+    #[must_use]
+    pub fn is_cleared(&self, object_id: &str) -> bool {
+        self.cleared.contains(object_id)
+    }
+
+    #[must_use]
+    pub const fn status(&self) -> Status {
+        self.status
+    }
+
+    /// Where the objective lies, once a clue has named the place. Without a clue the player is not told, though a
+    /// search there finds it all the same.
+    #[must_use]
+    pub fn objective_known(&self) -> Option<Cell> {
+        self.clues
+            .contains(&self.def.objective_id)
+            .then(|| self.def.objective())
+    }
+
+    /// Every living creature of the army.
+    #[must_use]
+    pub fn creatures(&self) -> u64 {
+        self.army.iter().map(|stack| u64::from(stack.count)).sum()
+    }
+
+    /// Carries out a command, or refuses it and leaves the expedition exactly as it was.
+    ///
+    /// # Errors
+    /// [`Refused`] saying why the command is not allowed now.
+    pub fn apply(&mut self, command: &Command) -> Result<Vec<Event>, Refused> {
+        let mut next = self.clone();
+        let mut events = Vec::new();
+        next.carry_out(command, &mut events)?;
+        next.revision += 1;
+        *self = next;
+        Ok(events)
+    }
+
+    fn carry_out(&mut self, command: &Command, events: &mut Vec<Event>) -> Result<(), Refused> {
+        if self.status != Status::Adventure {
+            return Err(Refused::Over);
+        }
+        if command.revision != self.revision {
+            return Err(Refused::Stale {
+                command: command.revision,
+                expedition: self.revision,
+            });
+        }
+        match &command.action {
+            Action::Move { dx, dy } => self.step(*dx, *dy, events),
+            Action::WaitTick => {
+                self.pass(1, events);
+                self.end_if_due(events);
+                Ok(())
+            }
+            Action::Recruit { troop_id, quantity } => self.recruit(troop_id, *quantity, events),
+            Action::TakeContract { id } => self.take_contract(id, events),
+            Action::Search => {
+                self.search(events);
+                Ok(())
+            }
+        }
+    }
+
+    fn step(&mut self, dx: i32, dy: i32, events: &mut Vec<Event>) -> Result<(), Refused> {
+        if dx.abs() + dy.abs() != 1 {
+            return Err(Refused::NotAStep);
+        }
+        let to = self
+            .hero
+            .x
+            .checked_add_signed(dx)
+            .zip(self.hero.y.checked_add_signed(dy));
+        let Some(to) = to
+            .map(|(x, y)| Cell { x, y })
+            .filter(|&to| self.def.map.passable(to))
+        else {
+            return Err(Refused::CannotEnter);
+        };
+        let band = self
+            .def
+            .map
+            .object_at(to)
+            .filter(|o| o.kind == ObjectKind::Encounter && !self.is_cleared(&o.id));
+        if let Some(band) = band {
+            return Err(Refused::EncounterAhead {
+                id: band.id.clone(),
+            });
+        }
+        // The step happens unless the deadline cuts the time it takes short.
+        if matches!(
+            self.pass(self.def.clock.movement_ticks, events),
+            Passed::All | Passed::AtDeadline
+        ) {
+            let from = std::mem::replace(&mut self.hero, to);
+            events.push(Event::Moved { from, to });
+        }
+        self.end_if_due(events);
+        Ok(())
+    }
+
+    fn recruit(
+        &mut self,
+        troop_id: &str,
+        quantity: u32,
+        events: &mut Vec<Event>,
+    ) -> Result<(), Refused> {
+        if self.hero != self.def.town {
+            return Err(Refused::NotInTown);
+        }
+        let (Some(&price), Some(troop)) = (
+            self.def.prices.get(troop_id),
+            self.def.rules.troop(troop_id),
+        ) else {
+            return Err(Refused::NotSold {
+                troop_id: troop_id.to_owned(),
+            });
+        };
+        if quantity == 0 {
+            return Err(Refused::NoQuantity);
+        }
+        let stock = self.stock(troop_id);
+        if quantity > stock {
+            return Err(Refused::OutOfStock { stock });
+        }
+        // Exactly what the purse holds is enough.
+        let cost = price.saturating_mul(u64::from(quantity));
+        if cost > self.gold {
+            return Err(Refused::CannotAfford {
+                cost,
+                gold: self.gold,
+            });
+        }
+        let slot = self
+            .army
+            .iter()
+            .position(|stack| stack.troop_id == troop_id);
+        let already = slot.map_or(0, |i| self.army[i].count);
+        // The whole stack, old and new, must be within the leadership; exactly the leadership is within it.
+        let health = (u64::from(already) + u64::from(quantity)) * u64::from(troop.hp);
+        if health > u64::from(self.def.leadership) {
+            return Err(Refused::OverLeadership {
+                health,
+                leadership: self.def.leadership,
+            });
+        }
+        if slot.is_none() && self.army.len() >= self.def.rules.board.max_stacks_per_side as usize {
+            return Err(Refused::ArmyFull);
+        }
+
+        self.gold -= cost;
+        self.stock.insert(troop_id.to_owned(), stock - quantity);
+        if let Some(i) = slot {
+            self.army[i].count += quantity;
+        } else {
+            // The lowest "p<n>" no stack has: among as many names as there are stacks plus one, one is free.
+            let free = (0..=self.army.len())
+                .map(|n| format!("p{n}"))
+                .find(|id| self.army.iter().all(|s| s.id != *id));
+            self.army.push(ArmyStack {
+                id: free.unwrap_or_default(),
+                troop_id: troop_id.to_owned(),
+                count: quantity,
+            });
+        }
+        events.push(Event::Recruited {
+            troop_id: troop_id.to_owned(),
+            quantity,
+            cost,
+        });
+        Ok(())
+    }
+
+    fn take_contract(&mut self, id: &str, events: &mut Vec<Event>) -> Result<(), Refused> {
+        if self.hero != self.def.town {
+            return Err(Refused::NotInTown);
+        }
+        if self.def.encounter(id).is_none() || self.is_cleared(id) {
+            return Err(Refused::NoSuchContract { id: id.to_owned() });
+        }
+        self.contract = Some(id.to_owned());
+        events.push(Event::ContractTaken { id: id.to_owned() });
+        Ok(())
+    }
+
+    /// A search takes its time whatever it finds. It finds the objective only if all of that time passes; a
+    /// search that ends exactly on the deadline still counts.
+    fn search(&mut self, events: &mut Vec<Event>) {
+        let passed = self.pass(self.def.clock.search_ticks, events);
+        if matches!(passed, Passed::All | Passed::AtDeadline) {
+            let found = self.hero == self.def.objective();
+            events.push(Event::Searched { found });
+            if found {
+                self.end(Status::Victory, events);
+            }
+        }
+        self.end_if_due(events);
+    }
+
+    /// Lets `ticks` pass, one by one: each week that ends is settled once, income first and then upkeep, and the
+    /// clock stops at the deadline. Settlement comes before anything else that falls on the same tick.
+    fn pass(&mut self, ticks: u32, events: &mut Vec<Event>) -> Passed {
+        let clock = &self.def.clock;
+        let (week_ticks, deadline) = (clock.week_ticks, clock.deadline_ticks);
+        let (income, per_creature) = (clock.weekly_income, clock.upkeep_per_creature);
+        let from = self.ticks;
+        let mut passed = Passed::All;
+        for done in 1..=ticks {
+            self.ticks += 1;
+            if self.ticks.is_multiple_of(week_ticks) {
+                let upkeep = self.creatures().saturating_mul(per_creature);
+                self.gold = self.gold.saturating_add(income);
+                if self.gold < upkeep {
+                    passed = Passed::Insolvent;
+                    break;
+                }
+                self.gold -= upkeep;
+                events.push(Event::WeekSettled {
+                    week: self.ticks / week_ticks,
+                    income,
+                    upkeep,
+                    gold: self.gold,
+                });
+            }
+            if self.ticks >= deadline {
+                passed = if done == ticks {
+                    Passed::AtDeadline
+                } else {
+                    Passed::CutShort
+                };
+                break;
+            }
+        }
+        events.push(Event::TimePassed {
+            from,
+            to: self.ticks,
+        });
+        if passed == Passed::Insolvent {
+            self.end(Status::Insolvent, events);
+        }
+        passed
+    }
+
+    /// Ends the expedition as timed out when the deadline has come and nothing else has ended it.
+    fn end_if_due(&mut self, events: &mut Vec<Event>) {
+        if self.status == Status::Adventure && self.ticks >= self.def.clock.deadline_ticks {
+            self.end(Status::Timeout, events);
+        }
+    }
+
+    fn end(&mut self, status: Status, events: &mut Vec<Event>) {
+        self.status = status;
+        events.push(Event::Ended { status });
+    }
+
+    /// The whole state that decides what happens next, as a value with one fixed encoding.
+    #[must_use]
+    pub fn to_canon(&self) -> Value {
+        let ids =
+            |set: &BTreeSet<String>| Value::Array(set.iter().map(|id| Value::str(id)).collect());
+        let army = self.army.iter().map(|stack| {
+            Value::object([
+                ("count", stack.count.into()),
+                ("id", Value::str(&stack.id)),
+                ("troop_id", Value::str(&stack.troop_id)),
+            ])
+        });
+        let stock = self
+            .stock
+            .iter()
+            .map(|(troop, left)| (troop.clone(), Value::from(*left)))
+            .collect();
+        Value::object([
+            ("army", Value::Array(army.collect())),
+            ("cleared", ids(&self.cleared)),
+            ("clues", ids(&self.clues)),
+            (
+                "contract",
+                self.contract.as_deref().map_or(Value::Null, Value::str),
+            ),
+            ("expedition_id", Value::str(&self.def.id)),
+            ("gold", self.gold.into()),
+            (
+                "hero",
+                Value::object([("x", self.hero.x.into()), ("y", self.hero.y.into())]),
+            ),
+            ("revision", self.revision.into()),
+            ("status", Value::str(self.status.name())),
+            ("stock", Value::Object(stock)),
+            ("ticks", self.ticks.into()),
+        ])
+    }
+
+    /// The digest of [`Expedition::to_canon`].
+    #[must_use]
+    pub fn digest(&self) -> String {
+        // Every key above is ASCII and every number unsigned, so the encoding cannot fail.
+        self.to_canon().digest().unwrap_or_default()
+    }
+}
+
+#[cfg(test)]
+mod tests;
