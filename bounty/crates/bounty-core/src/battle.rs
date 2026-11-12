@@ -10,7 +10,8 @@ use std::sync::Arc;
 
 use crate::canon::Value;
 use crate::content::{
-    Cell, ContentError, Morale, Profile, Rules, Scenario, Side, SpellEffect, Switches, Troop,
+    Answer, Cell, ContentError, Morale, Profile, Rules, Scenario, Side, SpellEffect, Switches,
+    Troop,
 };
 use crate::rng::{Lcg32, Lcg64, Rng};
 
@@ -871,11 +872,11 @@ impl Battle {
             && !self.stacks[defender].retaliated
         {
             self.stacks[defender].retaliated = true;
-            let from_before = self.reference() && !self.switches().answer_from_survivors;
-            let answering = if from_before {
-                before
-            } else {
-                self.stacks[defender].count
+            let after = self.stacks[defender].count;
+            let answering = match self.switches().answer {
+                Answer::Before if self.reference() => before,
+                Answer::Mean => u32::midpoint(before, after),
+                Answer::Before | Answer::Survivors => after,
             };
             self.strike(defender, attacker, answering, true, rolls, events);
         }

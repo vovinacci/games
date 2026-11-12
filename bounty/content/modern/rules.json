@@ -43,9 +43,9 @@
   "damage": {
     "method": "roll_times_count_times_skill_term_over_ten",
     "skill_term": "attacker_skill_plus_5_minus_target_skill",
-    "count_used": "count_at_the_blow",
-    "retaliation_uses_survivors": true,
-    "rolls": "mean_of_two",
+    "count_used": "count_before_the_exchange",
+    "retaliation_uses_survivors": false,
+    "rolls": "one",
     "injury_persists_during_battle": true,
     "injury_heals_after_battle": true
   },

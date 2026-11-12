@@ -21,19 +21,25 @@ BIN = $(VENV)/bin
 ascii-check: ## Check that code and config are ASCII (see tools/check_ascii.sh)
 	git ls-files -z | grep -zE '(\.(rs|toml|py|nix|sh)|Makefile|\.editorconfig)$$' | xargs -0 tools/check_ascii.sh
 
+# The suites of Bounty: the report each writes under target/ and the baseline it is held to.
+BALANCE_SUITES = suite:bounty-balance:prototype-0001 reference-suite:bounty-balance-reference:reference-0001 \
+	modern-suite:bounty-balance-modern:modern-0001
+
 .PHONY: balance
-balance: ## Bounty: play the fixed battles of both suites; reports in target/bounty-balance*.json
-	cargo run --quiet --release -p bounty-tools -- balance run --suite bounty/balance/suite.json \
-		--out target/bounty-balance.json --revision "$$(git describe --always --dirty)" $(BALANCE_ARGS)
-	cargo run --quiet --release -p bounty-tools -- balance run --suite bounty/balance/reference-suite.json \
-		--out target/bounty-balance-reference.json --revision "$$(git describe --always --dirty)" $(BALANCE_ARGS)
+balance: ## Bounty: play the fixed battles of every suite; reports in target/bounty-balance*.json
+	@for entry in $(BALANCE_SUITES); do \
+		suite=$${entry%%:*}; rest=$${entry#*:}; report=$${rest%%:*}; \
+		cargo run --quiet --release -p bounty-tools -- balance run --suite bounty/balance/$$suite.json \
+			--out target/$$report.json --revision "$$(git describe --always --dirty)" $(BALANCE_ARGS) || exit 1; \
+	done
 
 .PHONY: balance-check
 balance-check: balance ## Bounty: compare the fresh reports with the recorded baselines; any battle that moved fails
-	cargo run --quiet --release -p bounty-tools -- balance compare --exact \
-		--baseline bounty/balance/baselines/prototype-0001.json --candidate target/bounty-balance.json
-	cargo run --quiet --release -p bounty-tools -- balance compare --exact \
-		--baseline bounty/balance/baselines/reference-0001.json --candidate target/bounty-balance-reference.json
+	@for entry in $(BALANCE_SUITES); do \
+		rest=$${entry#*:}; report=$${rest%%:*}; baseline=$${rest#*:}; \
+		cargo run --quiet --release -p bounty-tools -- balance compare --exact \
+			--baseline bounty/balance/baselines/$$baseline.json --candidate target/$$report.json || exit 1; \
+	done
 
 .PHONY: build
 build: ## Build optimised, without running

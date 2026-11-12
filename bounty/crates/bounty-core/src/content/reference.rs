@@ -30,16 +30,24 @@ pub struct Reference {
     pub switches: Switches,
 }
 
+/// How many creatures of a stack answer a blow.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Answer {
+    /// As many as the stack had before the blow: creatures killed by it still strike. The reference's rule.
+    #[default]
+    Before,
+    /// Those left after the blow.
+    Survivors,
+    /// The mean of the two, rounded down: half of those the blow killed still strike.
+    Mean,
+}
+
 /// The rules a variant may set differently from the reference: one switch for each gap the study
 /// (`docs/spec/10-GAMEPLAY-GAPS.md`) proposes a rule change for. Each stands alone, so each can be measured alone.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-#[expect(
-    clippy::struct_excessive_bools,
-    reason = "four switches that have nothing to do with each other"
-)]
 pub struct Switches {
-    /// B4. The answer to a blow comes from the creatures left after it, not from the number before it.
-    pub answer_from_survivors: bool,
+    /// B4. How many creatures answer a blow.
+    pub answer: Answer,
     /// B5. A blow takes the mean of two rolls instead of one: the same average, less swing.
     pub two_rolls: bool,
     /// B1. Morale by the rule the army screen shows: a stack alone is High; every other stack of the side is
@@ -345,17 +353,21 @@ fn switch(
 fn switches(file: &File) -> Result<Switches, ContentError> {
     let vary = file.id == MODERN_RULESET;
     let damage = &file.damage;
-    let answer_from_survivors = switch(
-        "damage.count_used",
-        &damage.count_used,
-        "count_before_the_exchange",
-        "count_at_the_blow",
-        vary,
-    )?;
+    let answer = match damage.count_used.as_str() {
+        "count_before_the_exchange" => Answer::Before,
+        "count_at_the_blow" if vary => Answer::Survivors,
+        "mean_of_before_and_after_the_blow" if vary => Answer::Mean,
+        other => {
+            return Err(ContentError::Unsupported(format!(
+                "damage.count_used is {other:?}, which this ruleset does not allow"
+            )));
+        }
+    };
+    // The older yes-or-no line must agree with it.
     only(
         "damage.retaliation_uses_survivors",
         &damage.retaliation_uses_survivors,
-        &answer_from_survivors,
+        &(answer == Answer::Survivors),
     )?;
     let rolls = damage.rolls.as_deref().unwrap_or("one");
     let control = file
@@ -364,7 +376,7 @@ fn switches(file: &File) -> Result<Switches, ContentError> {
         .as_deref()
         .unwrap_or("out_of_control");
     Ok(Switches {
-        answer_from_survivors,
+        answer,
         two_rolls: switch("damage.rolls", rolls, "one", "mean_of_two", vary)?,
         army_view_morale: switch(
             "morale.rule",

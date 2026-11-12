@@ -11,7 +11,7 @@ use crate::canon::Value;
 
 mod reference;
 
-pub use reference::{Morale, Reference, Switches};
+pub use reference::{Answer, Morale, Reference, Switches};
 
 /// The synthetic ruleset the engine was built on: invented troops, for testing the engine.
 pub const RULESET: &str = "prototype-v0.1";
