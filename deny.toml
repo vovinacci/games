@@ -6,7 +6,10 @@ all-features = true
 
 [advisories]
 # Every advisory fails, including unmaintained and unsound crates; ignore one here only with a reason.
-ignore = []
+ignore = [
+    { id = "RUSTSEC-2025-0035", reason = "macroquad is the game engine and has no fixed version; review again when a new macroquad is out" },
+    { id = "RUSTSEC-2026-0192", reason = "comes with macroquad's text rendering (fontdue) and only reads the bundled font; goes away when macroquad moves on" },
+]
 
 [licenses]
 # Licences compatible with shipping the games under MIT.

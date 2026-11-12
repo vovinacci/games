@@ -1,6 +1,16 @@
 # Games: `make` alone lists the targets. Targets are in alphabetical order; each has its .PHONY line beside it.
 # Every target works on the whole workspace; pick one crate with cargo's -p (cargo test -p bounty-core).
 
+# On NixOS, cargo runs inside nix-shell so a game finds the libraries it loads at run time (GL, X11). Elsewhere, cargo
+# runs directly.
+ifneq ($(wildcard /etc/NIXOS),)
+  CARGO = nix-shell --run "cargo $(1)"
+  NEW_VENV = nix-shell --run "python3 -m venv --clear $(1)"
+else
+  CARGO = cargo $(1)
+  NEW_VENV = python3 -m venv --clear $(1)
+endif
+
 # Tools (rumdl, prek, shfmt, shellcheck) live in .venv, installed from the hash-pinned requirements.txt.
 VENV = .venv
 BIN = $(VENV)/bin
@@ -23,11 +33,11 @@ balance-check: balance ## Bounty: compare the fresh report with the recorded bas
 
 .PHONY: build
 build: ## Build optimised, without running
-	cargo build --release --workspace
+	$(call CARGO,build --release --workspace)
 
 .PHONY: check
 check: ## Type-check, fast
-	cargo check --workspace --all-targets
+	$(call CARGO,check --workspace --all-targets)
 
 .PHONY: clean
 clean: ## Remove build output and the tools
@@ -64,7 +74,7 @@ hooks-install: tools ## Install the git hooks
 
 .PHONY: lint
 lint: ## Clippy on code and tests, warnings are errors
-	cargo clippy --workspace --all-targets -- -D warnings
+	$(call CARGO,clippy --workspace --all-targets -- -D warnings)
 
 .PHONY: shell
 shell: tools ## Format shell scripts (shfmt)
@@ -77,12 +87,12 @@ shell-check: tools ## Check shell scripts (shfmt, shellcheck)
 
 .PHONY: test
 test: ## Run the tests
-	cargo test --workspace
+	$(call CARGO,test --workspace)
 
 .PHONY: tools
 tools: $(VENV)/.installed ## Install the tools into .venv
 
 $(VENV)/.installed: requirements.txt
-	python3 -m venv --clear $(VENV)
+	$(call NEW_VENV,$(VENV))
 	$(BIN)/pip install --quiet --disable-pip-version-check --require-hashes -r requirements.txt
 	touch $@

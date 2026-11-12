@@ -1,12 +1,13 @@
 # Games
 
-Small games in Rust, one cargo workspace. Each game has its own folder and its own releases; `gamekit` (to come) holds
-what the games share. This file holds the rules for the whole repository; a game's own `AGENTS.md` adds what is true for
-that game only.
+Small games in Rust, one cargo workspace. Each game has its own folder and its own releases; `gamekit` holds what the
+games share. This file holds the rules for the whole repository; a game's own `AGENTS.md` adds what is true for that
+game only.
 
 | Folder | Contents |
 |---|---|
 | `bounty/` | Bounty, a tribute to King's Bounty (1990). Crates under `bounty/crates/`; only the application may use graphics and sound; see `bounty/AGENTS.md` |
+| `gamekit/` | what the games share around their rules: virtual screen, text and font, translations, a game's own files, the dedication, developer aids. Only a game's application depends on it |
 | `tools/` | scripts used by the hooks and CI |
 | `docs/REPOSITORY.md` | GitHub settings, rulesets, CI and Dependabot |
 
@@ -34,8 +35,8 @@ that game only.
 ## Dedication
 
 The games are dedicated to the memory of Joseph Rivkind; the words are in `README.md`, in English and Ukrainian, and are
-not to be reworded. Every game shows them on its first run and in its About screen; `gamekit` will hold the text and the
-screen so that no game carries a copy of its own.
+not to be reworded. Every game shows them on its first run and in its About screen, with `gamekit::dedication`, so that
+no game carries a copy of its own.
 
 ## Pull requests
 
@@ -92,7 +93,7 @@ and ends with `main "$@"`, an empty line and `# EOF` (a truncated file then show
 
 ## Not here yet
 
-- NixOS: no `shell.nix` or flake. They come with the first crate that opens a window; until then cargo runs directly.
+- NixOS: `shell.nix` is copied from Scorch and has not been run from this repository; there is no flake yet.
 - Releases: no release workflow. It comes with the first application that has something to ship.
 
 ## Rejected Findings

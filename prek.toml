@@ -5,6 +5,9 @@
 # Hooks run on commit unless they say otherwise (tests on push, the message check on commit-msg).
 default_stages = ["pre-commit"]
 
+# Third-party licence text stays exactly as published.
+exclude = '^gamekit/assets/fonts/LICENSE-OFL\.txt$'
+
 [[repos]]
 repo = "builtin"
 hooks = [
