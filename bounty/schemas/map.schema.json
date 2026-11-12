@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Bounty map v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "width",
+    "height",
+    "terrain_legend",
+    "rows",
+    "objects"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$"
+    },
+    "width": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 256
+    },
+    "height": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 256
+    },
+    "terrain_legend": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^[ -~]$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "passable"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          },
+          "passable": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "rows": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 256,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256,
+        "pattern": "^[ -~]+$"
+      }
+    },
+    "objects": {
+      "type": "array",
+      "maxItems": 65536,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "x",
+          "y"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          },
+          "kind": {
+            "enum": [
+              "town",
+              "encounter",
+              "objective"
+            ]
+          },
+          "x": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "y": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          }
+        }
+      }
+    }
+  }
+}

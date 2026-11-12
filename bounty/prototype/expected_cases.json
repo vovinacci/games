@@ -1,0 +1,135 @@
+{
+  "schema_version": 1,
+  "status": "specified_expectations_not_executed_by_a_game_engine",
+  "rng_vector": {
+    "algorithm": "prototype-lcg32-v1",
+    "initial_state": 1,
+    "first_five_raw_draws": [
+      1015568748,
+      1586005467,
+      2165703038,
+      3027450565,
+      217083232
+    ]
+  },
+  "cases": [
+    {
+      "id": "health_26_damage",
+      "test_id": "AT-012",
+      "input": {
+        "hp_each": 10,
+        "count": 10,
+        "injury": 0,
+        "damage": 26
+      },
+      "expected": {
+        "total_hp": 74,
+        "count": 8,
+        "injury": 6
+      }
+    },
+    {
+      "id": "health_exact_kill",
+      "input": {
+        "hp_each": 10,
+        "count": 10,
+        "injury": 0,
+        "damage": 100
+      },
+      "expected": {
+        "total_hp": 0,
+        "count": 0,
+        "injury": 0
+      }
+    },
+    {
+      "id": "health_overkill",
+      "input": {
+        "hp_each": 10,
+        "count": 10,
+        "injury": 0,
+        "damage": 1000
+      },
+      "expected": {
+        "total_hp": 0,
+        "count": 0,
+        "injury": 0
+      }
+    },
+    {
+      "id": "melee_exchange",
+      "test_id": "AT-013",
+      "scenario_id": "melee_exchange",
+      "command": {
+        "kind": "melee",
+        "actor": "p0",
+        "target": "e0"
+      },
+      "forced_damage_rolls": [
+        3,
+        2
+      ],
+      "expected": {
+        "p0": {
+          "count": 9,
+          "injury": 4,
+          "activation_ended": true
+        },
+        "e0": {
+          "count": 7,
+          "injury": 0,
+          "retaliated": true
+        }
+      }
+    },
+    {
+      "id": "blocked_shooter",
+      "test_id": "AT-015",
+      "scenario_id": "blocked_shooter",
+      "command": {
+        "kind": "shoot",
+        "actor": "p0",
+        "target": "e0"
+      },
+      "expected": {
+        "legal": false,
+        "state_unchanged": true,
+        "rng_unchanged": true
+      }
+    },
+    {
+      "id": "flight_to_clear_cell",
+      "test_id": "AT-017",
+      "scenario_id": "flight_barrier",
+      "command": {
+        "kind": "fly",
+        "actor": "p0",
+        "x": 4,
+        "y": 2
+      },
+      "expected": {
+        "legal": true,
+        "movement_remaining": 2,
+        "flights_remaining": 0
+      }
+    },
+    {
+      "id": "exact_funds",
+      "test_id": "AT-033",
+      "input": {
+        "gold": 20,
+        "unit_price": 20,
+        "quantity": 1,
+        "stock": 10,
+        "existing_count": 5,
+        "hp_each": 10,
+        "leadership": 100
+      },
+      "expected": {
+        "gold": 0,
+        "stock": 9,
+        "count": 6
+      }
+    }
+  ]
+}

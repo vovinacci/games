@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Bounty save envelope v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "save_schema_version",
+    "canonical_format",
+    "payload",
+    "sha256"
+  ],
+  "properties": {
+    "save_schema_version": {
+      "const": 1
+    },
+    "canonical_format": {
+      "const": "bounty-cjson-v1"
+    },
+    "payload": {
+      "type": "object",
+      "required": [
+        "ruleset_id",
+        "ruleset_version",
+        "content_sha256",
+        "campaign",
+        "battle",
+        "rng",
+        "policy_state"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "ruleset_id": {
+          "type": "string"
+        },
+        "ruleset_version": {
+          "type": "string"
+        },
+        "content_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "campaign": {
+          "type": "object"
+        },
+        "battle": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "rng": {
+          "type": "object"
+        },
+        "policy_state": {
+          "type": "object"
+        }
+      }
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}

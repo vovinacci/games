@@ -1,0 +1,51 @@
+{
+  "schema_version": 2,
+  "metric_set_id": "small-battle-metrics-v2",
+  "record": [
+    "case_id",
+    "seed",
+    "outcome",
+    "survivors_by_side_and_troop",
+    "completed_rounds",
+    "accepted_actions",
+    "ammunition_used",
+    "spell_charges_used",
+    "invalid_commands"
+  ],
+  "run_identity": [
+    "engine_revision",
+    "ruleset_id",
+    "rules_hash",
+    "scenario_hash",
+    "pilot_version",
+    "seed_list"
+  ],
+  "reference_prices": {
+    "warden": 20,
+    "slinger": 30,
+    "skyrider": 50
+  },
+  "derived": {
+    "casualties": "starting minus surviving count, only for these no-generation/no-resurrection fixtures",
+    "replacement_cost_reference": "sum casualty count times frozen reference price",
+    "replacement_cost_native": "same casualties times candidate price, shown when prices change"
+  },
+  "validity": [
+    "complete requested coverage",
+    "unique case/seed rows",
+    "zero illegal commands",
+    "no engine errors",
+    "only explicitly allowed diagnostic outcomes",
+    "identical deterministic repeat"
+  ],
+  "comparison": "exact gameplay results for refactors; reviewed case-level diff for intentional changes",
+  "campaign_extension": [
+    "elapsed_ticks",
+    "gold",
+    "recruitment_spending",
+    "upkeep_spending",
+    "rewards",
+    "recovery_count"
+  ],
+  "claims": "No universal win rate, statistical power, approved numeric tolerance or measured baseline supplied."
+}

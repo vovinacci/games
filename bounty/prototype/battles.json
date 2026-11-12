@@ -1,0 +1,170 @@
+{
+  "schema_version": 1,
+  "ruleset_id": "prototype-v0.1",
+  "scenarios": [
+    {
+      "id": "melee_exchange",
+      "rng_state": 1,
+      "obstacles": [],
+      "hero_charges": {},
+      "stacks": [
+        {
+          "id": "p0",
+          "side": "player",
+          "slot": 0,
+          "troop_id": "warden",
+          "count": 10,
+          "injury": 0,
+          "x": 1,
+          "y": 2
+        },
+        {
+          "id": "e0",
+          "side": "enemy",
+          "slot": 0,
+          "troop_id": "warden",
+          "count": 10,
+          "injury": 0,
+          "x": 2,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "id": "blocked_shooter",
+      "rng_state": 2,
+      "obstacles": [],
+      "hero_charges": {},
+      "stacks": [
+        {
+          "id": "p0",
+          "side": "player",
+          "slot": 0,
+          "troop_id": "slinger",
+          "count": 8,
+          "injury": 0,
+          "x": 2,
+          "y": 2
+        },
+        {
+          "id": "p1",
+          "side": "player",
+          "slot": 1,
+          "troop_id": "warden",
+          "count": 5,
+          "injury": 0,
+          "x": 1,
+          "y": 4
+        },
+        {
+          "id": "e0",
+          "side": "enemy",
+          "slot": 0,
+          "troop_id": "warden",
+          "count": 8,
+          "injury": 0,
+          "x": 3,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "id": "flight_barrier",
+      "rng_state": 3,
+      "obstacles": [
+        {
+          "x": 2,
+          "y": 0
+        },
+        {
+          "x": 2,
+          "y": 1
+        },
+        {
+          "x": 2,
+          "y": 2
+        },
+        {
+          "x": 2,
+          "y": 3
+        },
+        {
+          "x": 2,
+          "y": 4
+        }
+      ],
+      "hero_charges": {},
+      "stacks": [
+        {
+          "id": "p0",
+          "side": "player",
+          "slot": 0,
+          "troop_id": "skyrider",
+          "count": 8,
+          "injury": 0,
+          "x": 0,
+          "y": 2
+        },
+        {
+          "id": "e0",
+          "side": "enemy",
+          "slot": 0,
+          "troop_id": "warden",
+          "count": 8,
+          "injury": 0,
+          "x": 5,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "id": "unreachable_melee",
+      "rng_state": 4,
+      "obstacles": [
+        {
+          "x": 2,
+          "y": 0
+        },
+        {
+          "x": 2,
+          "y": 1
+        },
+        {
+          "x": 2,
+          "y": 2
+        },
+        {
+          "x": 2,
+          "y": 3
+        },
+        {
+          "x": 2,
+          "y": 4
+        }
+      ],
+      "hero_charges": {},
+      "stacks": [
+        {
+          "id": "p0",
+          "side": "player",
+          "slot": 0,
+          "troop_id": "warden",
+          "count": 8,
+          "injury": 0,
+          "x": 0,
+          "y": 2
+        },
+        {
+          "id": "e0",
+          "side": "enemy",
+          "slot": 0,
+          "troop_id": "warden",
+          "count": 8,
+          "injury": 0,
+          "x": 5,
+          "y": 2
+        }
+      ]
+    }
+  ]
+}
