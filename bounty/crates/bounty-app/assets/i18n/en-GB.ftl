@@ -1,0 +1,53 @@
+# Bounty: text on screen, British English. Every key must also be in uk.ftl (a test checks).
+
+title = Bounty
+prototype-note = Test rules, not those of the original game
+header-battle = Battle: { $id }, seed { $seed }
+round = Round { $n }
+
+# Names. A stack is named with its side, always in the same form, so sentences never have to bend the name.
+troop-warden = Wardens
+troop-slinger = Slingers
+troop-skyrider = Skyriders
+name-player = your { $troop }
+name-enemy = enemy { $troop }
+spell-blast = Blast
+spell-mend = Mend
+
+# Sidebar
+turn-of = Turn: { $name }
+enemy-turn = The enemy is moving
+stat-count = Creatures: { $n }
+stat-health = Health of each: { $hp }, injury: { $injury }
+stat-movement = Movement left: { $n }
+stat-shots = Shots left: { $n }
+stat-flights = Flights left: { $n }
+actions = What you can do
+key-move = Arrows: move the cursor
+key-act = Enter: { $what }
+act-melee = strike { $name }
+act-shoot = shoot at { $name }
+act-walk = step here
+act-fly = fly here
+act-none = nothing to do here
+key-wait = W: wait until the end of the round
+key-pass = Space: end the turn
+key-cast = { $key }: { $spell } on the stack under the cursor ({ $n } left)
+key-language = L: language
+key-again = R: fight again
+key-quit = Esc: quit
+
+# Log
+log-round = Round { $n } begins
+log-damage = Attack: { $attacker } on { $target }. Damage { $roll } x { $attackers } = { $damage }, lost: { $losses }
+log-retaliation = Strike back: { $attacker } on { $target }. Damage { $roll } x { $attackers } = { $damage }, lost: { $losses }
+log-spell-damage = { $spell } on { $target }. Damage { $damage }, lost: { $losses }
+log-removed = Destroyed: { $name }
+log-moved = Moved: { $name }
+log-flew = Flew: { $name }
+log-waited = Waiting: { $name }
+log-healed = { $name }: injury healed, { $removed }
+
+outcome-player_win = Victory
+outcome-enemy_win = Defeat
+outcome-budget_exceeded = No result: the round limit was reached

@@ -43,6 +43,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "bounty-app"
+version = "0.0.0"
+dependencies = [
+ "bounty-ai",
+ "bounty-core",
+ "gamekit",
+ "macroquad",
+]
+
+[[package]]
 name = "bounty-core"
 version = "0.0.0"
 dependencies = [

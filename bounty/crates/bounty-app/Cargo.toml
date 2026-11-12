@@ -1,0 +1,21 @@
+[package]
+name = "bounty-app"
+version = "0.0.0"
+description = "Bounty, a tribute to King's Bounty (1990): the game itself, with window and keyboard"
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "bounty"
+path = "src/main.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+bounty-ai = { workspace = true }
+bounty-core = { workspace = true }
+gamekit = { workspace = true }
+macroquad = { workspace = true }
