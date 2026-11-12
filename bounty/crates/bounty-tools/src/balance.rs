@@ -27,6 +27,8 @@ pub struct Suite {
     pub rules_path: PathBuf,
     pub scenarios_path: PathBuf,
     pub metrics_path: PathBuf,
+    /// The recorded report that runs are compared with.
+    pub baseline_path: PathBuf,
     pub pilot: Pilot,
     pub battle_seeds: Vec<u32>,
     pub cases: Vec<Case>,
@@ -459,6 +461,26 @@ pub(crate) mod tests {
         {
             assert!(!case.outcomes.contains_key("budget_exceeded"), "{case:?}");
         }
+    }
+
+    // B-REG-004: the code as it stands gives exactly the recorded baseline. A change that is meant to move results
+    // replaces the baseline in the same pull request and says there what moved and why (bounty/balance/README.md);
+    // a change that is not meant to must leave this test alone.
+    #[test]
+    fn the_suite_gives_the_recorded_baseline() {
+        let loaded = load(&suite_path()).unwrap();
+        let path = suite_path()
+            .parent()
+            .unwrap()
+            .join(&loaded.suite.baseline_path);
+        let baseline: Report = serde_json::from_str(&fs::read_to_string(path).unwrap()).unwrap();
+        let comparison = crate::compare::compare(&baseline, &run(&loaded, &[], "test").unwrap());
+        assert!(
+            comparison.same_results(),
+            "results moved against the baseline:\n{}",
+            comparison.text()
+        );
+        assert_eq!(comparison.compared, 32);
     }
 
     // AT-073, AT-074: an outcome the case does not allow is a problem, not a quiet row.

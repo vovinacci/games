@@ -1,0 +1,1101 @@
+{
+  "schema_version": 2,
+  "suite_id": "engineering-smoke-v2",
+  "identity": {
+    "engine_revision": "84956d1",
+    "ruleset_id": "prototype-v0.1",
+    "rules_hash": "551a646fbec385273b7ad59f06e6b284cd0baed0b65af46900b458a2507c082c",
+    "scenario_hash": "ee01f31e099ee8bf4b5f94756b5885df5849781fdc989b1826877ecc101b070c",
+    "pilot_version": "approach-v1",
+    "seed_list": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ]
+  },
+  "coverage": {
+    "planned": 32,
+    "executed": 32,
+    "cases_not_run": []
+  },
+  "rows": [
+    {
+      "case_id": "melee_exchange",
+      "seed": 1,
+      "outcome": "enemy_win",
+      "survivors": {
+        "enemy": {
+          "warden": 2
+        },
+        "player": {
+          "warden": 0
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "warden": 8
+        },
+        "player": {
+          "warden": 10
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 160,
+        "player": 200
+      },
+      "completed_rounds": 3,
+      "accepted_actions": 7,
+      "ammunition_used": 0,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "bf84c36cdc782d658fffa3d8206f4b69d1d34b8c1cf7cde1cc69d7d21bf9d43c"
+    },
+    {
+      "case_id": "melee_exchange",
+      "seed": 2,
+      "outcome": "player_win",
+      "survivors": {
+        "enemy": {
+          "warden": 0
+        },
+        "player": {
+          "warden": 6
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "warden": 10
+        },
+        "player": {
+          "warden": 4
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 200,
+        "player": 80
+      },
+      "completed_rounds": 2,
+      "accepted_actions": 5,
+      "ammunition_used": 0,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "aed4e9a1622ea1f1f6d476b55fe60be4c77b018224bbbc76456a4a2617e5debb"
+    },
+    {
+      "case_id": "melee_exchange",
+      "seed": 3,
+      "outcome": "player_win",
+      "survivors": {
+        "enemy": {
+          "warden": 0
+        },
+        "player": {
+          "warden": 1
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "warden": 10
+        },
+        "player": {
+          "warden": 9
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 200,
+        "player": 180
+      },
+      "completed_rounds": 4,
+      "accepted_actions": 9,
+      "ammunition_used": 0,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "fb76f0fe9b5bbf84904976ae81282d85921b61ba5cb1afc0011994dd461e29ce"
+    },
+    {
+      "case_id": "melee_exchange",
+      "seed": 4,
+      "outcome": "player_win",
+      "survivors": {
+        "enemy": {
+          "warden": 0
+        },
+        "player": {
+          "warden": 4
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "warden": 10
+        },
+        "player": {
+          "warden": 6
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 200,
+        "player": 120
+      },
+      "completed_rounds": 2,
+      "accepted_actions": 5,
+      "ammunition_used": 0,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "f1036c4a75eec8f100b9bdc9efffabad80e6b76c526dc856975253a469fbebeb"
+    },
+    {
+      "case_id": "melee_exchange",
+      "seed": 5,
+      "outcome": "player_win",
+      "survivors": {
+        "enemy": {
+          "warden": 0
+        },
+        "player": {
+          "warden": 3
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "warden": 10
+        },
+        "player": {
+          "warden": 7
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 200,
+        "player": 140
+      },
+      "completed_rounds": 3,
+      "accepted_actions": 8,
+      "ammunition_used": 0,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "8e425adbc529400f2b410a0c5ce29a0b6e51bc818a3b1b9f03abab957232a25a"
+    },
+    {
+      "case_id": "melee_exchange",
+      "seed": 6,
+      "outcome": "player_win",
+      "survivors": {
+        "enemy": {
+          "warden": 0
+        },
+        "player": {
+          "warden": 4
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "warden": 10
+        },
+        "player": {
+          "warden": 6
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 200,
+        "player": 120
+      },
+      "completed_rounds": 2,
+      "accepted_actions": 6,
+      "ammunition_used": 0,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "4781f0f80375a337eea5cceba9cd91c2902a84c231fa3281b352f8a6c0e4854a"
+    },
+    {
+      "case_id": "melee_exchange",
+      "seed": 7,
+      "outcome": "player_win",
+      "survivors": {
+        "enemy": {
+          "warden": 0
+        },
+        "player": {
+          "warden": 2
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "warden": 10
+        },
+        "player": {
+          "warden": 8
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 200,
+        "player": 160
+      },
+      "completed_rounds": 3,
+      "accepted_actions": 8,
+      "ammunition_used": 0,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "c1befad6beb645a231bd1e22d0e108973880061843d0dd97c71e155761ccfde6"
+    },
+    {
+      "case_id": "melee_exchange",
+      "seed": 8,
+      "outcome": "player_win",
+      "survivors": {
+        "enemy": {
+          "warden": 0
+        },
+        "player": {
+          "warden": 5
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "warden": 10
+        },
+        "player": {
+          "warden": 5
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 200,
+        "player": 100
+      },
+      "completed_rounds": 2,
+      "accepted_actions": 5,
+      "ammunition_used": 0,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "c1e1d761cc71d9370cf52273240a911a619149e61c2f604cc273d64318b51cb7"
+    },
+    {
+      "case_id": "blocked_shooter",
+      "seed": 1,
+      "outcome": "player_win",
+      "survivors": {
+        "enemy": {
+          "warden": 0
+        },
+        "player": {
+          "slinger": 0,
+          "warden": 5
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "warden": 8
+        },
+        "player": {
+          "slinger": 8,
+          "warden": 0
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 160,
+        "player": 240
+      },
+      "completed_rounds": 2,
+      "accepted_actions": 9,
+      "ammunition_used": 0,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "e1cbe3d27b1f9dd922f81c1c9017a0eab7ce335b9601c295a537423af2fb0854"
+    },
+    {
+      "case_id": "blocked_shooter",
+      "seed": 2,
+      "outcome": "player_win",
+      "survivors": {
+        "enemy": {
+          "warden": 0
+        },
+        "player": {
+          "slinger": 0,
+          "warden": 4
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "warden": 8
+        },
+        "player": {
+          "slinger": 8,
+          "warden": 1
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 160,
+        "player": 260
+      },
+      "completed_rounds": 3,
+      "accepted_actions": 10,
+      "ammunition_used": 0,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "4a556951b312263ba8901c546d9dd0ad346c49f945247ac240db7701593c36be"
+    },
+    {
+      "case_id": "blocked_shooter",
+      "seed": 3,
+      "outcome": "player_win",
+      "survivors": {
+        "enemy": {
+          "warden": 0
+        },
+        "player": {
+          "slinger": 0,
+          "warden": 1
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "warden": 8
+        },
+        "player": {
+          "slinger": 8,
+          "warden": 4
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 160,
+        "player": 320
+      },
+      "completed_rounds": 4,
+      "accepted_actions": 11,
+      "ammunition_used": 0,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "216bce5b6a7c5610bafdbfe4d8951600912445a90b64d66c072d8f412f84cb20"
+    },
+    {
+      "case_id": "blocked_shooter",
+      "seed": 4,
+      "outcome": "player_win",
+      "survivors": {
+        "enemy": {
+          "warden": 0
+        },
+        "player": {
+          "slinger": 0,
+          "warden": 5
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "warden": 8
+        },
+        "player": {
+          "slinger": 8,
+          "warden": 0
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 160,
+        "player": 240
+      },
+      "completed_rounds": 2,
+      "accepted_actions": 9,
+      "ammunition_used": 0,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "e087e4d1c9fa2754a3c5fcb506ecf0058bf3d71941322818cb9cbe2e06700fa5"
+    },
+    {
+      "case_id": "blocked_shooter",
+      "seed": 5,
+      "outcome": "player_win",
+      "survivors": {
+        "enemy": {
+          "warden": 0
+        },
+        "player": {
+          "slinger": 0,
+          "warden": 3
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "warden": 8
+        },
+        "player": {
+          "slinger": 8,
+          "warden": 2
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 160,
+        "player": 280
+      },
+      "completed_rounds": 3,
+      "accepted_actions": 11,
+      "ammunition_used": 0,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "2868e2e9b9952b9a2c751e05d30b7d52e36deddbee67af50de9d42ea80d4cd0f"
+    },
+    {
+      "case_id": "blocked_shooter",
+      "seed": 6,
+      "outcome": "enemy_win",
+      "survivors": {
+        "enemy": {
+          "warden": 2
+        },
+        "player": {
+          "slinger": 0,
+          "warden": 0
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "warden": 6
+        },
+        "player": {
+          "slinger": 8,
+          "warden": 5
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 120,
+        "player": 340
+      },
+      "completed_rounds": 3,
+      "accepted_actions": 9,
+      "ammunition_used": 0,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "405b1dfed30f2e167bdacdad3efad5203e5ceb20e443edb976eaa8a5ef5baccd"
+    },
+    {
+      "case_id": "blocked_shooter",
+      "seed": 7,
+      "outcome": "player_win",
+      "survivors": {
+        "enemy": {
+          "warden": 0
+        },
+        "player": {
+          "slinger": 0,
+          "warden": 4
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "warden": 8
+        },
+        "player": {
+          "slinger": 8,
+          "warden": 1
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 160,
+        "player": 260
+      },
+      "completed_rounds": 2,
+      "accepted_actions": 9,
+      "ammunition_used": 0,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "f585543ab50fb79cc2d78da76eb4d1c027bde01d60982afce4a2dd012efc18dc"
+    },
+    {
+      "case_id": "blocked_shooter",
+      "seed": 8,
+      "outcome": "player_win",
+      "survivors": {
+        "enemy": {
+          "warden": 0
+        },
+        "player": {
+          "slinger": 0,
+          "warden": 5
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "warden": 8
+        },
+        "player": {
+          "slinger": 8,
+          "warden": 0
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 160,
+        "player": 240
+      },
+      "completed_rounds": 2,
+      "accepted_actions": 9,
+      "ammunition_used": 0,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "ffdc97d3608f20fa2cb6e4867d5210d067c0c1f52bf8c3c940f79b1a455167e3"
+    },
+    {
+      "case_id": "flight_barrier",
+      "seed": 1,
+      "outcome": "enemy_win",
+      "survivors": {
+        "enemy": {
+          "warden": 5
+        },
+        "player": {
+          "skyrider": 0
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "warden": 3
+        },
+        "player": {
+          "skyrider": 8
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 60,
+        "player": 400
+      },
+      "completed_rounds": 1,
+      "accepted_actions": 5,
+      "ammunition_used": 0,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "f0216436000cb45a609005b163413cfe4ca84d0dc4d957d78174e66ab28a1a49"
+    },
+    {
+      "case_id": "flight_barrier",
+      "seed": 2,
+      "outcome": "enemy_win",
+      "survivors": {
+        "enemy": {
+          "warden": 3
+        },
+        "player": {
+          "skyrider": 0
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "warden": 5
+        },
+        "player": {
+          "skyrider": 8
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 100,
+        "player": 400
+      },
+      "completed_rounds": 2,
+      "accepted_actions": 7,
+      "ammunition_used": 0,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "4418aa0f2c7454d42a41b11a8326d615b9811cfab2ddc3d7bbfb03e5824f0001"
+    },
+    {
+      "case_id": "flight_barrier",
+      "seed": 3,
+      "outcome": "enemy_win",
+      "survivors": {
+        "enemy": {
+          "warden": 6
+        },
+        "player": {
+          "skyrider": 0
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "warden": 2
+        },
+        "player": {
+          "skyrider": 8
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 40,
+        "player": 400
+      },
+      "completed_rounds": 1,
+      "accepted_actions": 4,
+      "ammunition_used": 0,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "caacb8aac9e8ba718674e928ad8c057eaa365773e80f05c5b031b5494b9877d3"
+    },
+    {
+      "case_id": "flight_barrier",
+      "seed": 4,
+      "outcome": "enemy_win",
+      "survivors": {
+        "enemy": {
+          "warden": 3
+        },
+        "player": {
+          "skyrider": 0
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "warden": 5
+        },
+        "player": {
+          "skyrider": 8
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 100,
+        "player": 400
+      },
+      "completed_rounds": 2,
+      "accepted_actions": 7,
+      "ammunition_used": 0,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "413165e5f78caa8a2a20b239624a6f8811d78e738cd4cb383d42c973ca6b14f2"
+    },
+    {
+      "case_id": "flight_barrier",
+      "seed": 5,
+      "outcome": "enemy_win",
+      "survivors": {
+        "enemy": {
+          "warden": 5
+        },
+        "player": {
+          "skyrider": 0
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "warden": 3
+        },
+        "player": {
+          "skyrider": 8
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 60,
+        "player": 400
+      },
+      "completed_rounds": 1,
+      "accepted_actions": 5,
+      "ammunition_used": 0,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "18df0846a92a959668f22748782c11bf7c20d27e28ad35ebbc581e3bfab9fe7a"
+    },
+    {
+      "case_id": "flight_barrier",
+      "seed": 6,
+      "outcome": "enemy_win",
+      "survivors": {
+        "enemy": {
+          "warden": 4
+        },
+        "player": {
+          "skyrider": 0
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "warden": 4
+        },
+        "player": {
+          "skyrider": 8
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 80,
+        "player": 400
+      },
+      "completed_rounds": 2,
+      "accepted_actions": 6,
+      "ammunition_used": 0,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "194f5d99357d95e8240043521a26bc7e7091576bcdd649f4e9acf56c5faeb867"
+    },
+    {
+      "case_id": "flight_barrier",
+      "seed": 7,
+      "outcome": "enemy_win",
+      "survivors": {
+        "enemy": {
+          "warden": 4
+        },
+        "player": {
+          "skyrider": 0
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "warden": 4
+        },
+        "player": {
+          "skyrider": 8
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 80,
+        "player": 400
+      },
+      "completed_rounds": 2,
+      "accepted_actions": 6,
+      "ammunition_used": 0,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "c5ffead9137066887a57b684581e7553fa3bd433a1574b6d26a4f9c7158745e2"
+    },
+    {
+      "case_id": "flight_barrier",
+      "seed": 8,
+      "outcome": "enemy_win",
+      "survivors": {
+        "enemy": {
+          "warden": 4
+        },
+        "player": {
+          "skyrider": 0
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "warden": 4
+        },
+        "player": {
+          "skyrider": 8
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 80,
+        "player": 400
+      },
+      "completed_rounds": 2,
+      "accepted_actions": 6,
+      "ammunition_used": 0,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "71aba2fc8ce30ef65a3260a84e40ef1b0c1c11e18a0c7f4c3254a6d3719ee080"
+    },
+    {
+      "case_id": "unreachable_melee",
+      "seed": 1,
+      "outcome": "budget_exceeded",
+      "survivors": {
+        "enemy": {
+          "warden": 8
+        },
+        "player": {
+          "warden": 8
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "warden": 0
+        },
+        "player": {
+          "warden": 0
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 0,
+        "player": 0
+      },
+      "completed_rounds": 200,
+      "accepted_actions": 400,
+      "ammunition_used": 0,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "055fa537e3e73dbc9ea099576fad44c62ee22104ad51226483744e375ca01205"
+    },
+    {
+      "case_id": "unreachable_melee",
+      "seed": 2,
+      "outcome": "budget_exceeded",
+      "survivors": {
+        "enemy": {
+          "warden": 8
+        },
+        "player": {
+          "warden": 8
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "warden": 0
+        },
+        "player": {
+          "warden": 0
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 0,
+        "player": 0
+      },
+      "completed_rounds": 200,
+      "accepted_actions": 400,
+      "ammunition_used": 0,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "212133b52d20c5c17d076ed4ab5014203fd074b0c9bafb1ad7e1871e3e6abf40"
+    },
+    {
+      "case_id": "unreachable_melee",
+      "seed": 3,
+      "outcome": "budget_exceeded",
+      "survivors": {
+        "enemy": {
+          "warden": 8
+        },
+        "player": {
+          "warden": 8
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "warden": 0
+        },
+        "player": {
+          "warden": 0
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 0,
+        "player": 0
+      },
+      "completed_rounds": 200,
+      "accepted_actions": 400,
+      "ammunition_used": 0,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "71ad98fbae3e7d501d7e3caf1ef953c71d07a81c35473baab0b42372955a1ecd"
+    },
+    {
+      "case_id": "unreachable_melee",
+      "seed": 4,
+      "outcome": "budget_exceeded",
+      "survivors": {
+        "enemy": {
+          "warden": 8
+        },
+        "player": {
+          "warden": 8
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "warden": 0
+        },
+        "player": {
+          "warden": 0
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 0,
+        "player": 0
+      },
+      "completed_rounds": 200,
+      "accepted_actions": 400,
+      "ammunition_used": 0,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "050e88dbed2e0c47fa11be1dcdec7fb0591609a4bee218bc86a911b89f50a015"
+    },
+    {
+      "case_id": "unreachable_melee",
+      "seed": 5,
+      "outcome": "budget_exceeded",
+      "survivors": {
+        "enemy": {
+          "warden": 8
+        },
+        "player": {
+          "warden": 8
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "warden": 0
+        },
+        "player": {
+          "warden": 0
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 0,
+        "player": 0
+      },
+      "completed_rounds": 200,
+      "accepted_actions": 400,
+      "ammunition_used": 0,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "121b0c585ce86b63d3ba4de685c8ac03fa099124f8ed9368a769b1c528979398"
+    },
+    {
+      "case_id": "unreachable_melee",
+      "seed": 6,
+      "outcome": "budget_exceeded",
+      "survivors": {
+        "enemy": {
+          "warden": 8
+        },
+        "player": {
+          "warden": 8
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "warden": 0
+        },
+        "player": {
+          "warden": 0
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 0,
+        "player": 0
+      },
+      "completed_rounds": 200,
+      "accepted_actions": 400,
+      "ammunition_used": 0,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "346d4b7b0c2e83860afa3dd17132e6f487ff5af15b39bf8f1e4f02d4bbfaf0ff"
+    },
+    {
+      "case_id": "unreachable_melee",
+      "seed": 7,
+      "outcome": "budget_exceeded",
+      "survivors": {
+        "enemy": {
+          "warden": 8
+        },
+        "player": {
+          "warden": 8
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "warden": 0
+        },
+        "player": {
+          "warden": 0
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 0,
+        "player": 0
+      },
+      "completed_rounds": 200,
+      "accepted_actions": 400,
+      "ammunition_used": 0,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "996f9c9d7880ec0be6f7c808c042c902a0dc092380364695c25f2cbb7fe603c2"
+    },
+    {
+      "case_id": "unreachable_melee",
+      "seed": 8,
+      "outcome": "budget_exceeded",
+      "survivors": {
+        "enemy": {
+          "warden": 8
+        },
+        "player": {
+          "warden": 8
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "warden": 0
+        },
+        "player": {
+          "warden": 0
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 0,
+        "player": 0
+      },
+      "completed_rounds": 200,
+      "accepted_actions": 400,
+      "ammunition_used": 0,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "fdb147cffc7512e86f6ed104d8d269da302c8b50ca87c1beb538ddbe0e5cd886"
+    }
+  ],
+  "summary": [
+    {
+      "case_id": "melee_exchange",
+      "runs": 8,
+      "outcomes": {
+        "enemy_win": 1,
+        "player_win": 7
+      },
+      "casualties": {
+        "enemy": 78,
+        "player": 55
+      },
+      "replacement_cost_reference": {
+        "enemy": 1560,
+        "player": 1100
+      }
+    },
+    {
+      "case_id": "blocked_shooter",
+      "runs": 8,
+      "outcomes": {
+        "enemy_win": 1,
+        "player_win": 7
+      },
+      "casualties": {
+        "enemy": 62,
+        "player": 77
+      },
+      "replacement_cost_reference": {
+        "enemy": 1240,
+        "player": 2180
+      }
+    },
+    {
+      "case_id": "flight_barrier",
+      "runs": 8,
+      "outcomes": {
+        "enemy_win": 8
+      },
+      "casualties": {
+        "enemy": 30,
+        "player": 64
+      },
+      "replacement_cost_reference": {
+        "enemy": 600,
+        "player": 3200
+      }
+    },
+    {
+      "case_id": "unreachable_melee",
+      "runs": 8,
+      "outcomes": {
+        "budget_exceeded": 8
+      },
+      "casualties": {
+        "enemy": 0,
+        "player": 0
+      },
+      "replacement_cost_reference": {
+        "enemy": 0,
+        "player": 0
+      }
+    }
+  ],
+  "problems": []
+}

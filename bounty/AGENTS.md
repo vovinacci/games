@@ -35,11 +35,11 @@ Bounty only. The specification is in `docs/spec/`; `README.md` gives the reading
 cargo run -q -p bounty-tools -- balance compare --baseline <before.json> --candidate <after.json>
 ```
 
-and add `--exact` for a change that must not move any result. A report with problems (a refused command, an outcome the
-case does not allow, a run that does not repeat) is a defect to fix, not a result.
+and add `--exact` for a change that must not move any result. `make balance-check` does that against the recorded
+baseline, and so does a test, so CI fails when a battle of the suite ends differently. Replacing the baseline:
+`balance/README.md`. A report with problems (a refused command, an outcome the case does not allow, a run that does not
+repeat) is a defect to fix, not a result.
 
 ## Not here yet
 
 - `bounty-app`: added when its first code arrives.
-- A recorded baseline: all four cases of the suite run, but `balance/baselines/bootstrap.json` says `not_recorded` until
-  the maintainer has looked at the first numbers.
