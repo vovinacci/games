@@ -43,6 +43,71 @@ impl Lcg32 {
     }
 }
 
+/// The random numbers of the reference rules, `reference-lcg64-v1`, as the reimplementation the rules come from
+/// draws them: a 64-bit linear congruential generator whose top 32 bits are taken modulo the size of the range.
+/// The modulo favours the low numbers of a range very slightly; that is kept, so that a sequence of rolls can be
+/// compared with the reference's.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Lcg64(u64);
+
+impl Lcg64 {
+    #[must_use]
+    pub const fn new(state: u64) -> Self {
+        Self(state)
+    }
+
+    #[must_use]
+    pub const fn state(self) -> u64 {
+        self.0
+    }
+
+    /// A number from `lo` to `hi`, both included. When `lo == hi` nothing is drawn; a `hi` below `lo` counts as
+    /// `lo`.
+    pub const fn range(&mut self, lo: u32, hi: u32) -> u32 {
+        if hi <= lo {
+            return lo;
+        }
+        self.0 = self.0.wrapping_mul(25_214_903_917).wrapping_add(11);
+        let span = (hi - lo) as u64 + 1;
+        lo + ((self.0 >> 32) % span) as u32
+    }
+}
+
+/// The generator of a battle: which one depends on the ruleset, and a battle never changes it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Rng {
+    Prototype(Lcg32),
+    Reference(Lcg64),
+}
+
+impl Rng {
+    /// A number from `lo` to `hi`, both included, by the generator's own way of drawing.
+    pub fn range(&mut self, lo: u32, hi: u32) -> u32 {
+        match self {
+            Self::Prototype(rng) => rng.range(lo, hi),
+            Self::Reference(rng) => rng.range(lo, hi),
+        }
+    }
+
+    /// The whole state, for saving and for digests.
+    #[must_use]
+    pub fn state(self) -> u64 {
+        match self {
+            Self::Prototype(rng) => u64::from(rng.state()),
+            Self::Reference(rng) => rng.state(),
+        }
+    }
+
+    /// The name the generator goes by in rules files and digests.
+    #[must_use]
+    pub const fn algorithm(self) -> &'static str {
+        match self {
+            Self::Prototype(_) => "prototype-lcg32-v1",
+            Self::Reference(_) => "reference-lcg64-v1",
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -79,4 +144,29 @@ mod tests {
         let first = Lcg32::new(1).next_raw();
         assert_eq!(rng.range(0, u32::MAX), first);
     }
+
+    // Worked out by hand from the formula, then checked with a second implementation outside this crate.
+    #[test]
+    fn the_reference_generator_draws_as_its_formula_says() {
+        let mut rng = Lcg64::new(1);
+        // 1 x 25214903917 + 11 = 25214903928; its top 32 bits are 5; 5 mod 3 = 2.
+        assert_eq!(rng.range(1, 3), 3);
+        assert_eq!(rng.state(), 25_214_903_928);
+        let draws: Vec<u32> = (0..6).map(|_| rng.range(1, 100)).collect();
+        assert_eq!(draws, REFERENCE_DRAWS);
+        let mut still = Lcg64::new(9);
+        assert_eq!(
+            (still.range(4, 4), still.state()),
+            (4, 9),
+            "a range of one number draws nothing"
+        );
+        assert_eq!(
+            Lcg64::new(1).range(0, u32::MAX),
+            5,
+            "the widest range does not overflow"
+        );
+    }
+
+    /// The six draws from 1..=100 that follow the first draw from state 1.
+    const REFERENCE_DRAWS: [u32; 6] = [30, 46, 40, 28, 81, 38];
 }

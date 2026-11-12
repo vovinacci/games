@@ -978,20 +978,4 @@ fn every_legal_action_is_accepted_in_every_fixture() {
     }
 }
 
-// The reference rules load; a battle under them is refused until its rules are implemented, never fought under the
-// prototype's by mistake.
-#[test]
-fn a_battle_under_the_reference_rules_is_refused_for_now() {
-    let reference =
-        Rules::from_json(include_str!("../../../../content/reference/rules.json")).unwrap();
-    let mut scenario = scenario("melee_exchange");
-    for stack in &mut scenario.stacks {
-        stack.troop_id = "wolves".to_owned();
-        stack.count = 3;
-    }
-    let refused = Battle::start(Arc::new(reference), &scenario, None).unwrap_err();
-    assert!(
-        matches!(&refused, ContentError::Unsupported(why) if why.contains("reference-v0.1")),
-        "{refused}"
-    );
-}
+mod reference;

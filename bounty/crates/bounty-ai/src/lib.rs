@@ -2,7 +2,7 @@
 //! a battle or see its random numbers. A player that changes its choices gets a new name, so recorded results always
 //! say which one played.
 
-use bounty_core::battle::{Action, Command, Observation, adjacent, step_allowed};
+use bounty_core::battle::{Action, Command, Observation, adjacent};
 use bounty_core::content::Cell;
 
 /// The name `approach_v1` goes by in suites and reports.
@@ -119,7 +119,7 @@ impl Ways {
                 for x in at.x.saturating_sub(1)..=at.x + 1 {
                     let to = Cell { x, y };
                     if to != from
-                        && step_allowed(at, to, |c| seen.free(c))
+                        && seen.step_allowed(at, to)
                         && ways.reached[ways.index(to)].is_none()
                     {
                         let index = ways.index(to);
@@ -355,5 +355,67 @@ mod tests {
             tape.replay(rules(), &wrong),
             Err(ReplayError::WrongTape(_))
         ));
+    }
+
+    /// A battle of the three reference troops on each side, with a rock in the middle.
+    fn reference_fight(seed: u32) -> (Arc<Rules>, Scenario) {
+        use bounty_core::content::{Side, StackStart};
+        let rules = Arc::new(
+            Rules::from_json(include_str!("../../../content/reference/rules.json")).unwrap(),
+        );
+        let stack = |id: &str, side, slot, troop: &str, count, x, y| StackStart {
+            id: id.to_owned(),
+            side,
+            slot,
+            troop_id: troop.to_owned(),
+            count,
+            injury: 0,
+            x,
+            y,
+        };
+        let scenario = Scenario {
+            id: "reference_fight".to_owned(),
+            rng_state: seed,
+            obstacles: vec![Cell { x: 2, y: 2 }],
+            hero_charges: std::collections::BTreeMap::new(),
+            stacks: vec![
+                stack("p0", Side::Player, 0, "wolves", 20, 0, 0),
+                stack("p1", Side::Player, 1, "archers", 6, 0, 2),
+                stack("p2", Side::Player, 2, "sprites", 40, 0, 4),
+                stack("e0", Side::Enemy, 0, "wolves", 20, 5, 0),
+                stack("e1", Side::Enemy, 1, "archers", 6, 5, 2),
+                stack("e2", Side::Enemy, 2, "sprites", 40, 5, 4),
+            ],
+        };
+        (rules, scenario)
+    }
+
+    // AT-060, AT-003 under the reference rules: the pilot is never refused, every battle ends with a winner, and
+    // the recorded commands give the same battle again.
+    #[test]
+    fn the_pilot_plays_the_reference_rules_and_the_battle_replays() {
+        let mut winners = std::collections::BTreeSet::new();
+        for seed in 0..40 {
+            let (rules, scenario) = reference_fight(seed);
+            let mut battle = Battle::start(Arc::clone(&rules), &scenario, None).unwrap();
+            let mut tape = Tape::new(&scenario, seed);
+            while let Some(command) = approach_v1(&battle.observe()) {
+                tape.apply(&mut battle, &command)
+                    .unwrap_or_else(|e| panic!("seed {seed}: {command:?} refused: {e}"));
+            }
+            let outcome = battle.outcome().unwrap();
+            assert_ne!(outcome, Outcome::BudgetExceeded, "seed {seed}");
+            winners.insert(outcome.name());
+            assert_eq!(
+                tape.replay(rules, &scenario).unwrap(),
+                battle,
+                "seed {seed}"
+            );
+        }
+        assert_eq!(
+            winners.len(),
+            2,
+            "over forty seeds both sides win some: {winners:?}"
+        );
     }
 }
