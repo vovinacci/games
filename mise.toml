@@ -1,0 +1,3 @@
+[tools]
+# Rust for every crate in the workspace; CI uses the same pin (jdx/mise-action).
+rust = { version = "1.99.1", components = "rustfmt,clippy" }

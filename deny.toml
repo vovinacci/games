@@ -1,0 +1,22 @@
+# cargo-deny: checks dependencies for security advisories, licences, duplicates and sources (CI job "Dependencies").
+# Run locally: cargo deny check
+
+[graph]
+all-features = true
+
+[advisories]
+# Every advisory fails, including unmaintained and unsound crates; ignore one here only with a reason.
+ignore = []
+
+[licenses]
+# Licences compatible with shipping the games under MIT.
+allow = ["MIT", "Apache-2.0", "BSD-3-Clause", "ISC", "Unicode-3.0", "Zlib"]
+confidence-threshold = 0.9
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
