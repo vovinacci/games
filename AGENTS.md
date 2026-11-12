@@ -40,8 +40,8 @@ reviewer of today. `tools/check_pr_message.sh` checks the parts a script can che
 
 - Title: a Conventional Commit in the imperative (`feat(bounty): add the wait action`), at most 65 characters (GitHub
   adds the pull request number, and the line stays within 72), no full stop at the end.
-- Description: what changed and why, and what a reader of the code would not see by himself: the reason for a choice,
-  what was left out on purpose, numbers that justify the change. Markdown is fine, in the title too.
+- Description: what changed and why, and what the code does not show by itself: the reason for a choice, what was left
+  out on purpose, numbers that justify the change. Markdown is fine, in the title too.
 - Width: the description follows `.editorconfig` like any Markdown, lines up to 120 columns; only the title has the
   short limit. (GitHub rewraps the description at 72 when it writes the commit; that is its doing and needs no care.)
 - Not in the description: checklists, HTML comments, template headings with nothing under them, trailers, the state of
