@@ -323,6 +323,7 @@ fn a_melee_exchange_matches_the_fixture() {
             count: 7,
             injury: 0,
             retaliation: false,
+            morale: None,
         }
     );
     assert!(matches!(
