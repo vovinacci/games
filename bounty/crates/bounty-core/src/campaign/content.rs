@@ -442,16 +442,26 @@ fn check_town_and_bands(
     Ok(cell)
 }
 
+/// The army stands down the player's column of the layout, one stack a row from the player's cell, coming round
+/// at the foot of the board; the band on the enemy's cell. Every cell that can be used must be on the board and
+/// free.
 fn check_layout(layout: &BattleLayout, rules: &Rules) -> Result<(), ContentError> {
-    let cells = [layout.player, layout.enemy];
-    let on_board = cells
+    let board = &rules.board;
+    let column = (0..board.max_stacks_per_side.min(board.height)).map(|slot| Cell {
+        x: layout.player.x,
+        y: (layout.player.y + slot) % board.height.max(1),
+    });
+    let mut used: Vec<Cell> = column.collect();
+    used.push(layout.enemy);
+    let on_board = used
         .iter()
         .chain(&layout.obstacles)
-        .all(|&cell| rules.board.contains(cell));
-    if !on_board
-        || layout.player == layout.enemy
-        || cells.iter().any(|cell| layout.obstacles.contains(cell))
-    {
+        .all(|&cell| board.contains(cell));
+    let clash = used
+        .iter()
+        .enumerate()
+        .any(|(i, cell)| used[..i].contains(cell) || layout.obstacles.contains(cell));
+    if !on_board || clash || board.max_stacks_per_side > board.height {
         return invalid(
             "the battle layout puts something off the board or two things in one cell".to_owned(),
         );

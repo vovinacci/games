@@ -2,6 +2,7 @@
 //! expects, and the rules its README states, each with its edge.
 
 use super::*;
+use crate::battle;
 use crate::content::{ContentError, Rules};
 
 const MAP: &str = include_str!("../../../../content/demo/map.json");
@@ -606,17 +607,323 @@ fn the_deadline_lets_a_search_end_on_it_and_cuts_a_later_one_short() {
     assert_eq!((walker.hero(), walker.ticks()), (Cell { x: 1, y: 2 }, 24));
 }
 
-#[test]
-fn a_band_bars_the_way_until_fighting_is_built() {
+/// The command of the battle's active stack that strikes if it can and passes if not.
+fn blow(expedition: &Expedition) -> Action {
+    let battle = expedition.battle().expect("a battle is being fought");
+    let strike = battle
+        .legal_actions()
+        .into_iter()
+        .find(|a| matches!(a, battle::Action::Melee { .. }));
+    Action::Battle(battle::Command {
+        revision: battle.revision(),
+        actor: battle.active().unwrap().stack.clone(),
+        action: strike.unwrap_or(battle::Action::Pass),
+    })
+}
+
+/// Fights the battle to its end, both sides striking whenever they can.
+fn fight_out(expedition: &mut Expedition) -> Vec<Event> {
+    let mut events = Vec::new();
+    while expedition.status() == Status::Battle {
+        let strike = blow(expedition);
+        events.extend(act(expedition, strike).unwrap());
+    }
+    events
+}
+
+/// The demo with twelve Wardens, standing before the first band.
+fn before_the_guard(contract: Option<&str>) -> Expedition {
     let mut e = start();
+    if let Some(id) = contract {
+        act(&mut e, Action::TakeContract { id: id.to_owned() }).unwrap();
+    }
+    act(&mut e, recruit(2)).unwrap();
     go(&mut e, 1, 0, 2);
-    refused(
-        &mut e,
-        Action::Move { dx: 1, dy: 0 },
-        &Refused::EncounterAhead {
-            id: "demo-guard".to_owned(),
-        },
+    e
+}
+
+#[test]
+fn stepping_onto_a_band_costs_the_step_and_opens_its_battle() {
+    let mut e = before_the_guard(None);
+    let events = act(&mut e, Action::Move { dx: 1, dy: 0 }).unwrap();
+    assert_eq!(
+        events,
+        [
+            Event::TimePassed { from: 2, to: 3 },
+            Event::BattleStarted {
+                band: "demo-guard".to_owned()
+            }
+        ]
     );
+    assert_eq!(
+        (e.status(), e.hero(), e.engaged_with()),
+        (Status::Battle, Cell { x: 3, y: 1 }, Some("demo-guard"))
+    );
+    // The army and the band as the expedition has them, where the layout puts them.
+    let battle = e.battle().unwrap();
+    let placed: Vec<(&str, u32, Cell)> = battle
+        .stacks()
+        .iter()
+        .map(|s| (s.id.as_str(), s.count, s.cell))
+        .collect();
+    assert_eq!(
+        placed,
+        [
+            ("p0", 12, Cell { x: 1, y: 2 }),
+            ("e0", 1, Cell { x: 2, y: 2 })
+        ]
+    );
+
+    // The map waits while the battle is fought.
+    refused(&mut e, Action::WaitTick, &Refused::InBattle);
+    refused(&mut e, Action::Move { dx: -1, dy: 0 }, &Refused::InBattle);
+    refused(&mut e, Action::Search, &Refused::InBattle);
+    // A command the battle refuses changes nothing, the battle included.
+    let stale = battle::Command {
+        revision: 9,
+        actor: "p0".to_owned(),
+        action: battle::Action::Pass,
+    };
+    let why = Refused::Battle(battle::RuleError::Stale {
+        command: 9,
+        battle: 0,
+    });
+    refused(&mut e, Action::Battle(stale), &why);
+
+    // And without a battle its commands are refused.
+    let mut idle = start();
+    let pass = battle::Command {
+        revision: 0,
+        actor: "p0".to_owned(),
+        action: battle::Action::Pass,
+    };
+    refused(&mut idle, Action::Battle(pass), &Refused::NotInBattle);
+    refused(&mut idle, Action::Surrender, &Refused::NotInBattle);
+}
+
+// AT-022: the result of a battle is written back once.
+#[test]
+fn a_won_battle_pays_once_clears_the_band_and_takes_no_time() {
+    let mut e = before_the_guard(None);
+    act(&mut e, Action::Move { dx: 1, dy: 0 }).unwrap();
+    let events = fight_out(&mut e);
+    let won = Event::BattleWon {
+        band: "demo-guard".to_owned(),
+        reward: 30,
+    };
+    let arrived = Event::Moved {
+        from: Cell { x: 3, y: 1 },
+        to: Cell { x: 4, y: 1 },
+    };
+    assert_eq!(events[events.len() - 2..], [won, arrived]);
+    assert_eq!(
+        (e.status(), e.hero(), e.gold(), e.ticks(), wardens(&e)),
+        (Status::Adventure, Cell { x: 4, y: 1 }, 90, 3, 12)
+    );
+    assert!(e.is_cleared("demo-guard") && e.battle().is_none());
+    // No clue without the band's contract, and this band has none to give.
+    assert_eq!(e.objective_known(), None);
+    // The beaten band's cell is ordinary ground now: walking back over it starts nothing and pays nothing.
+    go(&mut e, -1, 0, 1);
+    go(&mut e, 1, 0, 1);
+    assert_eq!((e.status(), e.gold()), (Status::Adventure, 90));
+}
+
+// AT-038: the clue goes to the hero who holds the band's contract.
+#[test]
+fn the_captain_gives_the_clue_only_to_the_holder_of_his_contract() {
+    let beat_both = |contract: Option<&str>| {
+        let mut e = before_the_guard(contract);
+        act(&mut e, Action::Move { dx: 1, dy: 0 }).unwrap();
+        fight_out(&mut e);
+        go(&mut e, 1, 0, 3);
+        act(&mut e, Action::Move { dx: 1, dy: 0 }).unwrap();
+        (fight_out(&mut e), e)
+    };
+    let (events, with) = beat_both(Some("demo-captain"));
+    assert!(events.contains(&Event::ClueGained {
+        object: "demo-objective".to_owned()
+    }));
+    assert_eq!(
+        (with.objective_known(), with.contract(), with.gold()),
+        (Some(Cell { x: 8, y: 5 }), None, 150)
+    );
+
+    let (events, without) = beat_both(None);
+    assert!(
+        !events
+            .iter()
+            .any(|event| matches!(event, Event::ClueGained { .. }))
+    );
+    assert_eq!(
+        (without.objective_known(), without.gold()),
+        (None, 150),
+        "the gold all the same"
+    );
+
+    // The wrong contract is no contract.
+    let (_, wrong) = beat_both(Some("demo-guard"));
+    assert_eq!(
+        (wrong.objective_known(), wrong.contract()),
+        (None, None),
+        "the guard's contract was fulfilled"
+    );
+}
+
+// AT-042, and the fixture's route `surrender-first-encounter`.
+#[test]
+fn surrender_sends_the_hero_home_with_half_his_gold_and_four_wardens() {
+    let mut e = before_the_guard(None);
+    act(&mut e, Action::Move { dx: 1, dy: 0 }).unwrap();
+    let events = act(&mut e, Action::Surrender).unwrap();
+    assert_eq!(
+        events,
+        [
+            Event::Recovered { gold: 30 },
+            Event::TimePassed { from: 3, to: 7 }
+        ]
+    );
+    assert_eq!(
+        (e.status(), e.hero(), e.gold(), e.ticks(), wardens(&e)),
+        (Status::Adventure, Cell { x: 1, y: 1 }, 30, 7, 4)
+    );
+    assert!(!e.is_cleared("demo-guard") && e.battle().is_none());
+    assert_eq!(e.stock("warden"), 8, "what was bought stays bought");
+    // The band stands as before, at its full strength.
+    go(&mut e, 1, 0, 3);
+    assert_eq!(e.battle().unwrap().stack("e0").unwrap().count, 1);
+}
+
+#[test]
+fn a_lost_battle_recovers_like_a_surrender_and_keeps_what_was_won_before() {
+    // The captain with fifty Wardens is more than twelve can beat.
+    let mut e = start_with(|def| def.encounters[1].enemy_count = 50);
+    act(
+        &mut e,
+        Action::TakeContract {
+            id: "demo-captain".to_owned(),
+        },
+    )
+    .unwrap();
+    act(&mut e, recruit(2)).unwrap();
+    go(&mut e, 1, 0, 3);
+    fight_out(&mut e);
+    go(&mut e, 1, 0, 4);
+    let events = fight_out(&mut e);
+    assert!(
+        events.contains(&Event::Recovered { gold: 45 }),
+        "half of the 90 he had"
+    );
+    assert_eq!(
+        (e.status(), e.hero(), e.ticks(), wardens(&e)),
+        (Status::Adventure, Cell { x: 1, y: 1 }, 11, 4)
+    );
+    assert!(e.is_cleared("demo-guard") && !e.is_cleared("demo-captain"));
+    assert_eq!(e.contract(), Some("demo-captain"), "the contract is kept");
+}
+
+#[test]
+fn recovery_takes_its_time_through_the_week_and_up_to_the_deadline() {
+    // Surrender at tick 17: recovery ends at 21, across the week's end, which is settled for the four Wardens.
+    let mut e = before_the_guard(None);
+    wait(&mut e, 14);
+    act(&mut e, Action::Move { dx: 1, dy: 0 }).unwrap();
+    let events = act(&mut e, Action::Surrender).unwrap();
+    let settled = Event::WeekSettled {
+        week: 1,
+        income: 20,
+        upkeep: 4,
+        gold: 46,
+    };
+    assert_eq!(
+        events,
+        [
+            Event::Recovered { gold: 30 },
+            settled,
+            Event::TimePassed { from: 17, to: 21 }
+        ]
+    );
+
+    // Surrender at tick 22: the deadline cuts recovery short, and time is up.
+    let mut late = before_the_guard(None);
+    wait(&mut late, 19);
+    act(&mut late, Action::Move { dx: 1, dy: 0 }).unwrap();
+    let events = act(&mut late, Action::Surrender).unwrap();
+    assert_eq!(
+        events.last(),
+        Some(&Event::Ended {
+            status: Status::Timeout
+        })
+    );
+    assert_eq!((late.status(), late.ticks()), (Status::Timeout, 24));
+}
+
+#[test]
+fn a_step_onto_a_band_as_time_runs_out_starts_no_battle() {
+    let mut e = before_the_guard(None);
+    wait(&mut e, 21);
+    let events = act(&mut e, Action::Move { dx: 1, dy: 0 }).unwrap();
+    assert_eq!(
+        events,
+        [
+            Event::TimePassed { from: 23, to: 24 },
+            Event::Ended {
+                status: Status::Timeout
+            }
+        ]
+    );
+    assert_eq!(
+        (e.status(), e.hero()),
+        (Status::Timeout, Cell { x: 3, y: 1 })
+    );
+    assert!(e.battle().is_none());
+}
+
+// AT-023 in the campaign: a battle nobody wins leaves the hero and the band where they were.
+#[test]
+fn a_battle_that_runs_out_of_rounds_awards_nothing() {
+    let mut e = before_the_guard(None);
+    act(&mut e, Action::Move { dx: 1, dy: 0 }).unwrap();
+    let mut last = Vec::new();
+    while e.status() == Status::Battle {
+        let battle = e.battle().unwrap();
+        let pass = battle::Command {
+            revision: battle.revision(),
+            actor: battle.active().unwrap().stack.clone(),
+            action: battle::Action::Pass,
+        };
+        last = act(&mut e, Action::Battle(pass)).unwrap();
+    }
+    assert_eq!(
+        last.last(),
+        Some(&Event::BattleStalled {
+            band: "demo-guard".to_owned()
+        })
+    );
+    assert_eq!(
+        (e.status(), e.hero(), e.gold(), wardens(&e)),
+        (Status::Adventure, Cell { x: 3, y: 1 }, 60, 12)
+    );
+    assert!(!e.is_cleared("demo-guard"));
+}
+
+#[test]
+fn the_battle_is_part_of_the_state() {
+    let mut e = before_the_guard(None);
+    let before = e.digest();
+    act(&mut e, Action::Move { dx: 1, dy: 0 }).unwrap();
+    let Value::Object(state) = e.to_canon() else {
+        panic!("an object")
+    };
+    assert_eq!(
+        (&state["status"], &state["band"]),
+        (&Value::str("battle"), &Value::str("demo-guard"))
+    );
+    assert!(state.contains_key("battle") && state.contains_key("arrival"));
+    let engaged = e.digest();
+    let strike = blow(&e);
+    act(&mut e, strike).unwrap();
+    assert!(before != engaged && engaged != e.digest());
 }
 
 #[test]
