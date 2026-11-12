@@ -26,6 +26,11 @@ balance: ## Bounty: play the fixed battles and write the report to target/bounty
 	cargo run --quiet --release -p bounty-tools -- balance run --suite bounty/balance/suite.json \
 		--out target/bounty-balance.json --revision "$$(git describe --always --dirty)" $(BALANCE_ARGS)
 
+.PHONY: balance-check
+balance-check: balance ## Bounty: compare the fresh report with the recorded baseline; any battle that moved fails
+	cargo run --quiet --release -p bounty-tools -- balance compare --exact \
+		--baseline bounty/balance/baselines/prototype-0001.json --candidate target/bounty-balance.json
+
 .PHONY: build
 build: ## Build optimised, without running
 	$(call CARGO,build --release --workspace)

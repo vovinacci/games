@@ -39,9 +39,9 @@ needed for the first milestone.
 
 `balance/suite.json` contains four synthetic cases with eight explicit seeds each. That is 32 planned engineering runs,
 not a sample-size adequacy claim. Activate cases as their mechanics exist; partial coverage is visible. The unreachable
-case expects the prototype's round budget diagnostic. No new gameplay numbers are added. `baselines/bootstrap.json` is
-honestly unrecorded. These files have schema version 2; do not consume old schema-1 reports without an explicit
-conversion.
+case expects the prototype's round budget diagnostic. No new gameplay numbers are added. `baselines/prototype-0001.json`
+is the first recorded baseline; it replaces the pack's `bootstrap.json`, which said `not_recorded`. These files have
+schema version 2; do not consume old schema-1 reports without an explicit conversion.
 
 ## Eventual tool interface (not implemented in this pack)
 

@@ -7,7 +7,7 @@
   "rules_path": "../prototype/rules.json",
   "scenarios_path": "../prototype/battles.json",
   "metrics_path": "metrics.json",
-  "baseline_path": "baselines/bootstrap.json",
+  "baseline_path": "baselines/prototype-0001.json",
   "pilot": {
     "id": "approach-v1",
     "status": "specified_not_implemented",
