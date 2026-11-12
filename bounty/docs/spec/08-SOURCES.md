@@ -72,8 +72,9 @@ For a faithfully labelled rule: select the DOS executable and record its hash/ve
 sequence; compare its visible result with the manual; use reimplementations to identify likely explanations. Record
 disagreements, rather than automatically promoting whichever source is easiest to read.
 
-Pin reference repository revisions before relying on their contents in implementation issues. The URLs above point to
-branches and can change. No commit hash is claimed in this draft.
+The URLs above point to branches and can change. What the project relies on is pinned: OpenBounty [S2, S3, S4, S7] at
+revision `aace551ca625e0c723adff0cb13b22ca2f806dee` (MIT licence, read on 12 November 2026), as recorded in
+`07-RULES-REGISTER.md`. A later revision is used only after the register is updated with what changed.
 
 ## Provenance and publication policy
 

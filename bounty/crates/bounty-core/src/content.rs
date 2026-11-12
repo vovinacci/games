@@ -9,8 +9,23 @@ use serde::Deserialize;
 
 use crate::canon::Value;
 
-/// The one ruleset this engine implements. A rules file that asks for anything else is refused, not approximated.
+mod reference;
+
+pub use reference::{Morale, Reference};
+
+/// The synthetic ruleset the engine was built on: invented troops, for testing the engine.
 pub const RULESET: &str = "prototype-v0.1";
+
+/// The first rules taken from a reimplementation of the original game, not yet checked against the original.
+pub const REFERENCE_RULESET: &str = "reference-v0.1";
+
+/// Which family of rules a ruleset belongs to. The rules of a battle branch on this and on nothing else, so a
+/// rules file cannot mix the two.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Profile {
+    Prototype,
+    Reference(Reference),
+}
 
 /// Boards larger than this are refused before any memory is set aside for them.
 const MAX_BOARD_SIDE: u32 = 16;
@@ -118,6 +133,13 @@ pub struct Troop {
     pub shots: u32,
     pub flights_per_activation: u32,
     pub recruit_cost: u32,
+    /// Skill level, which scales damage under the reference rules. 0 in the prototype, which has no skill; a
+    /// prototype file cannot set it.
+    #[serde(skip)]
+    pub skill: u32,
+    /// Place of the troop's morale group in the morale chart (0 is A). `None` in the prototype.
+    #[serde(skip)]
+    pub morale_group: Option<usize>,
 }
 
 impl Troop {
@@ -147,6 +169,7 @@ pub struct Spell {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Rules {
     pub id: String,
+    pub profile: Profile,
     pub board: Board,
     /// A battle with no winner after this many completed rounds ends as "budget exceeded".
     pub round_limit: u32,
@@ -379,42 +402,56 @@ fn read_spells(raw: Vec<raw::Spell>) -> Result<Vec<Spell>, ContentError> {
     Ok(spells)
 }
 
+/// A board small enough to set memory aside for, room for the stacks, and a round limit.
+fn check_board(board: &Board, round_limit: u32) -> Result<(), ContentError> {
+    if board.width == 0
+        || board.height == 0
+        || board.width > MAX_BOARD_SIDE
+        || board.height > MAX_BOARD_SIDE
+    {
+        return invalid(format!(
+            "board is {} by {}; each side must be 1..={MAX_BOARD_SIDE}",
+            board.width, board.height
+        ));
+    }
+    if board.max_stacks_per_side == 0 || board.max_stacks_per_side > board.width * board.height {
+        return invalid(format!(
+            "max_stacks_per_side is {}",
+            board.max_stacks_per_side
+        ));
+    }
+    if round_limit == 0 {
+        return invalid("round_limit is 0".to_owned());
+    }
+    Ok(())
+}
+
 impl Rules {
     /// Reads and checks a rules file.
     ///
     /// # Errors
     /// [`ContentError`] naming the first thing wrong.
     pub fn from_json(text: &str) -> Result<Self, ContentError> {
+        /// Enough of a rules file to tell which ruleset it is.
+        #[derive(Deserialize)]
+        struct Head {
+            id: String,
+        }
+        let head: Head = read(text)?;
+        if head.id == REFERENCE_RULESET {
+            return reference::load(text);
+        }
         let raw: raw::Rules = read(text)?;
         check_switches(&raw)?;
-
         let board = raw.board;
-        if board.width == 0
-            || board.height == 0
-            || board.width > MAX_BOARD_SIDE
-            || board.height > MAX_BOARD_SIDE
-        {
-            return invalid(format!(
-                "board is {} by {}; each side must be 1..={MAX_BOARD_SIDE}",
-                board.width, board.height
-            ));
-        }
-        if board.max_stacks_per_side == 0 || board.max_stacks_per_side > board.width * board.height
-        {
-            return invalid(format!(
-                "max_stacks_per_side is {}",
-                board.max_stacks_per_side
-            ));
-        }
-        if raw.round_limit == 0 {
-            return invalid("round_limit is 0".to_owned());
-        }
+        check_board(&board, raw.round_limit)?;
 
         check_troops(&raw.troops)?;
         let spells = read_spells(raw.spells)?;
 
         Ok(Self {
             id: raw.id,
+            profile: Profile::Prototype,
             board,
             round_limit: raw.round_limit,
             troops: raw.troops,

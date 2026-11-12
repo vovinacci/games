@@ -56,3 +56,5 @@ repeat) is a defect to fix, not a result.
 ## Not here yet
 
 - Sound, a menu, saving a battle, the campaign.
+- Battles under the reference rules: `content/reference/rules.json` loads and is checked, but `Battle::start` refuses it
+  until those rules are implemented.
