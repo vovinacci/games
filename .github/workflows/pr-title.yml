@@ -1,7 +1,8 @@
 name: PR title
 
-# Squash merges make the PR title the commit on main, so it must be a Conventional Commit. Uses pull_request, not
-# pull_request_target: the check only reads the title, so it needs no write access or secrets.
+# Squash merges make the PR title and description the commit on main: the title must be a Conventional Commit and
+# both must read as a commit message (AGENTS.md, "Pull requests"). Uses pull_request, not pull_request_target: the
+# check only reads, so it needs no write access or secrets.
 on:
   pull_request:
     types: [opened, edited, synchronize, reopened]
@@ -14,7 +15,18 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       pull-requests: read
+      contents: read
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Dependabot writes its own descriptions (release notes, HTML); the maintainer trims them when merging.
+      - name: Title and description as a commit message
+        if: github.event.pull_request.user.login != 'dependabot[bot]'
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: tools/check_pr_message.sh
       - uses: amannn/action-semantic-pull-request@2252a14e810aa9b85c2d560bd7070c802206ecf6 # v6.1.2
         env:
           GITHUB_TOKEN: ${{ github.token }}
