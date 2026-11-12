@@ -14,6 +14,7 @@ use crate::content::{
     Troop,
 };
 use crate::rng::{Lcg32, Lcg64, Rng};
+use crate::save::{Reader, SaveError, invalid};
 
 /// A group of creatures of one kind, acting as one piece on the board.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -74,6 +75,13 @@ impl Outcome {
             Self::EnemyWin => "enemy_win",
             Self::BudgetExceeded => "budget_exceeded",
         }
+    }
+    /// The outcome of that name.
+    #[must_use]
+    pub fn from_name(name: &str) -> Option<Self> {
+        [Self::PlayerWin, Self::EnemyWin, Self::BudgetExceeded]
+            .into_iter()
+            .find(|outcome| outcome.name() == name)
     }
 }
 
@@ -1301,6 +1309,231 @@ impl Battle {
     pub fn digest(&self) -> String {
         // Every key above is ASCII and every number a u32 or u64, so the encoding cannot fail.
         self.to_canon().digest().unwrap_or_default()
+    }
+}
+
+fn saved_cell(from: &Reader<'_>) -> Result<Cell, SaveError> {
+    Ok(Cell {
+        x: from.u32("x")?,
+        y: from.u32("y")?,
+    })
+}
+
+/// The stacks of a saved battle, in the order the battle keeps them.
+fn saved_stacks(
+    rules: &Rules,
+    state: &Reader<'_>,
+    reference: bool,
+) -> Result<Vec<Stack>, SaveError> {
+    let mut stacks = Vec::new();
+    for item in state.list("stacks")? {
+        let from = Reader::of(item, "a stack")?;
+        let troop_id = from.text("troop_id")?;
+        let Some(troop) = rules.troops.iter().position(|troop| troop.id == troop_id) else {
+            return invalid(format!("a stack is of the unknown troop {troop_id:?}"));
+        };
+        let Some(side) = Side::from_name(from.text("side")?) else {
+            return invalid(format!("a stack is on the side {:?}", from.text("side")?));
+        };
+        stacks.push(Stack {
+            id: from.text("id")?.to_owned(),
+            side,
+            slot: from.u32("slot")?,
+            troop_id: troop_id.to_owned(),
+            troop,
+            cell: saved_cell(&from.object("cell")?)?,
+            count: from.u32("count")?,
+            injury: from.u32("injury")?,
+            shots: from.u32("shots")?,
+            retaliated: from.flag("retaliated")?,
+            waited: from.flag("waited")?,
+            // Only the rules that have control write the mark, and they always do.
+            out_of_control: if reference {
+                from.flag("out_of_control")?
+            } else {
+                false
+            },
+        });
+    }
+    stacks.sort_by_key(|stack| (stack.side, stack.slot));
+    Ok(stacks)
+}
+
+impl Battle {
+    /// The battle a value written by [`Battle::to_canon`] describes, under these rules. Everything is checked:
+    /// a value that names an unknown troop, puts two stacks on one cell, or gives the turn to a dead stack is
+    /// refused, since the rules could not have produced it.
+    ///
+    /// # Errors
+    /// [`SaveError::Invalid`] naming the first thing that cannot be.
+    pub fn from_canon(rules: Arc<Rules>, value: &Value) -> Result<Self, SaveError> {
+        let state = Reader::of(value, "the battle")?;
+        if state.text("ruleset_id")? != rules.id {
+            return invalid(format!(
+                "the battle was fought under {:?}",
+                state.text("ruleset_id")?
+            ));
+        }
+        let reference = matches!(rules.profile, Profile::Reference(_));
+        let generator = state.object("rng")?;
+        let seed = generator.u64("state")?;
+        let rng = match (reference, generator.text("algorithm")?, u32::try_from(seed)) {
+            (false, "prototype-lcg32-v1", Ok(seed)) => Rng::Prototype(Lcg32::new(seed)),
+            (true, "reference-lcg64-v1", _) => Rng::Reference(Lcg64::new(seed)),
+            (_, other, _) => {
+                return invalid(format!(
+                    "the generator {other:?} is not the one of these rules"
+                ));
+            }
+        };
+
+        let stacks = saved_stacks(&rules, &state, reference)?;
+
+        let obstacles = state.list("obstacles")?.iter();
+        let obstacles = obstacles
+            .map(|item| saved_cell(&Reader::of(item, "an obstacle")?))
+            .collect::<Result<Vec<_>, _>>()?;
+        let active = match state.opt("active") {
+            None => None,
+            Some(value) => {
+                let from = Reader::of(value, "the activation")?;
+                Some(Activation {
+                    stack: from.text("stack")?.to_owned(),
+                    movement: from.u32("movement")?,
+                    flights: from.u32("flights")?,
+                    moved: from.flag("moved")?,
+                })
+            }
+        };
+        let outcome = match state.opt("outcome") {
+            None => None,
+            Some(Value::Str(name)) => match Outcome::from_name(name) {
+                Some(outcome) => Some(outcome),
+                None => return invalid(format!("the battle ended as {name:?}")),
+            },
+            Some(_) => return invalid("the battle's outcome is not text"),
+        };
+        let side = if reference {
+            Side::from_name(state.text("side")?)
+        } else {
+            Some(Side::Player)
+        };
+        let Some(side) = side else {
+            return invalid("the battle has no side whose part of the round it is");
+        };
+        let leadership = match state.opt("leadership") {
+            Some(Value::Int(n)) if reference => {
+                Some(u32::try_from(*n).or_else(|_| invalid("the leadership is out of range"))?)
+            }
+            None => None,
+            Some(_) => return invalid("these rules have no leadership, or it is not a number"),
+        };
+        let battle = Self {
+            rules,
+            revision: state.u64("revision")?,
+            round: state.u32("round")?,
+            rng,
+            side,
+            stacks,
+            obstacles,
+            queue: state.texts("queue")?.into(),
+            deferred: state.texts("deferred")?.into(),
+            active,
+            hero_charges: state.numbers("hero_charges")?,
+            leadership,
+            cast_this_round: state.flag("cast_this_round")?,
+            outcome,
+        };
+        battle.check()?;
+        Ok(battle)
+    }
+
+    /// What must hold of any battle the rules produce. A saved battle that fails this is refused.
+    fn check(&self) -> Result<(), SaveError> {
+        let board = &self.rules.board;
+        if self.round == 0 || self.round > self.rules.round_limit {
+            return invalid(format!(
+                "round {} of at most {}",
+                self.round, self.rules.round_limit
+            ));
+        }
+        for (i, stack) in self.stacks.iter().enumerate() {
+            let troop = &self.rules.troops[stack.troop];
+            let id = &stack.id;
+            let twin = |other: &Stack| {
+                other.id == *id || (other.side == stack.side && other.slot == stack.slot)
+            };
+            if self.stacks[..i].iter().any(twin) || stack.slot >= board.max_stacks_per_side {
+                return invalid(format!(
+                    "stack {id:?} shares its ID or its slot, or its slot is none"
+                ));
+            }
+            if stack.shots > troop.shots {
+                return invalid(format!(
+                    "stack {id:?} has more shots than its troop starts with"
+                ));
+            }
+            if !stack.alive() {
+                if stack.injury != 0 {
+                    return invalid(format!("the dead stack {id:?} is hurt"));
+                }
+                continue;
+            }
+            let shared = self.stacks[..i]
+                .iter()
+                .any(|other| other.alive() && other.cell == stack.cell);
+            if stack.injury >= troop.hp
+                || !board.contains(stack.cell)
+                || self.obstacles.contains(&stack.cell)
+                || shared
+            {
+                return invalid(format!(
+                    "stack {id:?} is hurt beyond one creature, or stands where it cannot"
+                ));
+            }
+        }
+        if self.obstacles.iter().any(|&cell| !board.contains(cell)) {
+            return invalid("an obstacle is off the board");
+        }
+        let living = |id: &String| {
+            self.stacks
+                .iter()
+                .any(|stack| stack.id == *id && stack.alive())
+        };
+        if let Some(lost) = self
+            .queue
+            .iter()
+            .chain(&self.deferred)
+            .find(|id| self.stack(id).is_none())
+        {
+            return invalid(format!("{lost:?} waits its turn and is no stack"));
+        }
+        if let Some(unknown) = self
+            .hero_charges
+            .keys()
+            .find(|spell| self.rules.spell(spell).is_none())
+        {
+            return invalid(format!("charges of the unknown spell {unknown:?}"));
+        }
+        match (&self.active, self.outcome) {
+            (Some(active), None) => {
+                let Some(stack) = self.stack(&active.stack).filter(|_| living(&active.stack))
+                else {
+                    return invalid(format!(
+                        "it is the turn of {:?}, which is not alive",
+                        active.stack
+                    ));
+                };
+                let troop = self.troop(stack);
+                if active.movement > troop.movement || active.flights > troop.flights_per_activation
+                {
+                    return invalid("the active stack has more movement or flights than its troop");
+                }
+                Ok(())
+            }
+            (None, Some(_)) => Ok(()),
+            _ => invalid("a battle is either someone's turn or over, never both or neither"),
+        }
     }
 }
 

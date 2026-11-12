@@ -19,6 +19,7 @@ pub use content::{
 use crate::battle::{self, Battle, Outcome};
 use crate::canon::Value;
 use crate::content::{Cell, Profile, Scenario, Side, StackStart};
+use crate::save::{Reader, SaveError, invalid};
 
 /// How an expedition stands.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -46,6 +47,19 @@ impl Status {
             Self::Timeout => "timeout",
             Self::Insolvent => "insolvent",
         }
+    }
+
+    /// The status of that name.
+    #[must_use]
+    pub fn from_name(name: &str) -> Option<Self> {
+        let all = [
+            Self::Adventure,
+            Self::Battle,
+            Self::Victory,
+            Self::Timeout,
+            Self::Insolvent,
+        ];
+        all.into_iter().find(|status| status.name() == name)
     }
 }
 
@@ -294,6 +308,12 @@ impl Expedition {
 
     #[must_use]
     pub fn def(&self) -> &ExpeditionDef {
+        &self.def
+    }
+
+    /// The definition as the expedition holds it, for another expedition of the same: a loaded save.
+    #[must_use]
+    pub const fn def_shared(&self) -> &Arc<ExpeditionDef> {
         &self.def
     }
 
@@ -804,6 +824,133 @@ impl Expedition {
             );
         }
         value
+    }
+
+    /// The expedition of `def` that a value written by [`Expedition::to_canon`] describes, with its battle given
+    /// apart, as a save keeps it. A state the rules could not have reached is refused.
+    ///
+    /// # Errors
+    /// [`SaveError::Invalid`] naming the first thing that cannot be.
+    pub fn from_canon(
+        def: Arc<ExpeditionDef>,
+        value: &Value,
+        battle: Option<&Value>,
+    ) -> Result<Self, SaveError> {
+        let state = Reader::of(value, "the campaign")?;
+        if state.text("expedition_id")? != def.id {
+            return invalid(format!(
+                "it is the expedition {:?}",
+                state.text("expedition_id")?
+            ));
+        }
+        let cell = |key| -> Result<Cell, SaveError> {
+            let from = state.object(key)?;
+            Ok(Cell {
+                x: from.u32("x")?,
+                y: from.u32("y")?,
+            })
+        };
+        let Some(status) = Status::from_name(state.text("status")?) else {
+            return invalid(format!(
+                "the expedition stands as {:?}",
+                state.text("status")?
+            ));
+        };
+        let mut army = Vec::new();
+        for item in state.list("army")? {
+            let from = Reader::of(item, "a stack of the army")?;
+            army.push(ArmyStack {
+                id: from.text("id")?.to_owned(),
+                troop_id: from.text("troop_id")?.to_owned(),
+                count: from.u32("count")?,
+            });
+        }
+        let engagement = match battle {
+            None => None,
+            Some(battle) => Some(Engagement {
+                battle: Battle::from_canon(Arc::clone(&def.rules), battle)?,
+                band: state.text("band")?.to_owned(),
+                arrival: cell("arrival")?,
+            }),
+        };
+        let expedition = Self {
+            revision: state.u64("revision")?,
+            hero: cell("hero")?,
+            ticks: state.u32("ticks")?,
+            gold: state.u64("gold")?,
+            army,
+            stock: state.numbers("stock")?,
+            contract: match state.opt("contract") {
+                None => None,
+                Some(Value::Str(band)) => Some(band.clone()),
+                Some(_) => return invalid("the contract is not text"),
+            },
+            clues: state.texts("clues")?.into_iter().collect(),
+            cleared: state.texts("cleared")?.into_iter().collect(),
+            engagement,
+            status,
+            def,
+        };
+        expedition.check()?;
+        Ok(expedition)
+    }
+
+    /// What must hold of any expedition the rules produce. A saved one that fails this is refused.
+    fn check(&self) -> Result<(), SaveError> {
+        let def = &self.def;
+        if !def.map.passable(self.hero) {
+            return invalid("the hero stands where nobody can");
+        }
+        if self.ticks > def.clock.deadline_ticks {
+            return invalid("the clock is past the deadline");
+        }
+        for (i, stack) in self.army.iter().enumerate() {
+            let known = def
+                .rules
+                .troops
+                .iter()
+                .any(|troop| troop.id == stack.troop_id);
+            if !known || stack.count == 0 || self.army[..i].iter().any(|other| other.id == stack.id)
+            {
+                return invalid(format!(
+                    "the army's stack {:?} is empty, a twin, or of no troop",
+                    stack.id
+                ));
+            }
+        }
+        if self.army.len() > def.rules.board.max_stacks_per_side as usize {
+            return invalid("the army has more stacks than a side may field");
+        }
+        let stocked =
+            |(troop, left): (&String, &u32)| def.stock.get(troop).is_some_and(|all| left <= all);
+        if self.stock.len() != def.stock.len() || !self.stock.iter().all(stocked) {
+            return invalid("the town's stock is not of this expedition");
+        }
+        let band = |id: &String| def.encounter(id).is_some();
+        if !self.cleared.iter().all(band) || !self.contract.iter().all(band) {
+            return invalid("a beaten band or the contract names no band");
+        }
+        if let Some(unknown) = self.clues.iter().find(|id| def.map.object(id).is_none()) {
+            return invalid(format!("a clue names {unknown:?}, which is not on the map"));
+        }
+        match (&self.engagement, self.status) {
+            (Some(engagement), Status::Battle) => {
+                if !band(&engagement.band) || self.cleared.contains(&engagement.band) {
+                    return invalid("the battle is against no band, or one already beaten");
+                }
+                if !def.map.passable(engagement.arrival) {
+                    return invalid("the battle leads where nobody can stand");
+                }
+                if engagement.battle.outcome().is_some() {
+                    return invalid("the battle is over and its result not written back");
+                }
+                Ok(())
+            }
+            (None, Status::Battle) | (Some(_), _) => {
+                invalid("an expedition is in battle exactly when it has one")
+            }
+            (None, _) => Ok(()),
+        }
     }
 
     /// The digest of [`Expedition::to_canon`].

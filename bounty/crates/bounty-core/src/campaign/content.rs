@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use serde::Deserialize;
 
-use crate::canon::Value;
+use crate::canon::{Value, sha256_hex};
 use crate::content::{Cell, ContentError, Rules};
 
 /// Maps larger than this on a side are refused before any memory is set aside for them.
@@ -256,6 +256,9 @@ pub struct ExpeditionDef {
     pub recovery: Recovery,
     /// The routes a fixture file carries for the tests, as written. Nothing in play reads them.
     pub test_routes: Vec<serde_json::Value>,
+    /// SHA-256 over the three files the expedition was read from: its own, its map's and its rules'. A save
+    /// carries it, and is refused when any of the three has changed since.
+    pub content_sha256: String,
 }
 
 #[derive(Deserialize)]
@@ -500,12 +503,17 @@ fn known(rules: &Rules, troop: &str, what: &str) -> Result<(), ContentError> {
 }
 
 impl ExpeditionDef {
-    /// Reads and checks an expedition file against its map and the rules of its battles. The caller reads the
-    /// three files; this crate opens none.
+    /// Reads and checks an expedition from the texts of its three files: its own, its map's and the rules of its
+    /// battles. The caller reads the files; this crate opens none.
     ///
     /// # Errors
     /// [`ContentError`] naming the first thing wrong.
-    pub fn from_json(text: &str, map: Map, rules: Arc<Rules>) -> Result<Self, ContentError> {
+    pub fn from_texts(text: &str, map: &str, rules: &str) -> Result<Self, ContentError> {
+        // The lengths go into the hash with the texts, so that no two triples of files run together alike.
+        let mut all = format!("{} {} {}\n", text.len(), map.len(), rules.len());
+        all.extend([text, map, rules]);
+        let content_sha256 = sha256_hex(all.as_bytes());
+        let (map, rules) = (Map::from_json(map)?, Arc::new(Rules::from_json(rules)?));
         let file: File = read(text)?;
         only("schema_version", &file.schema_version, &1)?;
         only(
@@ -571,6 +579,7 @@ impl ExpeditionDef {
             objective_id: file.objective.object_id,
             recovery,
             test_routes: file.tests,
+            content_sha256,
         })
     }
 
