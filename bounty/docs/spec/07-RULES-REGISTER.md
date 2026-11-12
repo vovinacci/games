@@ -231,3 +231,10 @@ decides what the player is told against what the dice do.
 Refused on load, not approximated: hero spells in battle, troop abilities other than flying (regeneration, leech,
 absorption, the demon's scythe, magic shots and immunity, undead), artefact powers, siege layout, the random field
 obstacles of an encounter, spoils. Each comes with the first troop or encounter that needs it.
+
+## A variant, not a source: `modern-v0.1`
+
+`content/modern/rules.json` holds the reference rules with four switches set otherwise, to try the rule changes proposed
+in `10-GAMEPLAY-GAPS.md`. Nothing in it is evidence about the original, and nothing it changes is ever written back into
+`reference-v0.1`. The loader lets only this ruleset set a switch; the reference file with a variant's value is refused.
+The variant plays the reference's battles and keeps its own baselines.

@@ -11,13 +11,17 @@ use crate::canon::Value;
 
 mod reference;
 
-pub use reference::{Morale, Reference};
+pub use reference::{Morale, Reference, Switches};
 
 /// The synthetic ruleset the engine was built on: invented troops, for testing the engine.
 pub const RULESET: &str = "prototype-v0.1";
 
 /// The first rules taken from a reimplementation of the original game, not yet checked against the original.
 pub const REFERENCE_RULESET: &str = "reference-v0.1";
+
+/// A variant of the reference rules: the same troops and battles, with the rule changes the study of the
+/// original's gaps proposes switched on. Never a claim about the original.
+pub const MODERN_RULESET: &str = "modern-v0.1";
 
 /// Which family of rules a ruleset belongs to. The rules of a battle branch on this and on nothing else, so a
 /// rules file cannot mix the two.
@@ -169,6 +173,8 @@ pub struct Spell {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Rules {
     pub id: String,
+    /// The ruleset whose battle files these rules play: their own, or for a variant the reference's.
+    pub battles_id: String,
     pub profile: Profile,
     pub board: Board,
     /// A battle with no winner after this many completed rounds ends as "budget exceeded".
@@ -438,7 +444,7 @@ impl Rules {
             id: String,
         }
         let head: Head = read(text)?;
-        if head.id == REFERENCE_RULESET {
+        if head.id == REFERENCE_RULESET || head.id == MODERN_RULESET {
             return reference::load(text);
         }
         let raw: raw::Rules = read(text)?;
@@ -450,6 +456,7 @@ impl Rules {
         let spells = read_spells(raw.spells)?;
 
         Ok(Self {
+            battles_id: raw.id.clone(),
             id: raw.id,
             profile: Profile::Prototype,
             board,
@@ -528,7 +535,11 @@ struct ScenarioFile {
 pub fn scenarios_from_json(text: &str, rules: &Rules) -> Result<Vec<Scenario>, ContentError> {
     let file: ScenarioFile = read(text)?;
     only("schema_version", &file.schema_version, &1)?;
-    only("ruleset_id", &file.ruleset_id.as_str(), &rules.id.as_str())?;
+    only(
+        "ruleset_id",
+        &file.ruleset_id.as_str(),
+        &rules.battles_id.as_str(),
+    )?;
     unique("scenario", file.scenarios.iter().map(|s| s.id.as_str()))?;
     for scenario in &file.scenarios {
         scenario.check(rules)?;
