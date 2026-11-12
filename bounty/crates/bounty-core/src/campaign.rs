@@ -16,14 +16,17 @@ pub use content::{
     Terrain,
 };
 
+use crate::battle::{self, Battle, Outcome};
 use crate::canon::Value;
-use crate::content::Cell;
+use crate::content::{Cell, Profile, Scenario, Side, StackStart};
 
 /// How an expedition stands.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Status {
     /// The hero is on the map and may act.
     Adventure,
+    /// A battle is being fought; only its commands and surrender are taken.
+    Battle,
     /// The objective was found.
     Victory,
     /// The deadline came first.
@@ -38,6 +41,7 @@ impl Status {
     pub const fn name(self) -> &'static str {
         match self {
             Self::Adventure => "adventure",
+            Self::Battle => "battle",
             Self::Victory => "victory",
             Self::Timeout => "timeout",
             Self::Insolvent => "insolvent",
@@ -67,6 +71,10 @@ pub enum Action {
     TakeContract { id: String },
     /// Search the ground where the hero stands for the objective.
     Search,
+    /// A command of the battle being fought.
+    Battle(battle::Command),
+    /// Give the battle up.
+    Surrender,
 }
 
 /// A request to change the expedition. It names what should happen, never the price or the result.
@@ -88,8 +96,12 @@ pub enum Refused {
     NotAStep,
     /// The step leads off the map or onto ground that cannot be walked.
     CannotEnter,
-    /// An enemy band stands there. Fighting it is not implemented yet.
-    EncounterAhead { id: String },
+    /// A battle is being fought; the map waits.
+    InBattle,
+    /// No battle is being fought.
+    NotInBattle,
+    /// The battle refused its command.
+    Battle(battle::RuleError),
     /// Only possible in the town.
     NotInTown,
     /// The town does not sell this troop.
@@ -125,10 +137,9 @@ impl fmt::Display for Refused {
             Self::CannotEnter => {
                 f.write_str("the step leads off the map or onto ground that cannot be walked")
             }
-            Self::EncounterAhead { id } => write!(
-                f,
-                "{id:?} stands there, and fighting is not implemented yet"
-            ),
+            Self::InBattle => f.write_str("a battle is being fought"),
+            Self::NotInBattle => f.write_str("no battle is being fought"),
+            Self::Battle(refused) => write!(f, "the battle refused: {refused}"),
             Self::NotInTown => f.write_str("only possible in the town"),
             Self::NotSold { troop_id } => write!(f, "the town does not sell {troop_id:?}"),
             Self::NoQuantity => f.write_str("nothing asked for"),
@@ -180,6 +191,29 @@ pub enum Event {
     Searched {
         found: bool,
     },
+    /// The hero stepped onto a band and its battle began.
+    BattleStarted {
+        band: String,
+    },
+    /// Something happened in the battle.
+    Battle(battle::Event),
+    /// The band is beaten; the reward is in the purse.
+    BattleWon {
+        band: String,
+        reward: u64,
+    },
+    /// A clue named the place of an object.
+    ClueGained {
+        object: String,
+    },
+    /// The battle ran out of rounds with nobody winning; the hero stays where he stood and the band remains.
+    BattleStalled {
+        band: String,
+    },
+    /// A battle was lost or given up: the hero is back at the place of recovery with what recovery leaves him.
+    Recovered {
+        gold: u64,
+    },
     Ended {
         status: Status,
     },
@@ -196,6 +230,14 @@ enum Passed {
     CutShort,
     /// A week could not be paid.
     Insolvent,
+}
+
+/// A battle of the expedition while it is fought.
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct Engagement {
+    battle: Battle,
+    band: String,
+    arrival: Cell,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -217,6 +259,8 @@ pub struct Expedition {
     clues: BTreeSet<String>,
     /// Bands that are beaten.
     cleared: BTreeSet<String>,
+    /// The battle being fought, with the band and the cell the hero arrives on if he wins.
+    engagement: Option<Engagement>,
     status: Status,
 }
 
@@ -243,6 +287,7 @@ impl Expedition {
             contract: None,
             clues: BTreeSet::new(),
             cleared: BTreeSet::new(),
+            engagement: None,
             status: Status::Adventure,
         }
     }
@@ -293,6 +338,22 @@ impl Expedition {
         self.cleared.contains(object_id)
     }
 
+    /// The battle being fought, if one is.
+    #[must_use]
+    pub fn battle(&self) -> Option<&Battle> {
+        self.engagement
+            .as_ref()
+            .map(|engagement| &engagement.battle)
+    }
+
+    /// The band being fought, if one is.
+    #[must_use]
+    pub fn engaged_with(&self) -> Option<&str> {
+        self.engagement
+            .as_ref()
+            .map(|engagement| engagement.band.as_str())
+    }
+
     #[must_use]
     pub const fn status(&self) -> Status {
         self.status
@@ -327,7 +388,7 @@ impl Expedition {
     }
 
     fn carry_out(&mut self, command: &Command, events: &mut Vec<Event>) -> Result<(), Refused> {
-        if self.status != Status::Adventure {
+        if !matches!(self.status, Status::Adventure | Status::Battle) {
             return Err(Refused::Over);
         }
         if command.revision != self.revision {
@@ -336,7 +397,15 @@ impl Expedition {
                 expedition: self.revision,
             });
         }
+        let fighting = self.status == Status::Battle;
         match &command.action {
+            Action::Battle(order) if fighting => self.fight(order, events),
+            Action::Surrender if fighting => {
+                self.recover(events);
+                Ok(())
+            }
+            Action::Battle(_) | Action::Surrender => Err(Refused::NotInBattle),
+            _ if fighting => Err(Refused::InBattle),
             Action::Move { dx, dy } => self.step(*dx, *dy, events),
             Action::WaitTick => {
                 self.pass(1, events);
@@ -372,21 +441,166 @@ impl Expedition {
             .map
             .object_at(to)
             .filter(|o| o.kind == ObjectKind::Encounter && !self.is_cleared(&o.id));
-        if let Some(band) = band {
-            return Err(Refused::EncounterAhead {
-                id: band.id.clone(),
-            });
-        }
-        // The step happens unless the deadline cuts the time it takes short.
-        if matches!(
-            self.pass(self.def.clock.movement_ticks, events),
-            Passed::All | Passed::AtDeadline
-        ) {
-            let from = std::mem::replace(&mut self.hero, to);
-            events.push(Event::Moved { from, to });
+        let band = band.map(|object| object.id.clone());
+        // The step takes its time whatever stands there, and happens unless the deadline cuts that time short.
+        let passed = self.pass(self.def.clock.movement_ticks, events);
+        match band {
+            // A band bars the way: the step opens its battle, and the cell is where the hero arrives if he wins.
+            // With time up at the same tick there is no battle.
+            Some(band) if passed == Passed::All => self.engage(band, to, events),
+            None if matches!(passed, Passed::All | Passed::AtDeadline) => {
+                let from = std::mem::replace(&mut self.hero, to);
+                events.push(Event::Moved { from, to });
+            }
+            _ => {}
         }
         self.end_if_due(events);
         Ok(())
+    }
+
+    /// Sets up the battle against a band: the army down the player's column of the layout, in slot order, the
+    /// band on the enemy's cell.
+    fn engage(&mut self, band: String, arrival: Cell, events: &mut Vec<Event>) {
+        let def = Arc::clone(&self.def);
+        let Some(encounter) = def.encounter(&band) else {
+            return;
+        };
+        let layout = &def.layout;
+        let height = def.rules.board.height;
+        let mut stacks: Vec<StackStart> = self
+            .army
+            .iter()
+            .zip(0..)
+            .map(|(stack, slot)| StackStart {
+                id: stack.id.clone(),
+                side: Side::Player,
+                slot,
+                troop_id: stack.troop_id.clone(),
+                count: stack.count,
+                injury: 0,
+                x: layout.player.x,
+                y: (layout.player.y + slot) % height,
+            })
+            .collect();
+        stacks.push(StackStart {
+            id: "e0".to_owned(),
+            side: Side::Enemy,
+            slot: 0,
+            troop_id: encounter.enemy_troop.clone(),
+            count: encounter.enemy_count,
+            injury: 0,
+            x: layout.enemy.x,
+            y: layout.enemy.y,
+        });
+        let scenario = Scenario {
+            id: band.clone(),
+            rng_state: encounter.battle_rng_state,
+            obstacles: layout.obstacles.clone(),
+            hero_charges: BTreeMap::new(),
+            // Only the rules that know leadership are told the hero's.
+            leadership: matches!(def.rules.profile, Profile::Reference(_))
+                .then_some(def.leadership),
+            stacks,
+        };
+        // The loader has checked the layout and every troop, so the battle starts; if it did not, the hero would
+        // simply stand before the band, a step's time spent.
+        if let Ok(battle) = Battle::start(Arc::clone(&def.rules), &scenario, None) {
+            events.push(Event::BattleStarted { band: band.clone() });
+            self.engagement = Some(Engagement {
+                battle,
+                band,
+                arrival,
+            });
+            self.status = Status::Battle;
+        }
+    }
+
+    /// Passes a command to the battle and, when that ends it, writes the result back, once.
+    fn fight(&mut self, order: &battle::Command, events: &mut Vec<Event>) -> Result<(), Refused> {
+        let Some(engagement) = &mut self.engagement else {
+            return Err(Refused::NotInBattle);
+        };
+        let happened = engagement.battle.apply(order).map_err(Refused::Battle)?;
+        events.extend(happened.into_iter().map(Event::Battle));
+        match engagement.battle.outcome() {
+            None => {}
+            Some(Outcome::PlayerWin) => self.win(events),
+            Some(Outcome::EnemyWin) => self.recover(events),
+            Some(Outcome::BudgetExceeded) => {
+                // Nobody won. The army is what the battle left of it; the band stands as before.
+                self.keep_survivors();
+                if let Some(engagement) = self.engagement.take() {
+                    events.push(Event::BattleStalled {
+                        band: engagement.band,
+                    });
+                }
+                self.status = Status::Adventure;
+            }
+        }
+        Ok(())
+    }
+
+    /// The army as the battle left it: each stack with its survivors, the dead stacks gone. Injury is healed.
+    fn keep_survivors(&mut self) {
+        let Some(engagement) = &self.engagement else {
+            return;
+        };
+        for stack in &mut self.army {
+            stack.count = engagement
+                .battle
+                .stack(&stack.id)
+                .map_or(0, |fought| fought.count);
+        }
+        self.army.retain(|stack| stack.count > 0);
+    }
+
+    /// The band is beaten: survivors kept, the hero on the band's cell, the reward paid, and the clue given if
+    /// the hero held the band's contract. Battles take no time of the campaign.
+    fn win(&mut self, events: &mut Vec<Event>) {
+        self.keep_survivors();
+        let Some(Engagement { band, arrival, .. }) = self.engagement.take() else {
+            return;
+        };
+        self.status = Status::Adventure;
+        let def = Arc::clone(&self.def);
+        let Some(encounter) = def.encounter(&band) else {
+            return;
+        };
+        self.gold = self.gold.saturating_add(encounter.gold_reward);
+        self.cleared.insert(band.clone());
+        events.push(Event::BattleWon {
+            band: band.clone(),
+            reward: encounter.gold_reward,
+        });
+        if self.contract.as_deref() == Some(band.as_str()) {
+            self.contract = None;
+            if encounter.grants_clue && self.clues.insert(def.objective_id.clone()) {
+                events.push(Event::ClueGained {
+                    object: def.objective_id.clone(),
+                });
+            }
+        }
+        let from = std::mem::replace(&mut self.hero, arrival);
+        events.push(Event::Moved { from, to: arrival });
+    }
+
+    /// A battle lost or given up: the hero is taken to the place of recovery with half his gold and the troops
+    /// recovery gives; the band stands as before; contract, clues and beaten bands are kept. Then recovery takes
+    /// its time, with the weeks and the deadline as for any other time.
+    fn recover(&mut self, events: &mut Vec<Event>) {
+        self.engagement = None;
+        self.status = Status::Adventure;
+        let recovery = self.def.recovery.clone();
+        self.hero = recovery.destination;
+        self.gold /= 2;
+        self.army = vec![ArmyStack {
+            id: "p0".to_owned(),
+            troop_id: recovery.troop_id,
+            count: recovery.count,
+        }];
+        events.push(Event::Recovered { gold: self.gold });
+        self.pass(recovery.ticks, events);
+        self.end_if_due(events);
     }
 
     fn recruit(
@@ -560,7 +774,7 @@ impl Expedition {
             .iter()
             .map(|(troop, left)| (troop.clone(), Value::from(*left)))
             .collect();
-        Value::object([
+        let mut value = Value::object([
             ("army", Value::Array(army.collect())),
             ("cleared", ids(&self.cleared)),
             ("clues", ids(&self.clues)),
@@ -578,7 +792,18 @@ impl Expedition {
             ("status", Value::str(self.status.name())),
             ("stock", Value::Object(stock)),
             ("ticks", self.ticks.into()),
-        ])
+        ]);
+        // The battle being fought is part of the state, with where it leads.
+        if let (Some(engagement), Value::Object(members)) = (&self.engagement, &mut value) {
+            members.insert("battle".to_owned(), engagement.battle.to_canon());
+            members.insert("band".to_owned(), Value::str(&engagement.band));
+            let arrival = engagement.arrival;
+            members.insert(
+                "arrival".to_owned(),
+                Value::object([("x", arrival.x.into()), ("y", arrival.y.into())]),
+            );
+        }
+        value
     }
 
     /// The digest of [`Expedition::to_canon`].
