@@ -5,17 +5,15 @@
 use std::sync::Arc;
 
 use bounty_ai::approach_v1;
-use bounty_core::campaign::{Action, Command, Expedition, ExpeditionDef, Map, Status};
-use bounty_core::content::Rules;
+use bounty_core::campaign::{Action, Command, Expedition, ExpeditionDef, Status};
+use bounty_core::save;
 use serde_json::Value;
 
 fn def() -> ExpeditionDef {
-    let rules = Rules::from_json(include_str!("../../../prototype/rules.json")).unwrap();
-    let map = Map::from_json(include_str!("../../../content/demo/map.json")).unwrap();
-    ExpeditionDef::from_json(
+    ExpeditionDef::from_texts(
         include_str!("../../../content/demo/expedition.json"),
-        map,
-        Arc::new(rules),
+        include_str!("../../../content/demo/map.json"),
+        include_str!("../../../prototype/rules.json"),
     )
     .unwrap()
 }
@@ -29,6 +27,20 @@ fn act(expedition: &mut Expedition, action: Action) {
     expedition
         .apply(&command)
         .unwrap_or_else(|refused| panic!("{said} refused: {refused}"));
+    // Every state a route passes through, in battle or out of it, comes back from its save as it was.
+    let saved = save::encode(expedition);
+    let loaded = save::decode(&saved, Arc::clone(expedition.def_shared()))
+        .unwrap_or_else(|error| panic!("the save after {said}: {error}"));
+    assert_eq!(&loaded, expedition, "after {said}");
+    assert_eq!(save::encode(&loaded), saved, "after {said}");
+    if RELOAD.with(std::cell::Cell::get) {
+        *expedition = loaded;
+    }
+}
+
+thread_local! {
+    /// While set, play goes on from the reloaded save after every command.
+    static RELOAD: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
 
 /// Plays the battle being fought to its end, the named pilot giving the commands of both sides. Never a result
@@ -141,4 +153,24 @@ fn the_same_route_gives_the_same_expedition_again() {
         (first.status(), first.ticks(), first.gold()),
         (Status::Victory, 15, 150)
     );
+}
+
+// AT-098: closing the game after any command, in a battle too, and going on from the save ends where the route
+// ends without it.
+#[test]
+fn a_route_played_from_its_saves_ends_as_the_route_played_through() {
+    let def = def();
+    for route in &def.test_routes {
+        let through = play(route);
+        RELOAD.with(|reload| reload.set(true));
+        let reloaded = play(route);
+        RELOAD.with(|reload| reload.set(false));
+        assert_eq!(reloaded, through, "{}", route["id"]);
+        // AT-044: the ended expedition loads as ended, and takes nothing more.
+        let again = save::decode(&save::encode(&through), Arc::new(def.clone())).unwrap();
+        assert_eq!(
+            (again.status(), again.gold()),
+            (through.status(), through.gold())
+        );
+    }
 }

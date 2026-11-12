@@ -3,18 +3,14 @@
 
 use super::*;
 use crate::battle;
-use crate::content::{ContentError, Rules};
+use crate::content::ContentError;
 
 const MAP: &str = include_str!("../../../../content/demo/map.json");
 const EXPEDITION: &str = include_str!("../../../../content/demo/expedition.json");
 const RULES: &str = include_str!("../../../../prototype/rules.json");
 
-fn rules() -> Arc<Rules> {
-    Arc::new(Rules::from_json(RULES).unwrap())
-}
-
 fn def() -> ExpeditionDef {
-    ExpeditionDef::from_json(EXPEDITION, Map::from_json(MAP).unwrap(), rules()).unwrap()
+    ExpeditionDef::from_texts(EXPEDITION, MAP, RULES).unwrap()
 }
 
 fn start() -> Expedition {
@@ -189,11 +185,7 @@ fn broken_content_is_refused() {
 
     let expedition = |old: &str, new: &str| {
         assert!(EXPEDITION.contains(old), "{old}");
-        ExpeditionDef::from_json(
-            &EXPEDITION.replacen(old, new, 1),
-            Map::from_json(MAP).unwrap(),
-            rules(),
-        )
+        ExpeditionDef::from_texts(&EXPEDITION.replacen(old, new, 1), MAP, RULES)
     };
     let invalid =
         |r: Result<ExpeditionDef, ContentError>| matches!(r, Err(ContentError::Invalid(_)));

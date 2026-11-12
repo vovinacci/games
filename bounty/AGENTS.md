@@ -62,9 +62,21 @@ repeat) is a defect to fix, not a result.
 - A run without `--shot` reads and writes `settings.txt` in the user's data folder. The user may be playing: stop only
   your own process, by its ID.
 
+## Saving
+
+- A save is the envelope of `schemas/save-envelope.schema.json`, written by `bounty-core::save`: the expedition and the
+  battle being fought, in the canonical encoding, with a checksum, the rules' ID and a hash of the three content files.
+  `decode` gives an expedition or one reason (`SaveError`): not a save, another version, damaged, other content, or a
+  state the rules cannot reach. Nothing is half loaded.
+- A new field of `Expedition` or `Battle` goes into `to_canon`, `from_canon` and `check` together; the round-trip tests
+  (`save/tests.rs`, `bounty-ai/tests/save_battles.rs`, `expedition_routes.rs`) fail when one is forgotten. A change to
+  what is written is a new `SCHEMA_VERSION`; there is no migration yet, an older save is refused by its version.
+- The application writes a save with `gamekit::files::write_keeping_previous` and reads it with `read_newest`: one
+  current file and the one before it. A file that cannot be read is never deleted or overwritten.
+
 ## Not here yet
 
-- Sound, a menu, saving.
+- Sound, a menu.
 - Most of the campaign. `bounty-core::campaign` has the expedition of `content/demo/` whole: map, clock and weekly
-  budget, recruiting, contract, battles with their reward and clue, surrender and recovery, search. Saving and the
-  adventure screen are to come.
+  budget, recruiting, contract, battles with their reward and clue, surrender and recovery, search, and its save. The
+  adventure screen, which will also be what saves and continues, is to come.

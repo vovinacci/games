@@ -7,3 +7,4 @@ pub mod canon;
 pub mod content;
 pub mod replay;
 pub mod rng;
+pub mod save;

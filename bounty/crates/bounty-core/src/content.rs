@@ -92,6 +92,14 @@ impl Side {
             Self::Enemy => "enemy",
         }
     }
+
+    /// The side of that name.
+    #[must_use]
+    pub fn from_name(name: &str) -> Option<Self> {
+        [Self::Player, Self::Enemy]
+            .into_iter()
+            .find(|side| side.name() == name)
+    }
 }
 
 /// A board cell: `x` to the right, `y` down, from the top-left corner.
