@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use crate::canon::Value;
 use crate::content::{Cell, ContentError, Profile, Rules, Scenario, Side, SpellEffect, Troop};
-use crate::rng::Lcg32;
+use crate::rng::{Lcg32, Lcg64, Rng};
 
 /// A group of creatures of one kind, acting as one piece on the board.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -177,6 +177,11 @@ pub enum Event {
     RoundStarted {
         round: u32,
     },
+    /// Under the reference rules the sides take turns: the enemy's part of the round begins. The player's part
+    /// begins with the round.
+    SideStarted {
+        side: Side,
+    },
     ActivationStarted {
         stack: String,
     },
@@ -191,7 +196,7 @@ pub enum Event {
         roll: u32,
         /// Attacking creatures at the moment of the blow; for a spell, 1.
         attackers: u32,
-        /// `roll` times `attackers`.
+        /// What the blow takes off the target: `roll` times `attackers`, scaled as the ruleset says.
         damage: u64,
         /// Creatures the target lost.
         losses: u32,
@@ -245,8 +250,17 @@ pub fn health_after(hp: u32, count: u32, injury: u32, damage: u64) -> (u32, u32)
     (count as u32, (count * hp - left) as u32)
 }
 
+/// A blow as it lands: what was rolled, how many struck, what it takes off the target.
+#[derive(Clone, Copy)]
+struct Blow {
+    roll: u32,
+    attackers: u32,
+    damage: u64,
+    retaliation: bool,
+}
+
 /// Where damage rolls come from: the battle's generator in play, a fixed list in tests.
-type Rolls<'a> = &'a mut dyn FnMut(&mut Lcg32, u32, u32) -> u32;
+type Rolls<'a> = &'a mut dyn FnMut(&mut Rng, u32, u32) -> u32;
 
 /// A stack together with what its troop is.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -269,9 +283,20 @@ pub struct Observation {
     pub active: Option<Activation>,
     /// As [`Battle::legal_actions`].
     pub legal: Vec<Action>,
+    /// Whether a diagonal step needs both cells beside it free: the ruleset's choice.
+    pub diagonal_needs_clear_corners: bool,
 }
 
 impl Observation {
+    /// Whether a stack standing on `from` could step to `to` with the stacks where they are now, by the ruleset's
+    /// own rule. For planning a way of several steps; what the active stack may do now is in `legal`.
+    #[must_use]
+    pub fn step_allowed(&self, from: Cell, to: Cell) -> bool {
+        step_allowed(from, to, self.diagonal_needs_clear_corners, |c| {
+            self.free(c)
+        })
+    }
+
     /// On the board, not an obstacle, and no living stack on it.
     #[must_use]
     pub fn free(&self, cell: Cell) -> bool {
@@ -292,7 +317,10 @@ pub struct Battle {
     revision: u64,
     /// The round being played, from 1.
     round: u32,
-    rng: Lcg32,
+    rng: Rng,
+    /// Under the reference rules, the side whose part of the round it is. Always the player in the prototype,
+    /// where both sides share one order.
+    side: Side,
     /// Player slots in rising order, then enemy slots. Dead stacks stay in the list with a count of 0.
     stacks: Vec<Stack>,
     obstacles: Vec<Cell>,
@@ -319,13 +347,6 @@ impl Battle {
         rng_state: Option<u32>,
     ) -> Result<Self, ContentError> {
         scenario.check(&rules)?;
-        if rules.profile != Profile::Prototype {
-            // The reference rules load and are checked; fighting under them is the next step.
-            return Err(ContentError::Unsupported(format!(
-                "battles under {} are not implemented yet",
-                rules.id
-            )));
-        }
         let mut stacks = Vec::new();
         for start in &scenario.stacks {
             // `check` has seen every troop, so the search finds one.
@@ -349,11 +370,17 @@ impl Battle {
         stacks.sort_by_key(|s| (s.side, s.slot));
         let mut obstacles = scenario.obstacles.clone();
         obstacles.sort_by_key(|c| (c.y, c.x));
+        let seed = rng_state.unwrap_or(scenario.rng_state);
+        let rng = match rules.profile {
+            Profile::Prototype => Rng::Prototype(Lcg32::new(seed)),
+            Profile::Reference(_) => Rng::Reference(Lcg64::new(u64::from(seed))),
+        };
         let mut battle = Self {
             rules,
             revision: 0,
             round: 1,
-            rng: Lcg32::new(rng_state.unwrap_or(scenario.rng_state)),
+            rng,
+            side: Side::Player,
             stacks,
             obstacles,
             queue: VecDeque::new(),
@@ -366,6 +393,11 @@ impl Battle {
         battle.fill_queue();
         battle.next_activation(&mut Vec::new());
         Ok(battle)
+    }
+
+    /// Whether the battle is fought under the reference rules. The rules below branch on this and nothing else.
+    fn reference(&self) -> bool {
+        matches!(self.rules.profile, Profile::Reference(_))
     }
 
     #[must_use]
@@ -384,7 +416,7 @@ impl Battle {
     }
 
     #[must_use]
-    pub const fn rng_state(&self) -> u32 {
+    pub fn rng_state(&self) -> u64 {
         self.rng.state()
     }
 
@@ -443,6 +475,7 @@ impl Battle {
             obstacles: self.obstacles.clone(),
             active: self.active.clone(),
             legal: self.legal_actions(),
+            diagonal_needs_clear_corners: !self.reference(),
         }
     }
 
@@ -491,7 +524,8 @@ impl Battle {
                     target: s.id.clone(),
                 }));
             }
-            let step = |to: &Cell| step_allowed(actor.cell, *to, |c| self.free(c));
+            let corners = !self.reference();
+            let step = |to: &Cell| step_allowed(actor.cell, *to, corners, |c| self.free(c));
             actions.extend(cells().filter(step).map(|to| Action::Walk { to }));
             if active.flights > 0 {
                 actions.extend(
@@ -582,30 +616,13 @@ impl Battle {
             Action::Shoot { target } => {
                 needs_movement(active.movement)?;
                 let defender = self.enemy_of(actor, target)?;
-                let shooter = &self.stacks[actor];
-                let Some((lo, hi)) = self.rules.troops[shooter.troop]
-                    .ranged()
-                    .filter(|_| shooter.shots > 0)
-                else {
-                    return Err(RuleError::NoShots);
-                };
-                let near = |s: &Stack| {
-                    s.alive() && s.side != shooter.side && adjacent(s.cell, shooter.cell)
-                };
-                if self.stacks.iter().any(near) {
-                    return Err(RuleError::EnemyAdjacent);
-                }
-                self.stacks[actor].shots -= 1;
-                let roll = rolls(&mut self.rng, lo, hi);
-                let damage = u64::from(roll) * u64::from(self.stacks[actor].count);
-                self.hurt(actor, defender, roll, damage, false, events);
-                if self.outcome.is_none() {
-                    self.end_activation(events);
-                }
+                self.shoot(actor, defender, rolls, events)?;
             }
             Action::Walk { to } => {
                 needs_movement(active.movement)?;
-                if !step_allowed(self.stacks[actor].cell, *to, |c| self.free(c)) {
+                if !step_allowed(self.stacks[actor].cell, *to, !self.reference(), |c| {
+                    self.free(c)
+                }) {
                     return Err(RuleError::CannotEnter { to: *to });
                 }
                 self.move_to(actor, *to, false, events);
@@ -640,6 +657,44 @@ impl Battle {
         Ok(())
     }
 
+    /// A shot at a living enemy anywhere on the board: not with an enemy beside the shooter; one shot spent; never
+    /// answered; ends the activation.
+    fn shoot(
+        &mut self,
+        actor: usize,
+        defender: usize,
+        rolls: Rolls<'_>,
+        events: &mut Vec<Event>,
+    ) -> Result<(), RuleError> {
+        let shooter = &self.stacks[actor];
+        let Some((lo, hi)) = self.rules.troops[shooter.troop]
+            .ranged()
+            .filter(|_| shooter.shots > 0)
+        else {
+            return Err(RuleError::NoShots);
+        };
+        let near =
+            |s: &Stack| s.alive() && s.side != shooter.side && adjacent(s.cell, shooter.cell);
+        if self.stacks.iter().any(near) {
+            return Err(RuleError::EnemyAdjacent);
+        }
+        self.stacks[actor].shots -= 1;
+        let roll = rolls(&mut self.rng, lo, hi);
+        let count = self.stacks[actor].count;
+        let damage = self.damage(actor, defender, roll, count);
+        let blow = Blow {
+            roll,
+            attackers: count,
+            damage,
+            retaliation: false,
+        };
+        self.hurt_by(Some(actor), defender, blow, events);
+        if self.outcome.is_none() {
+            self.end_activation(events);
+        }
+        Ok(())
+    }
+
     /// The living enemy stack of `actor` with this ID.
     fn enemy_of(&self, actor: usize, target: &str) -> Result<usize, RuleError> {
         self.index(target)
@@ -649,8 +704,9 @@ impl Battle {
             })
     }
 
-    /// A step or a landing: one movement point, and the flight when flown. The activation goes on while points
-    /// remain.
+    /// A step or a landing. A step costs a movement point. A flight costs the flight, and in the prototype a
+    /// movement point as well. The activation ends when the movement points are gone, and under the reference
+    /// rules also with the last flight.
     fn move_to(&mut self, actor: usize, to: Cell, flew: bool, events: &mut Vec<Event>) {
         let from = std::mem::replace(&mut self.stacks[actor].cell, to);
         events.push(Event::Moved {
@@ -659,14 +715,19 @@ impl Battle {
             to,
             flew,
         });
-        let mut out_of_points = false;
+        let reference = self.reference();
+        let mut done = false;
         if let Some(active) = &mut self.active {
-            active.movement -= 1;
-            active.flights -= u32::from(flew);
             active.moved = true;
-            out_of_points = active.movement == 0;
+            if flew {
+                active.flights -= 1;
+            }
+            if !(flew && reference) {
+                active.movement -= 1;
+            }
+            done = active.movement == 0 || (reference && flew && active.flights == 0);
         }
-        if out_of_points {
+        if done {
             self.end_activation(events);
         }
     }
@@ -724,7 +785,13 @@ impl Battle {
         });
         match effect {
             SpellEffect::Damage(amount) => {
-                self.hurt_by(None, to, amount, u64::from(amount), false, events);
+                let blow = Blow {
+                    roll: amount,
+                    attackers: 1,
+                    damage: u64::from(amount),
+                    retaliation: false,
+                };
+                self.hurt_by(None, to, blow, events);
             }
             SpellEffect::RemoveInjury(amount) => {
                 let stack = &mut self.stacks[to];
@@ -744,8 +811,10 @@ impl Battle {
         self.stacks.iter().position(|s| s.id == id)
     }
 
-    /// The attacker strikes; a defender that survives and has not struck back this round does so once, with the
-    /// creatures it has left. Then the attacker's activation ends.
+    /// The attacker strikes; a defender that survives and has not struck back since its flag was last renewed does
+    /// so once. In the prototype it answers with the creatures it has left; under the reference rules with the
+    /// number it had before the blow, so creatures killed by the blow still strike. Then the attacker's
+    /// activation ends.
     fn melee(
         &mut self,
         attacker: usize,
@@ -753,24 +822,32 @@ impl Battle {
         rolls: Rolls<'_>,
         events: &mut Vec<Event>,
     ) {
-        self.strike(attacker, defender, false, rolls, events);
+        let before = self.stacks[defender].count;
+        let attackers = self.stacks[attacker].count;
+        self.strike(attacker, defender, attackers, false, rolls, events);
         if self.outcome.is_none()
             && self.stacks[defender].alive()
             && !self.stacks[defender].retaliated
         {
             self.stacks[defender].retaliated = true;
-            self.strike(defender, attacker, true, rolls, events);
+            let answering = if self.reference() {
+                before
+            } else {
+                self.stacks[defender].count
+            };
+            self.strike(defender, attacker, answering, true, rolls, events);
         }
         if self.outcome.is_none() {
             self.end_activation(events);
         }
     }
 
-    /// One melee blow: one roll from the attacker's range, times its creatures.
+    /// One melee blow by `count` creatures: one roll from the attacker's range.
     fn strike(
         &mut self,
         from: usize,
         to: usize,
+        count: u32,
         retaliation: bool,
         rolls: Rolls<'_>,
         events: &mut Vec<Event>,
@@ -778,35 +855,44 @@ impl Battle {
         let troop = &self.rules.troops[self.stacks[from].troop];
         let (lo, hi) = (troop.melee_min, troop.melee_max);
         let roll = rolls(&mut self.rng, lo, hi);
-        let damage = u64::from(roll) * u64::from(self.stacks[from].count);
-        self.hurt(from, to, roll, damage, retaliation, events);
+        let damage = self.damage(from, to, roll, count);
+        self.hurt_by(
+            Some(from),
+            to,
+            Blow {
+                roll,
+                attackers: count,
+                damage,
+                retaliation,
+            },
+            events,
+        );
     }
 
-    /// Takes `damage` off a stack. Removes it when it dies and ends the battle when it was its side's last.
-    fn hurt(
-        &mut self,
-        from: usize,
-        to: usize,
-        roll: u32,
-        damage: u64,
-        retaliation: bool,
-        events: &mut Vec<Event>,
-    ) {
-        self.hurt_by(Some(from), to, roll, damage, retaliation, events);
+    /// What a blow of `count` creatures with this roll takes off the target. Prototype: roll times count.
+    /// Reference: that, times (attacker's skill + 5 - target's skill), divided by ten and rounded down; a term of
+    /// zero or less does no damage.
+    fn damage(&self, from: usize, to: usize, roll: u32, count: u32) -> u64 {
+        let base = u64::from(roll) * u64::from(count);
+        if !self.reference() {
+            return base;
+        }
+        let skill = |stack: usize| self.rules.troops[self.stacks[stack].troop].skill;
+        let term = (skill(from) + 5).saturating_sub(skill(to));
+        base * u64::from(term) / 10
     }
 
-    /// As `hurt`; `from` is `None` for the hero's spell, which is recorded as coming from "hero".
-    fn hurt_by(
-        &mut self,
-        from: Option<usize>,
-        to: usize,
-        roll: u32,
-        damage: u64,
-        retaliation: bool,
-        events: &mut Vec<Event>,
-    ) {
+    /// Takes `damage` off a stack. Removes it when it dies and ends the battle when it was its side's last. `from`
+    /// is `None` for the hero's spell, which is recorded as coming from "hero"; `attackers` is the number of
+    /// creatures that struck, which under the reference rules can be more than the stack still has.
+    fn hurt_by(&mut self, from: Option<usize>, to: usize, blow: Blow, events: &mut Vec<Event>) {
+        let Blow {
+            roll,
+            attackers,
+            damage,
+            retaliation,
+        } = blow;
         let hp = self.rules.troops[self.stacks[to].troop].hp;
-        let attackers = from.map_or(1, |i| self.stacks[i].count);
         let attacker = from.map_or_else(|| "hero".to_owned(), |i| self.stacks[i].id.clone());
         let target = &mut self.stacks[to];
         let before = target.count;
@@ -849,12 +935,15 @@ impl Battle {
         self.next_activation(events);
     }
 
-    /// Puts every living stack into the queue, in order.
+    /// Puts the living stacks that act next into the queue, in order: all of them in the prototype, those of the
+    /// side whose part of the round it is under the reference rules.
     fn fill_queue(&mut self) {
+        let (reference, side) = (self.reference(), self.side);
+        let acts = |s: &&Stack| s.alive() && (!reference || s.side == side);
         self.queue = self
             .stacks
             .iter()
-            .filter(|s| s.alive())
+            .filter(acts)
             .map(|s| s.id.clone())
             .collect();
     }
@@ -877,11 +966,26 @@ impl Battle {
                 events.push(Event::ActivationStarted { stack: id });
                 return;
             }
+            // Nobody is left to act. Under the reference rules that ends one side's part of the round: flags are
+            // renewed, and after the player's part comes the enemy's.
+            if self.reference() {
+                for stack in &mut self.stacks {
+                    stack.retaliated = false;
+                    stack.waited = false;
+                }
+                if self.side == Side::Player {
+                    self.side = Side::Enemy;
+                    self.fill_queue();
+                    events.push(Event::SideStarted { side: Side::Enemy });
+                    continue;
+                }
+            }
             if self.round >= self.rules.round_limit {
                 self.finish(Outcome::BudgetExceeded, events);
                 return;
             }
             self.round += 1;
+            self.side = Side::Player;
             self.cast_this_round = false;
             for stack in &mut self.stacks {
                 stack.retaliated = false;
@@ -940,7 +1044,7 @@ impl Battle {
             .iter()
             .map(|(spell, n)| (spell.clone(), Value::from(*n)))
             .collect();
-        Value::object([
+        let mut value = Value::object([
             ("active", active),
             ("cast_this_round", self.cast_this_round.into()),
             ("deferred", ids(&self.deferred)),
@@ -958,14 +1062,20 @@ impl Battle {
             (
                 "rng",
                 Value::object([
-                    ("algorithm", Value::str("prototype-lcg32-v1")),
+                    ("algorithm", Value::str(self.rng.algorithm())),
                     ("state", self.rng.state().into()),
                 ]),
             ),
             ("round", self.round.into()),
             ("ruleset_id", Value::str(&self.rules.id)),
             ("stacks", Value::Array(stacks)),
-        ])
+        ]);
+        // Whose part of the round it is belongs to the state only where the sides take turns. The prototype's
+        // digests stay as they were recorded.
+        if let (true, Value::Object(members)) = (self.reference(), &mut value) {
+            members.insert("side".to_owned(), Value::str(self.side.name()));
+        }
+        value
     }
 
     /// The digest of [`Battle::to_canon`]: two battles with the same digest go on in the same way.
@@ -977,14 +1087,15 @@ impl Battle {
 }
 
 /// The rule for one step on the ground, the same for the battle and for a computer player planning a route: `to`
-/// is one of the eight cells around `from` and free, and for a diagonal step the two cells it passes between are
-/// free too. `free` says whether a cell can be stood on.
+/// is one of the eight cells around `from` and free. With `corners` (the prototype), a diagonal step also needs the
+/// two cells it passes between to be free. `free` says whether a cell can be stood on.
 #[must_use]
-pub fn step_allowed(from: Cell, to: Cell, free: impl Fn(Cell) -> bool) -> bool {
+pub fn step_allowed(from: Cell, to: Cell, corners: bool, free: impl Fn(Cell) -> bool) -> bool {
+    let straight = from.x == to.x || from.y == to.y;
     adjacent(from, to)
         && free(to)
-        && (from.x == to.x
-            || from.y == to.y
+        && (straight
+            || !corners
             || (free(Cell { x: to.x, y: from.y }) && free(Cell { x: from.x, y: to.y })))
 }
 

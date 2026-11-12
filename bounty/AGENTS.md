@@ -56,5 +56,6 @@ repeat) is a defect to fix, not a result.
 ## Not here yet
 
 - Sound, a menu, saving a battle, the campaign.
-- Battles under the reference rules: `content/reference/rules.json` loads and is checked, but `Battle::start` refuses it
-  until those rules are implemented.
+- Morale and loss of control under the reference rules. Battles under `content/reference/rules.json` are fought with its
+  turn order, movement, flight and skill-scaled damage, but without those two, so they are not yet the reference's
+  battles. No scenario file, suite or baseline for them yet.

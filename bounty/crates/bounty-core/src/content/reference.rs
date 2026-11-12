@@ -320,9 +320,11 @@ fn chart(rows: &[String]) -> Result<[[Morale; GROUPS]; GROUPS], ContentError> {
 
 fn troop(from: FileTroop, flights: u32) -> Result<Troop, ContentError> {
     let id = &from.id;
-    if from.skill == 0 || from.hp == 0 {
+    // Movement of at least 1: a stack acts while it has movement left, so one without any could neither strike
+    // nor use its flights. No troop of the original has less.
+    if from.skill == 0 || from.hp == 0 || from.movement == 0 {
         return invalid(format!(
-            "troop {id:?} needs a skill and health of at least 1"
+            "troop {id:?} needs skill, health and movement of at least 1"
         ));
     }
     if from.melee_min > from.melee_max {
@@ -522,6 +524,10 @@ mod tests {
         assert!(
             is_invalid(with(r#""skill": 1"#, r#""skill": 0"#)),
             "no skill"
+        );
+        assert!(
+            is_invalid(with(r#""movement": 3"#, r#""movement": 0"#)),
+            "no movement"
         );
         assert!(
             is_invalid(with(r#""id": "wolves""#, r#""id": "sprites""#)),
