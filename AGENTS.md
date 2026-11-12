@@ -20,6 +20,8 @@ that game only.
   rustfmt's 100.
 - Commits and PR titles are Conventional Commits with the game or crate as scope (`feat(bounty): ...`); changelogs are
   generated from them. No trailers in commits or PRs (no Co-authored-by, no "Generated with").
+- A pull request is squashed: its title and description become the commit on `main`. Write them as that commit message,
+  see "Pull requests" below.
 - Lints, edition, licence and the Rust version are set once: `[workspace.lints]` and `[workspace.package]` in the root
   `Cargo.toml`, and `mise.toml`. A crate takes them with `[lints] workspace = true` and `*.workspace = true`; it does
   not set its own.
@@ -34,6 +36,25 @@ that game only.
 The games are dedicated to the memory of Joseph Rivkind; the words are in `README.md`, in English and Ukrainian, and are
 not to be reworded. Every game shows them on its first run and in its About screen; `gamekit` will hold the text and the
 screen so that no game carries a copy of its own.
+
+## Pull requests
+
+The title of a pull request becomes the subject line of the commit on `main` and its description the body, word for
+word. So they are written as a commit message, for someone reading `git log` a year from now, not as a note to the
+reviewer of today. `tools/check_pr_message.sh` checks the parts a script can check, as part of the
+`Conventional PR title` check.
+
+- Title: a Conventional Commit in the imperative (`feat(bounty): add the wait action`), at most 65 characters (GitHub
+  adds the pull request number, and the line stays within 72), no full stop at the end.
+- Description: what changed and why, and what the code does not show by itself: the reason for a choice, what was left
+  out on purpose, numbers that justify the change. Markdown is fine, in the title too.
+- Width: the description follows `.editorconfig` like any Markdown, lines up to 120 columns; only the title has the
+  short limit. (GitHub rewraps the description at 72 when it writes the commit; that is its doing and needs no care.)
+- Not in the description: checklists, HTML comments, template headings with nothing under them, trailers, the state of
+  the pull request ("draft until ...", "CI is green", "all tests pass"), greetings.
+- What is true only while the pull request is open goes into a comment on it: test runs, measurements made for the
+  review, what the reviewer should look at first, what it waits for.
+- Dependabot writes its own descriptions; trim them to a sentence when merging.
 
 ## Shell scripts
 

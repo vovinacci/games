@@ -1,7 +1,8 @@
 # GitHub, CI and repository settings
 
-Files: `.github/workflows/ci.yml`, `pr-title.yml`, `.github/dependabot.yml`, the issue and pull request templates. The
-settings below are made by hand (or `gh api`); this page is their record. Change the setting and this page together.
+Files: `.github/workflows/ci.yml`, `pr-title.yml`, `.github/dependabot.yml`, the issue templates. There is no pull
+request template on purpose: whatever it held would end up in every commit message. The settings below are made by hand
+(or `gh api`); this page is their record. Change the setting and this page together.
 
 ## Repository
 
@@ -26,7 +27,8 @@ settings below are made by hand (or `gh api`); this page is their record. Change
 - `Checks`: all prek hooks (whitespace, ASCII, Markdown, shell, rustfmt, clippy), then `cargo test` for the whole
   workspace with the committed lockfile.
 - `Dependencies`: cargo-deny (advisories, licences, duplicates, sources) as set in `deny.toml`.
-- `Conventional PR title`: the title must be a Conventional Commit.
+- `Conventional PR title`: the title must be a Conventional Commit, and title and description must pass
+  `tools/check_pr_message.sh`, since they become the commit on `main` (`AGENTS.md`, "Pull requests").
 - Rust comes from `mise.toml` via `jdx/mise-action`; dependencies are cached (`Swatinem/rust-cache`).
 
 ## Dependabot
