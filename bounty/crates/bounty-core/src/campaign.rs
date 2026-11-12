@@ -394,6 +394,17 @@ impl Expedition {
         self.army.iter().map(|stack| u64::from(stack.count)).sum()
     }
 
+    /// Why this action would be refused now, or `None` when it would be carried out. Nothing changes either way:
+    /// a screen asks this to offer only what the rules allow.
+    #[must_use]
+    pub fn refusal(&self, action: &Action) -> Option<Refused> {
+        let command = Command {
+            revision: self.revision,
+            action: action.clone(),
+        };
+        self.clone().apply(&command).err()
+    }
+
     /// Carries out a command, or refuses it and leaves the expedition exactly as it was.
     ///
     /// # Errors

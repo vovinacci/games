@@ -14,6 +14,7 @@ publish = false
 [workspace.dependencies]
 bounty-ai = { path = "bounty/crates/bounty-ai" }
 bounty-core = { path = "bounty/crates/bounty-core" }
+bounty-tools = { path = "bounty/crates/bounty-tools" }
 fluent-bundle = "0.16.0"
 gamekit = { path = "gamekit" }
 # Without the default "audio" feature: no game plays a sound yet, and sound needs ALSA to build on Linux.

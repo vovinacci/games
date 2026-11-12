@@ -2,6 +2,7 @@
 //! tests can read every line in every language.
 
 use bounty_core::battle::{Battle, Event, Outcome};
+use bounty_core::campaign::{self, Refused, Status};
 use bounty_core::content::{Morale, Side};
 use gamekit::i18n::{Language, tr};
 use gamekit::t;
@@ -51,6 +52,80 @@ pub fn morale_text(morale: Morale) -> String {
 
 pub fn outcome_text(outcome: Outcome) -> String {
     tr(&format!("outcome-{}", outcome.name()), &[])
+}
+
+/// A town, a band or another thing on the map, as the texts name it.
+pub fn place_name(id: &str) -> String {
+    named("object", id)
+}
+
+/// How an expedition ended.
+pub fn status_text(status: Status) -> String {
+    tr(&format!("status-{}", status.name()), &[])
+}
+
+/// One line of the log for something that happened on the expedition, or `None` for what the screen shows by
+/// itself (a step, the clock). `battle` is the battle the events of a battle belong to.
+pub fn describe_campaign(event: &campaign::Event, battle: Option<&Battle>) -> Option<String> {
+    use campaign::Event as E;
+    Some(match event {
+        E::WeekSettled {
+            week,
+            income,
+            upkeep,
+            gold,
+        } => t!(
+            "log-week",
+            week = *week,
+            income = *income,
+            upkeep = *upkeep,
+            gold = *gold
+        ),
+        E::Recruited {
+            troop_id,
+            quantity,
+            cost,
+        } => t!(
+            "log-recruited",
+            troop = named("troop", troop_id),
+            n = *quantity,
+            cost = *cost
+        ),
+        E::ContractTaken { id } => t!("log-contract", name = place_name(id)),
+        E::Searched { found: true } => t!("log-search-found"),
+        E::Searched { found: false } => t!("log-search-nothing"),
+        E::BattleStarted { band } => t!("log-battle", name = place_name(band)),
+        E::Battle(event) => return describe(event, battle?),
+        E::BattleWon { band, reward } => t!("log-won", name = place_name(band), reward = *reward),
+        E::ClueGained { .. } => t!("log-clue"),
+        E::BattleStalled { band } => t!("log-stalled", name = place_name(band)),
+        E::Recovered { gold } => t!("log-recovered", gold = *gold),
+        E::Ended { status } => status_text(*status),
+        E::Moved { .. } | E::TimePassed { .. } => return None,
+    })
+}
+
+/// Why the expedition refused what the player asked, in the player's language. The screen offers what is
+/// allowed, so most of these are never seen; the ones a key can still meet have their own words.
+pub fn refusal_text(refused: &Refused) -> String {
+    match refused {
+        Refused::CannotEnter => t!("refused-cannot-enter"),
+        Refused::NotInTown => t!("refused-not-in-town"),
+        Refused::NotSold { .. } => t!("refused-not-sold"),
+        Refused::OutOfStock { stock } => t!("refused-out-of-stock", stock = *stock),
+        Refused::CannotAfford { cost, gold } => {
+            t!("refused-cannot-afford", cost = *cost, gold = *gold)
+        }
+        Refused::OverLeadership { health, leadership } => t!(
+            "refused-over-leadership",
+            health = *health,
+            leadership = *leadership
+        ),
+        Refused::ArmyFull => t!("refused-army-full"),
+        Refused::NoSuchContract { .. } => t!("refused-no-contract"),
+        Refused::Over => t!("refused-over"),
+        _ => t!("refused-other"),
+    }
 }
 
 /// One line for the log, or `None` for an event the log leaves out (whose turn it is shows in the sidebar; the
@@ -168,6 +243,18 @@ mod tests {
             .map(|o| format!("outcome-{}", o.name())),
         );
         needed.extend(["log-damage", "log-retaliation", "log-flew", "log-moved"].map(String::from));
+        let expedition = content::expedition();
+        needed.extend(
+            expedition
+                .map
+                .objects
+                .iter()
+                .map(|o| format!("object-{}", o.id)),
+        );
+        needed.extend(
+            [Status::Victory, Status::Timeout, Status::Insolvent]
+                .map(|s| format!("status-{}", s.name())),
+        );
         let known = i18n::keys(LANGUAGES[0].source);
         let missing: Vec<&String> = needed.iter().filter(|key| !known.contains(*key)).collect();
         assert!(missing.is_empty(), "keys not in en-GB.ftl: {missing:?}");

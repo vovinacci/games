@@ -4,11 +4,13 @@ A tribute to King's Bounty (1990, DOS): explore, recruit, fight, find the sceptr
 application will use macroquad. Made for nostalgia, for the fun of programming it, and to work on computer opponents and
 game balance.
 
-What can be played is one battle: `cargo run -p bounty-app` under invented test rules, or
-`cargo run -p bounty-app -- --rules reference` under the first rules taken from another remake of the original (three
-troops; `--scenario morale_sprites_wolves`, `loss_of_control`, `loss_of_control_deep` or `overmatch` for other battles),
-or with `--rules modern` under those rules with this game's own changes, which play the same battles. The campaign is
-still to come.
+What can be played is a small test expedition, `cargo run -p bounty-app`: a town to recruit in, two bands to beat, a
+contract, a clue and a prize to find before time runs out, all under invented test rules. It is saved after every
+command and goes on at the next start. One battle by itself: `cargo run -p bounty-app -- --rules prototype`, or
+`--rules reference` under the first rules taken from another remake of the original (three troops;
+`--scenario morale_sprites_wolves`, `loss_of_control`, `loss_of_control_deep` or `overmatch` for other battles), or
+`--rules modern` under those rules with this game's own changes, which play the same battles. The campaign of the
+original is still to come.
 
 ## Layout
 

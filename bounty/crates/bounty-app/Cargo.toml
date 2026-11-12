@@ -17,5 +17,6 @@ workspace = true
 [dependencies]
 bounty-ai = { workspace = true }
 bounty-core = { workspace = true }
+bounty-tools = { workspace = true }
 gamekit = { workspace = true }
 macroquad = { workspace = true }
