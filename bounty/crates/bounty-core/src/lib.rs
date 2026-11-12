@@ -4,4 +4,5 @@
 pub mod battle;
 pub mod canon;
 pub mod content;
+pub mod replay;
 pub mod rng;

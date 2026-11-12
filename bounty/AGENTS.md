@@ -41,6 +41,5 @@ case does not allow, a run that does not repeat) is a defect to fix, not a resul
 ## Not here yet
 
 - `bounty-app`: added when its first code arrives.
-- A recorded baseline: `balance/baselines/bootstrap.json` says `not_recorded` until all four cases of the suite can be
-  played and the first numbers have been looked at.
-- On-screen text: English and Ukrainian from the first screen, through `gamekit`.
+- A recorded baseline: all four cases of the suite run, but `balance/baselines/bootstrap.json` says `not_recorded` until
+  the maintainer has looked at the first numbers.

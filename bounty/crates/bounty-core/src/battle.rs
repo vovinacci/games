@@ -9,7 +9,7 @@ use std::fmt;
 use std::sync::Arc;
 
 use crate::canon::Value;
-use crate::content::{Cell, ContentError, Rules, Scenario, Side, Troop};
+use crate::content::{Cell, ContentError, Rules, Scenario, Side, SpellEffect, Troop};
 use crate::rng::Lcg32;
 
 /// A group of creatures of one kind, acting as one piece on the board.
@@ -78,6 +78,19 @@ pub enum Action {
     Pass,
     /// Strike a living enemy stack in one of the eight neighbouring cells. Ends the activation.
     Melee { target: String },
+    /// Shoot a living enemy stack anywhere on the board; not allowed with an enemy in a neighbouring cell. Costs
+    /// one shot and ends the activation. Never struck back.
+    Shoot { target: String },
+    /// Step into a free neighbouring cell, for one movement point. A diagonal step needs both cells it passes
+    /// between to be free as well.
+    Walk { to: Cell },
+    /// Land on any free cell, whatever lies between, for one movement point and one flight.
+    Fly { to: Cell },
+    /// Before moving: go to the end of the round's order. A stack that has waited this round passes instead.
+    Wait,
+    /// The player's hero casts a spell, once a round, during the turn of one of the player's stacks. It does not
+    /// use up that stack's turn.
+    Cast { spell: String, target: String },
 }
 
 /// A request to change the battle. It names what should happen, never the result.
@@ -106,6 +119,25 @@ pub enum RuleError {
     NotAnEnemy { target: String },
     /// The target is not in a neighbouring cell.
     NotAdjacent { target: String },
+    /// The stack has no shots (left).
+    NoShots,
+    /// An enemy stands in a neighbouring cell, so the stack cannot shoot.
+    EnemyAdjacent,
+    /// The cell is outside the board, an obstacle, taken, the stack's own, too far for a step, or a diagonal
+    /// step between cells that are not both free.
+    CannotEnter { to: Cell },
+    /// The stack cannot fly (any more in this activation).
+    NoFlights,
+    /// Waiting is only allowed before the stack has moved.
+    AlreadyMoved,
+    /// Only the player side has a hero.
+    NoHero,
+    /// The hero has cast this round.
+    AlreadyCast,
+    /// No such spell, or no charge of it left.
+    NoCharge { spell: String },
+    /// The spell cannot be cast on this stack.
+    WrongSpellTarget { target: String },
 }
 
 impl fmt::Display for RuleError {
@@ -122,6 +154,17 @@ impl fmt::Display for RuleError {
             Self::NoMovement => f.write_str("no movement points left"),
             Self::NotAnEnemy { target } => write!(f, "{target:?} is not a living enemy stack"),
             Self::NotAdjacent { target } => write!(f, "{target:?} is not in a neighbouring cell"),
+            Self::NoShots => f.write_str("no shots left"),
+            Self::EnemyAdjacent => f.write_str("an enemy in a neighbouring cell prevents shooting"),
+            Self::CannotEnter { to } => write!(f, "cell {},{} cannot be entered", to.x, to.y),
+            Self::NoFlights => f.write_str("no flight left in this activation"),
+            Self::AlreadyMoved => f.write_str("waiting is only allowed before moving"),
+            Self::NoHero => f.write_str("this side has no hero to cast spells"),
+            Self::AlreadyCast => f.write_str("the hero has cast this round"),
+            Self::NoCharge { spell } => write!(f, "no charge of {spell:?}"),
+            Self::WrongSpellTarget { target } => {
+                write!(f, "the spell cannot be cast on {target:?}")
+            }
         }
     }
 }
@@ -144,9 +187,9 @@ pub enum Event {
     Damage {
         attacker: String,
         target: String,
-        /// The damage roll for one creature.
+        /// The damage roll for one creature; for a spell, its fixed damage.
         roll: u32,
-        /// Attacking creatures at the moment of the blow.
+        /// Attacking creatures at the moment of the blow; for a spell, 1.
         attackers: u32,
         /// `roll` times `attackers`.
         damage: u64,
@@ -161,6 +204,26 @@ pub enum Event {
     /// The stack lost its last creature and left the board.
     StackRemoved {
         stack: String,
+    },
+    Moved {
+        stack: String,
+        from: Cell,
+        to: Cell,
+        flew: bool,
+    },
+    /// The stack went to the end of the round's order.
+    Waited {
+        stack: String,
+    },
+    SpellCast {
+        spell: String,
+        target: String,
+    },
+    /// Injury taken off a stack; `injury` is what is left.
+    Healed {
+        target: String,
+        removed: u32,
+        injury: u32,
     },
     BattleEnded {
         outcome: Outcome,
@@ -206,6 +269,20 @@ pub struct Observation {
     pub active: Option<Activation>,
     /// As [`Battle::legal_actions`].
     pub legal: Vec<Action>,
+}
+
+impl Observation {
+    /// On the board, not an obstacle, and no living stack on it.
+    #[must_use]
+    pub fn free(&self, cell: Cell) -> bool {
+        cell.x < self.width
+            && cell.y < self.height
+            && !self.obstacles.contains(&cell)
+            && !self
+                .stacks
+                .iter()
+                .any(|s| s.stack.alive() && s.stack.cell == cell)
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -379,9 +456,10 @@ impl Battle {
         Ok(events)
     }
 
-    /// What the active stack may do now, in a fixed order: attacks by target ID, then Pass. Empty once the battle
-    /// is over. Every command built from one of these is accepted; the screen and the computer players take their
-    /// choices from here, not from rules of their own.
+    /// What the active stack may do now, in a fixed order: melee and shots by target ID, steps and landings row by
+    /// row, spells by spell then target, Wait, Pass. Empty once the battle is over. Every command built from one
+    /// of these is accepted; the screen and the computer players take their choices from here, not from rules of
+    /// their own.
     #[must_use]
     pub fn legal_actions(&self) -> Vec<Action> {
         let Some(active) = &self.active else {
@@ -390,20 +468,64 @@ impl Battle {
         let Some(actor) = self.stack(&active.stack) else {
             return Vec::new();
         };
+        let mut living: Vec<&Stack> = self.stacks.iter().filter(|s| s.alive()).collect();
+        living.sort_by(|a, b| a.id.cmp(&b.id));
+        let enemies = || living.iter().filter(|s| s.side != actor.side);
+        let board = &self.rules.board;
+        let cells = || (0..board.height).flat_map(|y| (0..board.width).map(move |x| Cell { x, y }));
         let mut actions = Vec::new();
         if active.movement > 0 {
-            let mut targets: Vec<&Stack> = self
-                .stacks
-                .iter()
-                .filter(|s| s.alive() && s.side != actor.side && adjacent(s.cell, actor.cell))
-                .collect();
-            targets.sort_by(|a, b| a.id.cmp(&b.id));
-            actions.extend(targets.into_iter().map(|s| Action::Melee {
+            let near = |s: &&&Stack| adjacent(s.cell, actor.cell);
+            actions.extend(enemies().filter(near).map(|s| Action::Melee {
                 target: s.id.clone(),
             }));
+            if actor.shots > 0 && enemies().filter(near).count() == 0 {
+                actions.extend(enemies().map(|s| Action::Shoot {
+                    target: s.id.clone(),
+                }));
+            }
+            let step = |to: &Cell| step_allowed(actor.cell, *to, |c| self.free(c));
+            actions.extend(cells().filter(step).map(|to| Action::Walk { to }));
+            if active.flights > 0 {
+                actions.extend(
+                    cells()
+                        .filter(|&to| self.free(to))
+                        .map(|to| Action::Fly { to }),
+                );
+            }
+        }
+        if actor.side == Side::Player && !self.cast_this_round {
+            for (spell, _) in self
+                .hero_charges
+                .iter()
+                .filter(|(_, charges)| **charges > 0)
+            {
+                let Some(effect) = self.rules.spell(spell).map(|s| s.effect) else {
+                    continue;
+                };
+                let fits = |s: &&&Stack| match effect {
+                    SpellEffect::Damage(_) => s.side != actor.side,
+                    SpellEffect::RemoveInjury(_) => s.side == actor.side && s.injury > 0,
+                };
+                actions.extend(living.iter().filter(fits).map(|s| Action::Cast {
+                    spell: spell.clone(),
+                    target: s.id.clone(),
+                }));
+            }
+        }
+        if !active.moved {
+            actions.push(Action::Wait);
         }
         actions.push(Action::Pass);
         actions
+    }
+
+    /// On the board, not an obstacle, and no living stack on it.
+    #[must_use]
+    pub fn free(&self, cell: Cell) -> bool {
+        self.rules.board.contains(cell)
+            && !self.obstacles.contains(&cell)
+            && !self.stacks.iter().any(|s| s.alive() && s.cell == cell)
     }
 
     fn carry_out(
@@ -426,31 +548,186 @@ impl Battle {
                 actor: command.actor.clone(),
             });
         };
+        let actor = self
+            .index(&active.stack)
+            .ok_or_else(|| RuleError::NotActive {
+                actor: command.actor.clone(),
+            })?;
+        let needs_movement = |left: u32| {
+            if left == 0 {
+                Err(RuleError::NoMovement)
+            } else {
+                Ok(())
+            }
+        };
         match &command.action {
             Action::Pass => self.end_activation(events),
             Action::Melee { target } => {
-                if active.movement == 0 {
-                    return Err(RuleError::NoMovement);
-                }
-                let (Some(attacker), Some(defender)) =
-                    (self.index(&active.stack), self.index(target))
-                else {
-                    return Err(RuleError::NotAnEnemy {
-                        target: target.clone(),
-                    });
-                };
-                let (a, d) = (&self.stacks[attacker], &self.stacks[defender]);
-                if !d.alive() || d.side == a.side {
-                    return Err(RuleError::NotAnEnemy {
-                        target: target.clone(),
-                    });
-                }
-                if !adjacent(a.cell, d.cell) {
+                needs_movement(active.movement)?;
+                let defender = self.enemy_of(actor, target)?;
+                if !adjacent(self.stacks[actor].cell, self.stacks[defender].cell) {
                     return Err(RuleError::NotAdjacent {
                         target: target.clone(),
                     });
                 }
-                self.melee(attacker, defender, rolls, events);
+                self.melee(actor, defender, rolls, events);
+            }
+            Action::Shoot { target } => {
+                needs_movement(active.movement)?;
+                let defender = self.enemy_of(actor, target)?;
+                let shooter = &self.stacks[actor];
+                let Some((lo, hi)) = self.rules.troops[shooter.troop]
+                    .ranged()
+                    .filter(|_| shooter.shots > 0)
+                else {
+                    return Err(RuleError::NoShots);
+                };
+                let near = |s: &Stack| {
+                    s.alive() && s.side != shooter.side && adjacent(s.cell, shooter.cell)
+                };
+                if self.stacks.iter().any(near) {
+                    return Err(RuleError::EnemyAdjacent);
+                }
+                self.stacks[actor].shots -= 1;
+                let roll = rolls(&mut self.rng, lo, hi);
+                let damage = u64::from(roll) * u64::from(self.stacks[actor].count);
+                self.hurt(actor, defender, roll, damage, false, events);
+                if self.outcome.is_none() {
+                    self.end_activation(events);
+                }
+            }
+            Action::Walk { to } => {
+                needs_movement(active.movement)?;
+                if !step_allowed(self.stacks[actor].cell, *to, |c| self.free(c)) {
+                    return Err(RuleError::CannotEnter { to: *to });
+                }
+                self.move_to(actor, *to, false, events);
+            }
+            Action::Fly { to } => {
+                needs_movement(active.movement)?;
+                if active.flights == 0 {
+                    return Err(RuleError::NoFlights);
+                }
+                if !self.free(*to) {
+                    return Err(RuleError::CannotEnter { to: *to });
+                }
+                self.move_to(actor, *to, true, events);
+            }
+            Action::Wait => {
+                if active.moved {
+                    return Err(RuleError::AlreadyMoved);
+                }
+                if self.stacks[actor].waited {
+                    self.end_activation(events);
+                } else {
+                    self.stacks[actor].waited = true;
+                    self.deferred.push_back(active.stack.clone());
+                    events.push(Event::Waited {
+                        stack: active.stack.clone(),
+                    });
+                    self.end_activation(events);
+                }
+            }
+            Action::Cast { spell, target } => self.cast(actor, spell, target, events)?,
+        }
+        Ok(())
+    }
+
+    /// The living enemy stack of `actor` with this ID.
+    fn enemy_of(&self, actor: usize, target: &str) -> Result<usize, RuleError> {
+        self.index(target)
+            .filter(|&i| self.stacks[i].alive() && self.stacks[i].side != self.stacks[actor].side)
+            .ok_or_else(|| RuleError::NotAnEnemy {
+                target: target.to_owned(),
+            })
+    }
+
+    /// A step or a landing: one movement point, and the flight when flown. The activation goes on while points
+    /// remain.
+    fn move_to(&mut self, actor: usize, to: Cell, flew: bool, events: &mut Vec<Event>) {
+        let from = std::mem::replace(&mut self.stacks[actor].cell, to);
+        events.push(Event::Moved {
+            stack: self.stacks[actor].id.clone(),
+            from,
+            to,
+            flew,
+        });
+        let mut out_of_points = false;
+        if let Some(active) = &mut self.active {
+            active.movement -= 1;
+            active.flights -= u32::from(flew);
+            active.moved = true;
+            out_of_points = active.movement == 0;
+        }
+        if out_of_points {
+            self.end_activation(events);
+        }
+    }
+
+    /// The hero's spell. Everything is checked before the charge is spent, so a spell that cannot be cast costs
+    /// nothing.
+    fn cast(
+        &mut self,
+        actor: usize,
+        spell: &str,
+        target: &str,
+        events: &mut Vec<Event>,
+    ) -> Result<(), RuleError> {
+        let side = self.stacks[actor].side;
+        if side != Side::Player {
+            return Err(RuleError::NoHero);
+        }
+        if self.cast_this_round {
+            return Err(RuleError::AlreadyCast);
+        }
+        let no_charge = || RuleError::NoCharge {
+            spell: spell.to_owned(),
+        };
+        let effect = self
+            .rules
+            .spell(spell)
+            .map(|s| s.effect)
+            .ok_or_else(no_charge)?;
+        if self.hero_charges.get(spell).copied().unwrap_or(0) == 0 {
+            return Err(no_charge());
+        }
+        let wrong = || RuleError::WrongSpellTarget {
+            target: target.to_owned(),
+        };
+        let to = self
+            .index(target)
+            .filter(|&i| self.stacks[i].alive())
+            .ok_or_else(wrong)?;
+        let fits = match effect {
+            SpellEffect::Damage(_) => self.stacks[to].side != side,
+            SpellEffect::RemoveInjury(_) => {
+                self.stacks[to].side == side && self.stacks[to].injury > 0
+            }
+        };
+        if !fits {
+            return Err(wrong());
+        }
+        if let Some(charges) = self.hero_charges.get_mut(spell) {
+            *charges -= 1;
+        }
+        self.cast_this_round = true;
+        events.push(Event::SpellCast {
+            spell: spell.to_owned(),
+            target: target.to_owned(),
+        });
+        match effect {
+            SpellEffect::Damage(amount) => {
+                self.hurt_by(None, to, amount, u64::from(amount), false, events);
+            }
+            SpellEffect::RemoveInjury(amount) => {
+                let stack = &mut self.stacks[to];
+                let removed = amount.min(stack.injury);
+                stack.injury -= removed;
+                events.push(Event::Healed {
+                    target: target.to_owned(),
+                    removed,
+                    injury: stack.injury,
+                });
             }
         }
         Ok(())
@@ -508,9 +785,22 @@ impl Battle {
         retaliation: bool,
         events: &mut Vec<Event>,
     ) {
+        self.hurt_by(Some(from), to, roll, damage, retaliation, events);
+    }
+
+    /// As `hurt`; `from` is `None` for the hero's spell, which is recorded as coming from "hero".
+    fn hurt_by(
+        &mut self,
+        from: Option<usize>,
+        to: usize,
+        roll: u32,
+        damage: u64,
+        retaliation: bool,
+        events: &mut Vec<Event>,
+    ) {
         let hp = self.rules.troops[self.stacks[to].troop].hp;
-        let attackers = self.stacks[from].count;
-        let attacker = self.stacks[from].id.clone();
+        let attackers = from.map_or(1, |i| self.stacks[i].count);
+        let attacker = from.map_or_else(|| "hero".to_owned(), |i| self.stacks[i].id.clone());
         let target = &mut self.stacks[to];
         let before = target.count;
         (target.count, target.injury) = health_after(hp, target.count, target.injury, damage);
@@ -679,8 +969,21 @@ impl Battle {
     }
 }
 
+/// The rule for one step on the ground, the same for the battle and for a computer player planning a route: `to`
+/// is one of the eight cells around `from` and free, and for a diagonal step the two cells it passes between are
+/// free too. `free` says whether a cell can be stood on.
+#[must_use]
+pub fn step_allowed(from: Cell, to: Cell, free: impl Fn(Cell) -> bool) -> bool {
+    adjacent(from, to)
+        && free(to)
+        && (from.x == to.x
+            || from.y == to.y
+            || (free(Cell { x: to.x, y: from.y }) && free(Cell { x: from.x, y: to.y })))
+}
+
 /// In one of the eight cells around, not the same cell.
-const fn adjacent(a: Cell, b: Cell) -> bool {
+#[must_use]
+pub const fn adjacent(a: Cell, b: Cell) -> bool {
     a.x.abs_diff(b.x) <= 1 && a.y.abs_diff(b.y) <= 1 && (a.x != b.x || a.y != b.y)
 }
 
