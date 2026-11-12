@@ -53,8 +53,9 @@ reviewer of today. `tools/check_pr_message.sh` checks the parts a script can che
   short limit. (GitHub rewraps the description at 72 when it writes the commit; that is its doing and needs no care.)
 - Not in the description: checklists, HTML comments, template headings with nothing under them, trailers, the state of
   the pull request ("draft until ...", "CI is green", "all tests pass"), greetings.
-- What is true only while the pull request is open goes into a comment on it: test runs, measurements made for the
-  review, what the reviewer should look at first, what it waits for.
+- What is true only while the pull request is open (test runs, measurements made for the review, what it waits for) is
+  told to the maintainer directly and written nowhere. No comments on a pull request to carry it: they add nothing the
+  checks and the diff do not show.
 - Dependabot writes its own descriptions; trim them to a sentence when merging.
 
 ## Shell scripts
