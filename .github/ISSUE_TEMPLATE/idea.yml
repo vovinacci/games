@@ -1,0 +1,23 @@
+name: Idea
+description: Suggest a feature or a change to the rules
+labels: [idea]
+body:
+  - type: dropdown
+    id: game
+    attributes:
+      label: Game
+      options: [Bounty, All games]
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+      description: What should the game do, and why would it make it more fun?
+    validations:
+      required: true
+  - type: textarea
+    id: original
+    attributes:
+      label: From the original?
+      description: If the game this one pays tribute to had it, how did it work there?

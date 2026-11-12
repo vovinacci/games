@@ -10,3 +10,7 @@ reflow = true
 reflow-mode = "normalize"
 code-blocks = false
 tables = false
+
+# GitHub templates start with a comment, not a heading.
+[per-file-ignores]
+".github/pull_request_template.md" = ["MD041"]
