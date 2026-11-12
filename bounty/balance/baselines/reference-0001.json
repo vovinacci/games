@@ -1,0 +1,1557 @@
+{
+  "schema_version": 2,
+  "suite_id": "reference-smoke-v1",
+  "identity": {
+    "engine_revision": "ba1a341",
+    "ruleset_id": "reference-v0.1",
+    "rules_hash": "ac155e80b44c2e17091b3fa4bda11faa505ad64c7b7f0a73e2c268a60aefcb0b",
+    "scenario_hash": "07b9bdca43d12f77618ff2c1db02d71d99658ee3194fa1a9253f078b73b4f1ea",
+    "pilot_version": "approach-v1",
+    "seed_list": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ]
+  },
+  "coverage": {
+    "planned": 40,
+    "executed": 40,
+    "cases_not_run": []
+  },
+  "rows": [
+    {
+      "case_id": "even_fight",
+      "seed": 1,
+      "outcome": "player_win",
+      "survivors": {
+        "enemy": {
+          "archers": 0,
+          "sprites": 0,
+          "wolves": 0
+        },
+        "player": {
+          "archers": 6,
+          "sprites": 6,
+          "wolves": 13
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "archers": 6,
+          "sprites": 40,
+          "wolves": 20
+        },
+        "player": {
+          "archers": 0,
+          "sprites": 34,
+          "wolves": 7
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 2900,
+        "player": 790
+      },
+      "completed_rounds": 3,
+      "accepted_actions": 20,
+      "ammunition_used": 3,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "c0b6be138f2b33350ac02330f1d5d01894b5f5e06e548a8d0f136c2a64e14a46"
+    },
+    {
+      "case_id": "even_fight",
+      "seed": 2,
+      "outcome": "player_win",
+      "survivors": {
+        "enemy": {
+          "archers": 0,
+          "sprites": 0,
+          "wolves": 0
+        },
+        "player": {
+          "archers": 6,
+          "sprites": 3,
+          "wolves": 6
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "archers": 6,
+          "sprites": 40,
+          "wolves": 20
+        },
+        "player": {
+          "archers": 0,
+          "sprites": 37,
+          "wolves": 14
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 2900,
+        "player": 1115
+      },
+      "completed_rounds": 4,
+      "accepted_actions": 27,
+      "ammunition_used": 5,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "b2032bde71fc9a3c0290fe64f20ac42353c7353c7a7288eb3e84812060ae7b92"
+    },
+    {
+      "case_id": "even_fight",
+      "seed": 3,
+      "outcome": "player_win",
+      "survivors": {
+        "enemy": {
+          "archers": 0,
+          "sprites": 0,
+          "wolves": 0
+        },
+        "player": {
+          "archers": 6,
+          "sprites": 0,
+          "wolves": 0
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "archers": 6,
+          "sprites": 40,
+          "wolves": 20
+        },
+        "player": {
+          "archers": 0,
+          "sprites": 40,
+          "wolves": 20
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 2900,
+        "player": 1400
+      },
+      "completed_rounds": 8,
+      "accepted_actions": 35,
+      "ammunition_used": 12,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "365cc84f79e5bb8da22816cf9aa95e39531ecea69388f87fff1c379154cb8d5f"
+    },
+    {
+      "case_id": "even_fight",
+      "seed": 4,
+      "outcome": "player_win",
+      "survivors": {
+        "enemy": {
+          "archers": 0,
+          "sprites": 0,
+          "wolves": 0
+        },
+        "player": {
+          "archers": 5,
+          "sprites": 0,
+          "wolves": 0
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "archers": 6,
+          "sprites": 40,
+          "wolves": 20
+        },
+        "player": {
+          "archers": 1,
+          "sprites": 40,
+          "wolves": 20
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 2900,
+        "player": 1650
+      },
+      "completed_rounds": 11,
+      "accepted_actions": 39,
+      "ammunition_used": 20,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "79f00b197c2e181253707edfe8b4166d0672f526babcfb8ea285c8f292050f8a"
+    },
+    {
+      "case_id": "even_fight",
+      "seed": 5,
+      "outcome": "enemy_win",
+      "survivors": {
+        "enemy": {
+          "archers": 2,
+          "sprites": 0,
+          "wolves": 0
+        },
+        "player": {
+          "archers": 0,
+          "sprites": 0,
+          "wolves": 0
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "archers": 4,
+          "sprites": 40,
+          "wolves": 20
+        },
+        "player": {
+          "archers": 6,
+          "sprites": 40,
+          "wolves": 20
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 2400,
+        "player": 2900
+      },
+      "completed_rounds": 18,
+      "accepted_actions": 53,
+      "ammunition_used": 23,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "b4159ae8776aeb79766323402713bd7c20ebad7b545bcd1ebbc983297ca15850"
+    },
+    {
+      "case_id": "even_fight",
+      "seed": 6,
+      "outcome": "player_win",
+      "survivors": {
+        "enemy": {
+          "archers": 0,
+          "sprites": 0,
+          "wolves": 0
+        },
+        "player": {
+          "archers": 3,
+          "sprites": 0,
+          "wolves": 0
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "archers": 6,
+          "sprites": 40,
+          "wolves": 20
+        },
+        "player": {
+          "archers": 3,
+          "sprites": 40,
+          "wolves": 20
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 2900,
+        "player": 2150
+      },
+      "completed_rounds": 16,
+      "accepted_actions": 51,
+      "ammunition_used": 22,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "fbbe0773214e8093fbfefb723a29a01ff17460da7b5d5b2024bef90ead8ad82d"
+    },
+    {
+      "case_id": "even_fight",
+      "seed": 7,
+      "outcome": "player_win",
+      "survivors": {
+        "enemy": {
+          "archers": 0,
+          "sprites": 0,
+          "wolves": 0
+        },
+        "player": {
+          "archers": 6,
+          "sprites": 8,
+          "wolves": 12
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "archers": 6,
+          "sprites": 40,
+          "wolves": 20
+        },
+        "player": {
+          "archers": 0,
+          "sprites": 32,
+          "wolves": 8
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 2900,
+        "player": 800
+      },
+      "completed_rounds": 3,
+      "accepted_actions": 21,
+      "ammunition_used": 4,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "986b6c4efcd481d413b19dd3a6e87b63d99973732c9c9fe607763c53b8176a55"
+    },
+    {
+      "case_id": "even_fight",
+      "seed": 8,
+      "outcome": "enemy_win",
+      "survivors": {
+        "enemy": {
+          "archers": 6,
+          "sprites": 20,
+          "wolves": 0
+        },
+        "player": {
+          "archers": 0,
+          "sprites": 0,
+          "wolves": 0
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "archers": 0,
+          "sprites": 20,
+          "wolves": 20
+        },
+        "player": {
+          "archers": 6,
+          "sprites": 40,
+          "wolves": 20
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 1100,
+        "player": 2900
+      },
+      "completed_rounds": 4,
+      "accepted_actions": 28,
+      "ammunition_used": 8,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "bcdea31064f1be434b9556f54aff119af75a75aed38ee30961f27ab71edb25aa"
+    },
+    {
+      "case_id": "morale_sprites_wolves",
+      "seed": 1,
+      "outcome": "enemy_win",
+      "survivors": {
+        "enemy": {
+          "sprites": 6,
+          "wolves": 3
+        },
+        "player": {
+          "sprites": 0,
+          "wolves": 0
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "sprites": 54,
+          "wolves": 7
+        },
+        "player": {
+          "sprites": 60,
+          "wolves": 10
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 1090,
+        "player": 1300
+      },
+      "completed_rounds": 1,
+      "accepted_actions": 11,
+      "ammunition_used": 0,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "5bd47e949a51f2df74844c8ce686d7502a42a5a21d98850c09030ff40678a613"
+    },
+    {
+      "case_id": "morale_sprites_wolves",
+      "seed": 2,
+      "outcome": "enemy_win",
+      "survivors": {
+        "enemy": {
+          "sprites": 6,
+          "wolves": 5
+        },
+        "player": {
+          "sprites": 0,
+          "wolves": 0
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "sprites": 54,
+          "wolves": 5
+        },
+        "player": {
+          "sprites": 60,
+          "wolves": 10
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 1010,
+        "player": 1300
+      },
+      "completed_rounds": 1,
+      "accepted_actions": 10,
+      "ammunition_used": 0,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "3c41074912d045791067d549546af8ecfa248cc723a400db5702384fa6a44c32"
+    },
+    {
+      "case_id": "morale_sprites_wolves",
+      "seed": 3,
+      "outcome": "player_win",
+      "survivors": {
+        "enemy": {
+          "sprites": 0,
+          "wolves": 0
+        },
+        "player": {
+          "sprites": 0,
+          "wolves": 3
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "sprites": 60,
+          "wolves": 10
+        },
+        "player": {
+          "sprites": 60,
+          "wolves": 7
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 1300,
+        "player": 1180
+      },
+      "completed_rounds": 3,
+      "accepted_actions": 14,
+      "ammunition_used": 0,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "d9662ac5185923f8cab5582450fae56f0efcba27bf2249eeb7ed4cb375c14613"
+    },
+    {
+      "case_id": "morale_sprites_wolves",
+      "seed": 4,
+      "outcome": "enemy_win",
+      "survivors": {
+        "enemy": {
+          "sprites": 17,
+          "wolves": 8
+        },
+        "player": {
+          "sprites": 0,
+          "wolves": 0
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "sprites": 43,
+          "wolves": 2
+        },
+        "player": {
+          "sprites": 60,
+          "wolves": 10
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 725,
+        "player": 1300
+      },
+      "completed_rounds": 1,
+      "accepted_actions": 10,
+      "ammunition_used": 0,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "606cf929ef37cbec1dd4d0edc5b8fc462f593b3646bfb15a0ca4469dda1bdb70"
+    },
+    {
+      "case_id": "morale_sprites_wolves",
+      "seed": 5,
+      "outcome": "player_win",
+      "survivors": {
+        "enemy": {
+          "sprites": 0,
+          "wolves": 0
+        },
+        "player": {
+          "sprites": 0,
+          "wolves": 8
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "sprites": 60,
+          "wolves": 10
+        },
+        "player": {
+          "sprites": 60,
+          "wolves": 2
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 1300,
+        "player": 980
+      },
+      "completed_rounds": 2,
+      "accepted_actions": 13,
+      "ammunition_used": 0,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "0ff5bd5576fdad26a10074dea9fef0c94f6f1c2b590a3c7e0628bebbe812b762"
+    },
+    {
+      "case_id": "morale_sprites_wolves",
+      "seed": 6,
+      "outcome": "player_win",
+      "survivors": {
+        "enemy": {
+          "sprites": 0,
+          "wolves": 0
+        },
+        "player": {
+          "sprites": 0,
+          "wolves": 7
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "sprites": 60,
+          "wolves": 10
+        },
+        "player": {
+          "sprites": 60,
+          "wolves": 3
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 1300,
+        "player": 1020
+      },
+      "completed_rounds": 2,
+      "accepted_actions": 11,
+      "ammunition_used": 0,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "e2050417a326c74f99c7d31435b3f315a70ade46ab936c6ffcc5250694fe6946"
+    },
+    {
+      "case_id": "morale_sprites_wolves",
+      "seed": 7,
+      "outcome": "enemy_win",
+      "survivors": {
+        "enemy": {
+          "sprites": 15,
+          "wolves": 8
+        },
+        "player": {
+          "sprites": 0,
+          "wolves": 0
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "sprites": 45,
+          "wolves": 2
+        },
+        "player": {
+          "sprites": 60,
+          "wolves": 10
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 755,
+        "player": 1300
+      },
+      "completed_rounds": 1,
+      "accepted_actions": 10,
+      "ammunition_used": 0,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "e30f8eb641a635e9eb637740a8ca7f4168613cf69ab76bcfcdc4703a78895d22"
+    },
+    {
+      "case_id": "morale_sprites_wolves",
+      "seed": 8,
+      "outcome": "enemy_win",
+      "survivors": {
+        "enemy": {
+          "sprites": 0,
+          "wolves": 10
+        },
+        "player": {
+          "sprites": 0,
+          "wolves": 0
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "sprites": 60,
+          "wolves": 0
+        },
+        "player": {
+          "sprites": 60,
+          "wolves": 10
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 900,
+        "player": 1300
+      },
+      "completed_rounds": 2,
+      "accepted_actions": 14,
+      "ammunition_used": 0,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "fcfbe0bd7276ede2996d5e61250d9932f28758abc83c5f1da34c73efb8438382"
+    },
+    {
+      "case_id": "loss_of_control",
+      "seed": 1,
+      "outcome": "enemy_win",
+      "survivors": {
+        "enemy": {
+          "archers": 3,
+          "wolves": 9
+        },
+        "player": {
+          "archers": 0,
+          "wolves": 0
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "archers": 0,
+          "wolves": 6
+        },
+        "player": {
+          "archers": 4,
+          "wolves": 20
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 240,
+        "player": 1800
+      },
+      "completed_rounds": 2,
+      "accepted_actions": 12,
+      "ammunition_used": 2,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "170a2126fe777a1fb739c6e000d9457fee25dbb87ca7fc36c681fe934c3826ce"
+    },
+    {
+      "case_id": "loss_of_control",
+      "seed": 2,
+      "outcome": "player_win",
+      "survivors": {
+        "enemy": {
+          "archers": 0,
+          "wolves": 0
+        },
+        "player": {
+          "archers": 0,
+          "wolves": 8
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "archers": 3,
+          "wolves": 15
+        },
+        "player": {
+          "archers": 4,
+          "wolves": 12
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 1350,
+        "player": 1480
+      },
+      "completed_rounds": 4,
+      "accepted_actions": 18,
+      "ammunition_used": 3,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "e1818ba15820b9682f63f89be3d54d255eb7452859a89b8e3506e53a134d0bd6"
+    },
+    {
+      "case_id": "loss_of_control",
+      "seed": 3,
+      "outcome": "player_win",
+      "survivors": {
+        "enemy": {
+          "archers": 0,
+          "wolves": 0
+        },
+        "player": {
+          "archers": 0,
+          "wolves": 9
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "archers": 3,
+          "wolves": 15
+        },
+        "player": {
+          "archers": 4,
+          "wolves": 11
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 1350,
+        "player": 1440
+      },
+      "completed_rounds": 3,
+      "accepted_actions": 15,
+      "ammunition_used": 2,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "912ddda32426d0d57eca48e6fd9fece99041938403e9145a8d91a7398082f4bf"
+    },
+    {
+      "case_id": "loss_of_control",
+      "seed": 4,
+      "outcome": "player_win",
+      "survivors": {
+        "enemy": {
+          "archers": 0,
+          "wolves": 0
+        },
+        "player": {
+          "archers": 0,
+          "wolves": 10
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "archers": 3,
+          "wolves": 15
+        },
+        "player": {
+          "archers": 4,
+          "wolves": 10
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 1350,
+        "player": 1400
+      },
+      "completed_rounds": 5,
+      "accepted_actions": 20,
+      "ammunition_used": 4,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "2a60e2dbb805a1124106047fff0d31b5f0126f917e78dd52e3c73b0832b0808d"
+    },
+    {
+      "case_id": "loss_of_control",
+      "seed": 5,
+      "outcome": "player_win",
+      "survivors": {
+        "enemy": {
+          "archers": 0,
+          "wolves": 0
+        },
+        "player": {
+          "archers": 0,
+          "wolves": 11
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "archers": 3,
+          "wolves": 15
+        },
+        "player": {
+          "archers": 4,
+          "wolves": 9
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 1350,
+        "player": 1360
+      },
+      "completed_rounds": 4,
+      "accepted_actions": 17,
+      "ammunition_used": 3,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "f3301a0f6a4628c3b64336dd1168696ccb4163607be938d3a3dbf1d67960646f"
+    },
+    {
+      "case_id": "loss_of_control",
+      "seed": 6,
+      "outcome": "player_win",
+      "survivors": {
+        "enemy": {
+          "archers": 0,
+          "wolves": 0
+        },
+        "player": {
+          "archers": 0,
+          "wolves": 5
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "archers": 3,
+          "wolves": 15
+        },
+        "player": {
+          "archers": 4,
+          "wolves": 15
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 1350,
+        "player": 1600
+      },
+      "completed_rounds": 5,
+      "accepted_actions": 20,
+      "ammunition_used": 3,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "40c7c317d7a4fa89a7bee9cdf0f8d87b954a02091e771b52255bf1cfd17fa315"
+    },
+    {
+      "case_id": "loss_of_control",
+      "seed": 7,
+      "outcome": "player_win",
+      "survivors": {
+        "enemy": {
+          "archers": 0,
+          "wolves": 0
+        },
+        "player": {
+          "archers": 0,
+          "wolves": 8
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "archers": 3,
+          "wolves": 15
+        },
+        "player": {
+          "archers": 4,
+          "wolves": 12
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 1350,
+        "player": 1480
+      },
+      "completed_rounds": 5,
+      "accepted_actions": 21,
+      "ammunition_used": 4,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "55557ed2289de355cc4991a739d3bf0216530e08afc68e021a70d160055dd2ea"
+    },
+    {
+      "case_id": "loss_of_control",
+      "seed": 8,
+      "outcome": "player_win",
+      "survivors": {
+        "enemy": {
+          "archers": 0,
+          "wolves": 0
+        },
+        "player": {
+          "archers": 0,
+          "wolves": 10
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "archers": 3,
+          "wolves": 15
+        },
+        "player": {
+          "archers": 4,
+          "wolves": 10
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 1350,
+        "player": 1400
+      },
+      "completed_rounds": 4,
+      "accepted_actions": 18,
+      "ammunition_used": 3,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "9544324f9453a615f92670f7c811bbca88fca84512e74b96fc7105b6e4093132"
+    },
+    {
+      "case_id": "loss_of_control_deep",
+      "seed": 1,
+      "outcome": "enemy_win",
+      "survivors": {
+        "enemy": {
+          "archers": 4,
+          "sprites": 0,
+          "wolves": 0
+        },
+        "player": {
+          "archers": 0,
+          "sprites": 0,
+          "wolves": 0
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "archers": 2,
+          "sprites": 30,
+          "wolves": 30
+        },
+        "player": {
+          "archers": 6,
+          "sprites": 30,
+          "wolves": 40
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 2150,
+        "player": 3550
+      },
+      "completed_rounds": 7,
+      "accepted_actions": 29,
+      "ammunition_used": 5,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "65070203c09c816f7ff9bf9f53160c46d06642abe64d78c5e5973a64daa8c728"
+    },
+    {
+      "case_id": "loss_of_control_deep",
+      "seed": 2,
+      "outcome": "enemy_win",
+      "survivors": {
+        "enemy": {
+          "archers": 6,
+          "sprites": 0,
+          "wolves": 10
+        },
+        "player": {
+          "archers": 0,
+          "sprites": 0,
+          "wolves": 0
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "archers": 0,
+          "sprites": 30,
+          "wolves": 20
+        },
+        "player": {
+          "archers": 6,
+          "sprites": 30,
+          "wolves": 40
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 1250,
+        "player": 3550
+      },
+      "completed_rounds": 3,
+      "accepted_actions": 17,
+      "ammunition_used": 3,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "0d74a1d176b02d7c824f0e9bc188b704b71da5ab0d7e3c199c141a828feefefc"
+    },
+    {
+      "case_id": "loss_of_control_deep",
+      "seed": 3,
+      "outcome": "enemy_win",
+      "survivors": {
+        "enemy": {
+          "archers": 6,
+          "sprites": 0,
+          "wolves": 18
+        },
+        "player": {
+          "archers": 0,
+          "sprites": 0,
+          "wolves": 0
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "archers": 0,
+          "sprites": 30,
+          "wolves": 12
+        },
+        "player": {
+          "archers": 6,
+          "sprites": 30,
+          "wolves": 40
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 930,
+        "player": 3550
+      },
+      "completed_rounds": 2,
+      "accepted_actions": 15,
+      "ammunition_used": 2,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "b9cc4e0de66333eb5b59d6a630381540ebd6fc83fadb322b74517709bc523c7e"
+    },
+    {
+      "case_id": "loss_of_control_deep",
+      "seed": 4,
+      "outcome": "enemy_win",
+      "survivors": {
+        "enemy": {
+          "archers": 6,
+          "sprites": 0,
+          "wolves": 12
+        },
+        "player": {
+          "archers": 0,
+          "sprites": 0,
+          "wolves": 0
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "archers": 0,
+          "sprites": 30,
+          "wolves": 18
+        },
+        "player": {
+          "archers": 6,
+          "sprites": 30,
+          "wolves": 40
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 1170,
+        "player": 3550
+      },
+      "completed_rounds": 3,
+      "accepted_actions": 18,
+      "ammunition_used": 3,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "fc74d7980a8b62bce01e746a854da160207f9e27b99219115c84645029b68022"
+    },
+    {
+      "case_id": "loss_of_control_deep",
+      "seed": 5,
+      "outcome": "enemy_win",
+      "survivors": {
+        "enemy": {
+          "archers": 6,
+          "sprites": 0,
+          "wolves": 19
+        },
+        "player": {
+          "archers": 0,
+          "sprites": 0,
+          "wolves": 0
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "archers": 0,
+          "sprites": 30,
+          "wolves": 11
+        },
+        "player": {
+          "archers": 6,
+          "sprites": 30,
+          "wolves": 40
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 890,
+        "player": 3550
+      },
+      "completed_rounds": 2,
+      "accepted_actions": 15,
+      "ammunition_used": 3,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "1484814c6f0697585695a0a4aeea16a77745b0ab3d8fd6b8c6686f5b1f296029"
+    },
+    {
+      "case_id": "loss_of_control_deep",
+      "seed": 6,
+      "outcome": "enemy_win",
+      "survivors": {
+        "enemy": {
+          "archers": 6,
+          "sprites": 0,
+          "wolves": 0
+        },
+        "player": {
+          "archers": 0,
+          "sprites": 0,
+          "wolves": 0
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "archers": 0,
+          "sprites": 30,
+          "wolves": 30
+        },
+        "player": {
+          "archers": 6,
+          "sprites": 30,
+          "wolves": 40
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 1650,
+        "player": 3550
+      },
+      "completed_rounds": 6,
+      "accepted_actions": 26,
+      "ammunition_used": 6,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "c91607eb934cb9bf317a0b07c29d438ba032c50235cebea5ec728124ae9b68af"
+    },
+    {
+      "case_id": "loss_of_control_deep",
+      "seed": 7,
+      "outcome": "enemy_win",
+      "survivors": {
+        "enemy": {
+          "archers": 6,
+          "sprites": 0,
+          "wolves": 19
+        },
+        "player": {
+          "archers": 0,
+          "sprites": 0,
+          "wolves": 0
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "archers": 0,
+          "sprites": 30,
+          "wolves": 11
+        },
+        "player": {
+          "archers": 6,
+          "sprites": 30,
+          "wolves": 40
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 890,
+        "player": 3550
+      },
+      "completed_rounds": 2,
+      "accepted_actions": 14,
+      "ammunition_used": 2,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "cc2c222b046d7a0e16e647e1450b43544227c5caea8876496dd5e7c134be4801"
+    },
+    {
+      "case_id": "loss_of_control_deep",
+      "seed": 8,
+      "outcome": "enemy_win",
+      "survivors": {
+        "enemy": {
+          "archers": 6,
+          "sprites": 0,
+          "wolves": 1
+        },
+        "player": {
+          "archers": 0,
+          "sprites": 0,
+          "wolves": 0
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "archers": 0,
+          "sprites": 30,
+          "wolves": 29
+        },
+        "player": {
+          "archers": 6,
+          "sprites": 30,
+          "wolves": 40
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 1610,
+        "player": 3550
+      },
+      "completed_rounds": 4,
+      "accepted_actions": 22,
+      "ammunition_used": 4,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "19bc68d05b1d04727fd63f8ac66762d070bca7f7676b71902bd156ed941e34ef"
+    },
+    {
+      "case_id": "overmatch",
+      "seed": 1,
+      "outcome": "player_win",
+      "survivors": {
+        "enemy": {
+          "sprites": 0
+        },
+        "player": {
+          "archers": 10,
+          "wolves": 30
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "sprites": 10
+        },
+        "player": {
+          "archers": 0,
+          "wolves": 0
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 150,
+        "player": 0
+      },
+      "completed_rounds": 0,
+      "accepted_actions": 4,
+      "ammunition_used": 1,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "5513ecfab08b567f3cb3f8593ff2527974e10d738914e85c731f37188f8d852d"
+    },
+    {
+      "case_id": "overmatch",
+      "seed": 2,
+      "outcome": "player_win",
+      "survivors": {
+        "enemy": {
+          "sprites": 0
+        },
+        "player": {
+          "archers": 10,
+          "wolves": 30
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "sprites": 10
+        },
+        "player": {
+          "archers": 0,
+          "wolves": 0
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 150,
+        "player": 0
+      },
+      "completed_rounds": 0,
+      "accepted_actions": 4,
+      "ammunition_used": 1,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "bfa7068faaf8a249faaeb522586bc3307600d51888afc64fccd65e67cd260467"
+    },
+    {
+      "case_id": "overmatch",
+      "seed": 3,
+      "outcome": "player_win",
+      "survivors": {
+        "enemy": {
+          "sprites": 0
+        },
+        "player": {
+          "archers": 10,
+          "wolves": 30
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "sprites": 10
+        },
+        "player": {
+          "archers": 0,
+          "wolves": 0
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 150,
+        "player": 0
+      },
+      "completed_rounds": 0,
+      "accepted_actions": 4,
+      "ammunition_used": 1,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "c557a6c3709be5540a087cee9dce25053d741008d7bdfa1fee6eaaa6ff253b51"
+    },
+    {
+      "case_id": "overmatch",
+      "seed": 4,
+      "outcome": "player_win",
+      "survivors": {
+        "enemy": {
+          "sprites": 0
+        },
+        "player": {
+          "archers": 10,
+          "wolves": 30
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "sprites": 10
+        },
+        "player": {
+          "archers": 0,
+          "wolves": 0
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 150,
+        "player": 0
+      },
+      "completed_rounds": 0,
+      "accepted_actions": 4,
+      "ammunition_used": 1,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "968d9899e5fdeb598ce2e7c987b184312c2e3ba31d2c3ec65e477c822e444d03"
+    },
+    {
+      "case_id": "overmatch",
+      "seed": 5,
+      "outcome": "player_win",
+      "survivors": {
+        "enemy": {
+          "sprites": 0
+        },
+        "player": {
+          "archers": 10,
+          "wolves": 30
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "sprites": 10
+        },
+        "player": {
+          "archers": 0,
+          "wolves": 0
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 150,
+        "player": 0
+      },
+      "completed_rounds": 0,
+      "accepted_actions": 4,
+      "ammunition_used": 1,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "d1f78786908cbddd0e8d015efbe4af859c7322e1fee569ea20de08ec539df17e"
+    },
+    {
+      "case_id": "overmatch",
+      "seed": 6,
+      "outcome": "player_win",
+      "survivors": {
+        "enemy": {
+          "sprites": 0
+        },
+        "player": {
+          "archers": 10,
+          "wolves": 30
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "sprites": 10
+        },
+        "player": {
+          "archers": 0,
+          "wolves": 0
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 150,
+        "player": 0
+      },
+      "completed_rounds": 0,
+      "accepted_actions": 4,
+      "ammunition_used": 1,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "1bfb6674b735fec15c6bba20846ed3646b460430dcc6f665c33c0331b1946c9c"
+    },
+    {
+      "case_id": "overmatch",
+      "seed": 7,
+      "outcome": "player_win",
+      "survivors": {
+        "enemy": {
+          "sprites": 0
+        },
+        "player": {
+          "archers": 10,
+          "wolves": 30
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "sprites": 10
+        },
+        "player": {
+          "archers": 0,
+          "wolves": 0
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 150,
+        "player": 0
+      },
+      "completed_rounds": 0,
+      "accepted_actions": 4,
+      "ammunition_used": 1,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "56f719288154ce5865a29314e971e37f966bbfb7c2974c2b7fe53a9688b02cd3"
+    },
+    {
+      "case_id": "overmatch",
+      "seed": 8,
+      "outcome": "player_win",
+      "survivors": {
+        "enemy": {
+          "sprites": 0
+        },
+        "player": {
+          "archers": 10,
+          "wolves": 30
+        }
+      },
+      "casualties": {
+        "enemy": {
+          "sprites": 10
+        },
+        "player": {
+          "archers": 0,
+          "wolves": 0
+        }
+      },
+      "replacement_cost_reference": {
+        "enemy": 150,
+        "player": 0
+      },
+      "completed_rounds": 0,
+      "accepted_actions": 4,
+      "ammunition_used": 1,
+      "spell_charges_used": 0,
+      "invalid_commands": 0,
+      "final_digest": "c7114bac9862962fb209f88799553e3904787154a280b7eabce7e4310074edce"
+    }
+  ],
+  "summary": [
+    {
+      "case_id": "even_fight",
+      "runs": 8,
+      "outcomes": {
+        "enemy_win": 2,
+        "player_win": 6
+      },
+      "casualties": {
+        "enemy": 500,
+        "player": 448
+      },
+      "replacement_cost_reference": {
+        "enemy": 20900,
+        "player": 13705
+      }
+    },
+    {
+      "case_id": "morale_sprites_wolves",
+      "runs": 8,
+      "outcomes": {
+        "enemy_win": 5,
+        "player_win": 3
+      },
+      "casualties": {
+        "enemy": 482,
+        "player": 542
+      },
+      "replacement_cost_reference": {
+        "enemy": 8380,
+        "player": 9680
+      }
+    },
+    {
+      "case_id": "loss_of_control",
+      "runs": 8,
+      "outcomes": {
+        "enemy_win": 1,
+        "player_win": 7
+      },
+      "casualties": {
+        "enemy": 132,
+        "player": 131
+      },
+      "replacement_cost_reference": {
+        "enemy": 9690,
+        "player": 11960
+      }
+    },
+    {
+      "case_id": "loss_of_control_deep",
+      "runs": 8,
+      "outcomes": {
+        "enemy_win": 8
+      },
+      "casualties": {
+        "enemy": 403,
+        "player": 608
+      },
+      "replacement_cost_reference": {
+        "enemy": 10540,
+        "player": 28400
+      }
+    },
+    {
+      "case_id": "overmatch",
+      "runs": 8,
+      "outcomes": {
+        "player_win": 8
+      },
+      "casualties": {
+        "enemy": 80,
+        "player": 0
+      },
+      "replacement_cost_reference": {
+        "enemy": 1200,
+        "player": 0
+      }
+    }
+  ],
+  "problems": []
+}
