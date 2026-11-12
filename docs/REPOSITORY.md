@@ -16,8 +16,9 @@ request template on purpose: whatever it held would end up in every commit messa
 
 ## Rulesets
 
-- `main`: needs a pull request with the checks `Checks`, `Dependencies` and `Conventional PR title` passing, resolved
-  review threads, linear history and signed commits; it can't be deleted or force-pushed.
+- `main`: needs a pull request with the checks `Checks`, the three `Build` jobs, `Dependencies` and
+  `Conventional PR title` passing, resolved review threads, linear history and signed commits; it can't be deleted or
+  force-pushed.
 - `release tags`: tags matching `*-v*` (`<game>-vX.Y.Z`) can't be moved or deleted.
 - Repository admins can bypass both, for emergencies. A new required check is added to the `main` ruleset in the same
   change that adds its job, or the job protects nothing.
@@ -26,6 +27,7 @@ request template on purpose: whatever it held would end up in every commit messa
 
 - `Checks`: all prek hooks (whitespace, ASCII, Markdown, shell, rustfmt, clippy), then `cargo test` for the whole
   workspace with the committed lockfile.
+- `Build (Linux x86_64)`, `Build (Windows x86_64)`, `Build (macOS)`: a release build of each game's application.
 - `Dependencies`: cargo-deny (advisories, licences, duplicates, sources) as set in `deny.toml`.
 - `Conventional PR title`: the title must be a Conventional Commit, and title and description must pass
   `tools/check_pr_message.sh`, since they become the commit on `main` (`AGENTS.md`, "Pull requests").

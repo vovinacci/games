@@ -2,7 +2,7 @@
 # nothing is published to crates.io.
 [workspace]
 resolver = "3"
-members = ["bounty/crates/bounty-ai", "bounty/crates/bounty-core", "bounty/crates/bounty-tools", "gamekit"]
+members = ["bounty/crates/bounty-ai", "bounty/crates/bounty-app", "bounty/crates/bounty-core", "bounty/crates/bounty-tools", "gamekit"]
 
 [workspace.package]
 edition = "2024"

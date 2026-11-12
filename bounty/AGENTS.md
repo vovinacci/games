@@ -40,6 +40,19 @@ baseline, and so does a test, so CI fails when a battle of the suite ends differ
 `balance/README.md`. A report with problems (a refused command, an outcome the case does not allow, a run that does not
 repeat) is a defect to fix, not a result.
 
+## The application
+
+- All text on screen goes through `t!("key")`, with the key in both `crates/bounty-app/assets/i18n/en-GB.ftl` (British
+  spelling) and `uk.ftl`. Never hard-code on-screen text; tests check the keys. A stack is always named with its side
+  and in one form ("your Wardens", "ваші Вартові"), and sentences are built so that the name is never declined.
+- The screen offers only what `Battle::legal_actions` lists (`control.rs`); it has no rules of its own.
+- Check a changed screen in both languages by screenshot, not by eye on a window:
+  `cargo run -p bounty-app -- --lang uk --scenario flight_barrier --steps 3 --shot shot.png`. `--steps` lets the pilot
+  play that many commands first. With `--shot` the user's settings are neither read nor written.
+- Ukrainian runs longer than English: text with a fixed place uses `text_fit` or `text_wrapped` from `gamekit`.
+- A run without `--shot` reads and writes `settings.txt` in the user's data folder. The user may be playing: stop only
+  your own process, by its ID.
+
 ## Not here yet
 
-- `bounty-app`: added when its first code arrives.
+- Sound, a menu, saving a battle, the campaign.
