@@ -59,5 +59,3 @@ repeat) is a defect to fix, not a result.
 ## Not here yet
 
 - Sound, a menu, saving a battle, the campaign.
-- A recorded baseline for the reference rules: `balance/reference-suite.json` runs, and its first numbers wait to be
-  looked at before a baseline is recorded.

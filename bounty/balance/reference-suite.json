@@ -7,6 +7,7 @@
   "rules_path": "../content/reference/rules.json",
   "scenarios_path": "../content/reference/battles.json",
   "metrics_path": "reference-metrics.json",
+  "baseline_path": "baselines/reference-0001.json",
   "pilot": {
     "id": "approach-v1",
     "status": "implemented",
@@ -47,7 +48,15 @@
         "player_win",
         "enemy_win"
       ],
-      "purpose": "the player's Wolves start out of control"
+      "purpose": "the player's Wolves start a little over the leadership and come back under control after their first losses"
+    },
+    {
+      "id": "loss_of_control_deep",
+      "allowed_outcomes": [
+        "player_win",
+        "enemy_win"
+      ],
+      "purpose": "the player's Wolves start at twice the leadership and stay out of control for most of the battle"
     },
     {
       "id": "overmatch",
@@ -57,6 +66,6 @@
       "purpose": "a fight the player must win"
     }
   ],
-  "planned_runs": 32,
-  "note": "No baseline_path yet: the first numbers are looked at before a baseline is recorded."
+  "planned_runs": 40,
+  "note": "Baselines of this suite are never compared with the prototype's: other rules, other troops."
 }

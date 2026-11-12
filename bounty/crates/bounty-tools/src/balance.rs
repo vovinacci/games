@@ -469,34 +469,34 @@ pub(crate) mod tests {
     // replaces the baseline in the same pull request and says there what moved and why (bounty/balance/README.md);
     // a change that is not meant to must leave this test alone.
     #[test]
-    fn the_suite_gives_the_recorded_baseline() {
-        let loaded = load(&suite_path()).unwrap();
-        let path = suite_path()
-            .parent()
-            .unwrap()
-            .join(loaded.suite.baseline_path.as_ref().unwrap());
-        let baseline: Report = serde_json::from_str(&fs::read_to_string(path).unwrap()).unwrap();
-        let comparison = crate::compare::compare(&baseline, &run(&loaded, &[], "test").unwrap());
-        assert!(
-            comparison.same_results(),
-            "results moved against the baseline:\n{}",
-            comparison.text()
-        );
-        assert_eq!(comparison.compared, 32);
+    fn each_suite_gives_its_recorded_baseline() {
+        for (file, battles) in [("suite.json", 32), ("reference-suite.json", 40)] {
+            let path = suite_path().with_file_name(file);
+            let loaded = load(&path).unwrap();
+            let baseline = path.with_file_name(loaded.suite.baseline_path.as_ref().unwrap());
+            let baseline: Report =
+                serde_json::from_str(&fs::read_to_string(baseline).unwrap()).unwrap();
+            let comparison =
+                crate::compare::compare(&baseline, &run(&loaded, &[], "test").unwrap());
+            assert!(
+                comparison.same_results(),
+                "{file}: results moved against the baseline:\n{}",
+                comparison.text()
+            );
+            assert_eq!(comparison.compared, battles, "{file}");
+        }
     }
 
-    // The cases for the reference rules run to an end without problems. They have no baseline yet, so there is
-    // nothing to compare them with; the one case with a fixed answer is checked here.
+    // The cases for the reference rules run to an end without problems, and the one with a fixed answer gives it.
     #[test]
     fn the_reference_suite_runs_without_problems() {
         let path = suite_path().with_file_name("reference-suite.json");
         let loaded = load(&path).unwrap();
-        assert_eq!(loaded.suite.baseline_path, None);
         let report = run(&loaded, &[], "test").unwrap();
         assert_eq!(report.problems, Vec::<String>::new());
         assert_eq!(
             (report.coverage.planned, report.coverage.executed),
-            (32, 32)
+            (40, 40)
         );
         assert_eq!(report.identity.ruleset_id, "reference-v0.1");
         let overmatch = report
