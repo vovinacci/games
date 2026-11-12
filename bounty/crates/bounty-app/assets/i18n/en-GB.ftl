@@ -2,6 +2,7 @@
 
 title = Bounty
 prototype-note = Test rules, not those of the original game
+reference-note = Rules from another remake of the original, not yet checked against it
 header-battle = Battle: { $id }, seed { $seed }
 round = Round { $n }
 
@@ -9,6 +10,9 @@ round = Round { $n }
 troop-warden = Wardens
 troop-slinger = Slingers
 troop-skyrider = Skyriders
+troop-sprites = Sprites
+troop-wolves = Wolves
+troop-archers = Archers
 name-player = your { $troop }
 name-enemy = enemy { $troop }
 spell-blast = Blast
@@ -22,6 +26,12 @@ stat-health = Health of each: { $hp }, injury: { $injury }
 stat-movement = Movement left: { $n }
 stat-shots = Shots left: { $n }
 stat-flights = Flights left: { $n }
+stat-leadership = Hero's leadership: { $n }
+stat-morale = Morale: { $morale }
+morale-low = low, damage halved
+morale-normal = normal
+morale-high = high, damage and half again
+out-of-control = Out of control: it fights everyone and moves by itself
 actions = What you can do
 key-move = Arrows: move the cursor
 key-act = Enter: { $what }
@@ -39,8 +49,11 @@ key-quit = Esc: quit
 
 # Log
 log-round = Round { $n } begins
-log-damage = Attack: { $attacker } on { $target }. Damage { $roll } x { $attackers } = { $damage }, lost: { $losses }
-log-retaliation = Strike back: { $attacker } on { $target }. Damage { $roll } x { $attackers } = { $damage }, lost: { $losses }
+log-damage = Attack: { $attacker } on { $target }. Damage { $damage } (roll { $roll }, creatures: { $attackers }{ $morale }), lost: { $losses }
+log-retaliation = Strike back: { $attacker } on { $target }. Damage { $damage } (roll { $roll }, creatures: { $attackers }{ $morale }), lost: { $losses }
+log-morale-low = , low morale
+log-morale-high = , high morale
+log-control = Back under control: { $name }
 log-spell-damage = { $spell } on { $target }. Damage { $damage }, lost: { $losses }
 log-removed = Destroyed: { $name }
 log-moved = Moved: { $name }

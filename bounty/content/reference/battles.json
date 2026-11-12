@@ -1,0 +1,221 @@
+{
+  "schema_version": 1,
+  "ruleset_id": "reference-v0.1",
+  "scenarios": [
+    {
+      "id": "even_fight",
+      "rng_state": 1,
+      "obstacles": [
+        {
+          "x": 2,
+          "y": 2
+        },
+        {
+          "x": 3,
+          "y": 1
+        }
+      ],
+      "hero_charges": {},
+      "leadership": 200,
+      "stacks": [
+        {
+          "id": "p0",
+          "side": "player",
+          "slot": 0,
+          "troop_id": "wolves",
+          "count": 20,
+          "injury": 0,
+          "x": 0,
+          "y": 0
+        },
+        {
+          "id": "p1",
+          "side": "player",
+          "slot": 1,
+          "troop_id": "archers",
+          "count": 6,
+          "injury": 0,
+          "x": 0,
+          "y": 1
+        },
+        {
+          "id": "p2",
+          "side": "player",
+          "slot": 2,
+          "troop_id": "sprites",
+          "count": 40,
+          "injury": 0,
+          "x": 0,
+          "y": 2
+        },
+        {
+          "id": "e0",
+          "side": "enemy",
+          "slot": 0,
+          "troop_id": "wolves",
+          "count": 20,
+          "injury": 0,
+          "x": 5,
+          "y": 0
+        },
+        {
+          "id": "e1",
+          "side": "enemy",
+          "slot": 1,
+          "troop_id": "archers",
+          "count": 6,
+          "injury": 0,
+          "x": 5,
+          "y": 1
+        },
+        {
+          "id": "e2",
+          "side": "enemy",
+          "slot": 2,
+          "troop_id": "sprites",
+          "count": 40,
+          "injury": 0,
+          "x": 5,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "id": "morale_sprites_wolves",
+      "rng_state": 2,
+      "obstacles": [],
+      "hero_charges": {},
+      "leadership": 200,
+      "stacks": [
+        {
+          "id": "p0",
+          "side": "player",
+          "slot": 0,
+          "troop_id": "sprites",
+          "count": 60,
+          "injury": 0,
+          "x": 0,
+          "y": 0
+        },
+        {
+          "id": "p1",
+          "side": "player",
+          "slot": 1,
+          "troop_id": "wolves",
+          "count": 10,
+          "injury": 0,
+          "x": 0,
+          "y": 1
+        },
+        {
+          "id": "e0",
+          "side": "enemy",
+          "slot": 0,
+          "troop_id": "sprites",
+          "count": 60,
+          "injury": 0,
+          "x": 5,
+          "y": 0
+        },
+        {
+          "id": "e1",
+          "side": "enemy",
+          "slot": 1,
+          "troop_id": "wolves",
+          "count": 10,
+          "injury": 0,
+          "x": 5,
+          "y": 1
+        }
+      ]
+    },
+    {
+      "id": "loss_of_control",
+      "rng_state": 3,
+      "obstacles": [],
+      "hero_charges": {},
+      "leadership": 45,
+      "stacks": [
+        {
+          "id": "p0",
+          "side": "player",
+          "slot": 0,
+          "troop_id": "wolves",
+          "count": 20,
+          "injury": 0,
+          "x": 0,
+          "y": 0
+        },
+        {
+          "id": "p1",
+          "side": "player",
+          "slot": 1,
+          "troop_id": "archers",
+          "count": 4,
+          "injury": 0,
+          "x": 0,
+          "y": 1
+        },
+        {
+          "id": "e0",
+          "side": "enemy",
+          "slot": 0,
+          "troop_id": "wolves",
+          "count": 15,
+          "injury": 0,
+          "x": 5,
+          "y": 0
+        },
+        {
+          "id": "e1",
+          "side": "enemy",
+          "slot": 1,
+          "troop_id": "archers",
+          "count": 3,
+          "injury": 0,
+          "x": 5,
+          "y": 1
+        }
+      ]
+    },
+    {
+      "id": "overmatch",
+      "rng_state": 4,
+      "obstacles": [],
+      "hero_charges": {},
+      "leadership": 200,
+      "stacks": [
+        {
+          "id": "p0",
+          "side": "player",
+          "slot": 0,
+          "troop_id": "wolves",
+          "count": 30,
+          "injury": 0,
+          "x": 0,
+          "y": 0
+        },
+        {
+          "id": "p1",
+          "side": "player",
+          "slot": 1,
+          "troop_id": "archers",
+          "count": 10,
+          "injury": 0,
+          "x": 0,
+          "y": 1
+        },
+        {
+          "id": "e0",
+          "side": "enemy",
+          "slot": 0,
+          "troop_id": "sprites",
+          "count": 10,
+          "injury": 0,
+          "x": 5,
+          "y": 0
+        }
+      ]
+    }
+  ]
+}

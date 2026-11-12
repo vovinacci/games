@@ -2,7 +2,7 @@
 //! tests can read every line in every language.
 
 use bounty_core::battle::{Battle, Event, Outcome};
-use bounty_core::content::Side;
+use bounty_core::content::{Morale, Side};
 use gamekit::i18n::{Language, tr};
 use gamekit::t;
 
@@ -40,6 +40,15 @@ pub fn stack_name(battle: &Battle, id: &str) -> String {
     }
 }
 
+/// A morale as the sidebar names it.
+pub fn morale_text(morale: Morale) -> String {
+    match morale {
+        Morale::Low => t!("morale-low"),
+        Morale::Normal => t!("morale-normal"),
+        Morale::High => t!("morale-high"),
+    }
+}
+
 pub fn outcome_text(outcome: Outcome) -> String {
     tr(&format!("outcome-{}", outcome.name()), &[])
 }
@@ -58,6 +67,7 @@ pub fn describe(event: &Event, battle: &Battle) -> Option<String> {
             damage,
             losses,
             retaliation,
+            morale,
             ..
         } => {
             if battle.stack(attacker).is_none() {
@@ -70,10 +80,17 @@ pub fn describe(event: &Event, battle: &Battle) -> Option<String> {
                     losses = *losses
                 )
             } else {
+                // The damage is given as the rules made it; roll and number are what went in. No sum is shown,
+                // since skill and morale stand between them and the result.
                 let key = if *retaliation {
                     "log-retaliation"
                 } else {
                     "log-damage"
+                };
+                let morale = match morale {
+                    Some(Morale::Low) => t!("log-morale-low"),
+                    Some(Morale::High) => t!("log-morale-high"),
+                    Some(Morale::Normal) | None => String::new(),
                 };
                 tr(
                     key,
@@ -84,6 +101,7 @@ pub fn describe(event: &Event, battle: &Battle) -> Option<String> {
                         ("attackers", (*attackers).into()),
                         ("damage", (*damage).into()),
                         ("losses", (*losses).into()),
+                        ("morale", morale.into()),
                     ],
                 )
             }
@@ -97,8 +115,8 @@ pub fn describe(event: &Event, battle: &Battle) -> Option<String> {
         Event::Healed {
             target, removed, ..
         } => t!("log-healed", name = name(target), removed = *removed),
+        Event::ControlRegained { stack } => t!("log-control", name = name(stack)),
         Event::SideStarted { .. }
-        | Event::ControlRegained { .. }
         | Event::ActivationStarted { .. }
         | Event::ActivationEnded { .. }
         | Event::SpellCast { .. }
@@ -238,5 +256,53 @@ mod tests {
         i18n::set_language(0);
         assert_eq!(stack_name(&battle, "p0"), "your Skyriders");
         assert_eq!(stack_name(&battle, "e0"), "enemy Wardens");
+    }
+
+    // Under the reference rules the log also tells of morale and of control coming back.
+    #[test]
+    fn the_log_tells_of_morale_and_of_control() {
+        i18n::init(&LANGUAGES);
+        let rules = Arc::new(content::rules_named("reference").unwrap());
+        let scenario = content::scenario(&rules, "morale_sprites_wolves").unwrap();
+        let mut battle = Battle::start(rules, &scenario, None).unwrap();
+        // The player's Sprites fly beside the enemy's and strike them, at Low morale.
+        let act = |battle: &mut Battle, action: Action| {
+            let command = Command {
+                revision: battle.revision(),
+                actor: battle.active().unwrap().stack.clone(),
+                action,
+            };
+            battle.apply(&command).unwrap()
+        };
+        act(
+            &mut battle,
+            Action::Fly {
+                to: Cell { x: 4, y: 0 },
+            },
+        );
+        let events = act(
+            &mut battle,
+            Action::Melee {
+                target: "e0".to_owned(),
+            },
+        );
+        let control = Event::ControlRegained {
+            stack: "p0".to_owned(),
+        };
+        for place in 0..i18n::language_count() {
+            i18n::set_language(place);
+            let blow = describe(&events[0], &battle).unwrap();
+            assert!(blow.contains(&t!("log-morale-low")), "{blow}");
+            assert!(!blow.contains('{') && !blow.contains("log-"), "{blow}");
+            let back = describe(&control, &battle).unwrap();
+            assert!(
+                back.contains(&stack_name(&battle, "p0")) && !back.contains("log-"),
+                "{back}"
+            );
+            for morale in [Morale::Low, Morale::Normal, Morale::High] {
+                assert!(!morale_text(morale).starts_with("morale-"));
+            }
+        }
+        i18n::set_language(0);
     }
 }

@@ -4,8 +4,10 @@ A tribute to King's Bounty (1990, DOS): explore, recruit, fight, find the sceptr
 application will use macroquad. Made for nostalgia, for the fun of programming it, and to work on computer opponents and
 game balance.
 
-What can be played is one battle under invented test rules: `cargo run -p bounty-app`, or with
-`-- --scenario flight_barrier --seed 5` for another battle. The campaign and the original's rules are still to come.
+What can be played is one battle: `cargo run -p bounty-app` under invented test rules, or
+`cargo run -p bounty-app -- --rules reference` under the first rules taken from another remake of the original (three
+troops; `--scenario morale_sprites_wolves`, `loss_of_control` or `overmatch` for other battles). The campaign is still
+to come.
 
 ## Layout
 
@@ -17,7 +19,7 @@ What can be played is one battle under invented test rules: `cargo run -p bounty
 | `crates/bounty-tools` | developer tools: fixed-seed battle runs and their comparison (`make balance`) |
 | `docs/spec/` | the specification, see below |
 | `prototype/` | synthetic battle rules, scenarios and expected results for testing the engine |
-| `content/reference/` | the first rules and troops taken from a reimplementation of the original; implemented in part |
+| `content/reference/` | the first rules and troops taken from a reimplementation of the original, and battles for them |
 | `content/demo/` | a small synthetic expedition used as an integration test |
 | `balance/` | the fixed set of cases and seeds for before/after comparisons, and recorded baselines |
 | `schemas/` | JSON schemas of the map and save file |

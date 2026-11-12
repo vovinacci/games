@@ -2,13 +2,13 @@
 //! The layout is the fixed one of `docs/spec/CONTENT-AND-ASSETS.md`: header, board, sidebar, log.
 
 use bounty_core::battle::{Action, Battle, Observation, Stack};
-use bounty_core::content::{Cell, Side, Troop};
+use bounty_core::content::{Cell, Profile, Side, Troop};
 use gamekit::t;
 use gamekit::text::{measure, text_at, text_centered_fit, text_fit};
 use macroquad::prelude::*;
 
 use crate::control::action_at;
-use crate::words::{named, outcome_text, stack_name};
+use crate::words::{morale_text, named, outcome_text, stack_name};
 
 /// Side of a board cell, and where the board's top-left corner is.
 pub const CELL: f32 = 96.0;
@@ -85,19 +85,16 @@ fn header(battle: &Battle, shown: &Shown<'_>) {
         18.0,
         LIGHTGRAY,
     );
-    // The rules in use are not the original game's; the screen says so, always.
-    text_fit(
-        &t!("prototype-note"),
-        SIDEBAR.x,
-        32.0,
-        SIDEBAR.w,
-        18.0,
-        CURSOR,
-    );
+    // The rules in use are not the original game's; the screen says so, always, and says which they are.
+    let note = match battle.rules().profile {
+        Profile::Prototype => t!("prototype-note"),
+        Profile::Reference(_) => t!("reference-note"),
+    };
+    text_fit(&note, SIDEBAR.x, 32.0, SIDEBAR.w, 18.0, CURSOR);
 }
 
 fn board(battle: &Battle, seen: &Observation, cursor: Cell) {
-    let players_turn = players_turn(battle);
+    let players_turn = player_commands(battle);
     for y in 0..seen.height {
         for x in 0..seen.width {
             let cell = Cell { x, y };
@@ -190,6 +187,11 @@ fn token(stack: &Stack, troop: &Troop, active: bool) {
     if active {
         draw_rectangle_lines(at.x + 4.0, at.y + 4.0, CELL - 8.0, CELL - 8.0, 2.0, WHITE);
     }
+    if stack.out_of_control {
+        // A mark in the corner, not a colour: the stack obeys nobody.
+        text_at("!", at.x + CELL - 20.0, at.y + 26.0, 28.0, TARGET);
+        text_at("!", at.x + 10.0, at.y + 26.0, 28.0, TARGET);
+    }
     let count = if stack.injury > 0 {
         format!("{} -{}", stack.count, stack.injury)
     } else {
@@ -213,11 +215,11 @@ fn token(stack: &Stack, troop: &Troop, active: bool) {
     }
 }
 
-fn players_turn(battle: &Battle) -> bool {
-    battle
-        .active()
-        .and_then(|a| battle.stack(&a.stack))
-        .is_some_and(|s| s.side == Side::Player)
+/// Whether the stack whose turn it is takes the player's commands: one of the player's, and under control. A stack
+/// out of control is moved by the pilot, like the enemy's.
+pub fn player_commands(battle: &Battle) -> bool {
+    let active = battle.active().and_then(|a| battle.stack(&a.stack));
+    active.is_some_and(|s| s.side == Side::Player && !s.out_of_control)
 }
 
 fn sidebar(battle: &Battle, seen: &Observation, cursor: Cell) {
@@ -255,7 +257,20 @@ fn sidebar(battle: &Battle, seen: &Observation, cursor: Cell) {
     if troop.flights_per_activation > 0 {
         line(&t!("stat-flights", n = active.flights), 18.0, LIGHTGRAY);
     }
+    if let Some(morale) = battle.morale(&stack.id) {
+        line(
+            &t!("stat-morale", morale = morale_text(morale)),
+            18.0,
+            LIGHTGRAY,
+        );
+    }
+    if let Some(leadership) = battle.leadership() {
+        line(&t!("stat-leadership", n = leadership), 18.0, LIGHTGRAY);
+    }
     line("", 10.0, WHITE);
+    if stack.out_of_control {
+        return line(&t!("out-of-control"), 18.0, TARGET);
+    }
     if stack.side == Side::Enemy {
         return line(&t!("enemy-turn"), 20.0, ENEMY);
     }

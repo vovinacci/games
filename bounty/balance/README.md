@@ -1,8 +1,18 @@
 # Regression suite and baselines
 
-`suite.json` lists four synthetic battles and eight seeds for each: 32 battles, played by the pilot `approach-v1` on
-both sides. `metrics.json` holds the frozen prices used to value losses. All paths in `suite.json` are relative to that
-file. The battles test the engine; they are not a calibration of King's Bounty balance.
+A suite lists four battles and eight seeds for each: 32 battles, played by the pilot `approach-v1` on both sides. All
+paths in a suite file are relative to that file. The battles test the engine; they are not a calibration of King's
+Bounty balance.
+
+| Suite | Rules | Prices for valuing losses | Baseline |
+|---|---|---|---|
+| `suite.json` | prototype (`prototype/`) | `metrics.json` | `baselines/prototype-0001.json` |
+| `reference-suite.json` | reference (`content/reference/`) | `reference-metrics.json` | none yet |
+
+The reference suite has battles of Sprites, Wolves and Archers: equal armies; equal armies in which the player's Sprites
+have Low morale and the enemy's have none; the player's Wolves starting out of control; and a fight the player must win.
+Its numbers are never set beside the prototype's: other rules, other troops. Until its first numbers have been looked at
+it has no baseline, and a run of it is compared with nothing.
 
 ## The recorded baseline
 
