@@ -13,6 +13,9 @@ use crate::content::{Cell, ContentError, Rules};
 /// Maps larger than this on a side are refused before any memory is set aside for them.
 const MAX_MAP_SIDE: u32 = 256;
 
+/// No length of time in an expedition is longer than this many ticks.
+const MAX_TICKS: u32 = 1_000_000;
+
 fn invalid<T>(why: String) -> Result<T, ContentError> {
     Err(ContentError::Invalid(why))
 }
@@ -354,6 +357,34 @@ fn place(map: &Map, id: &str, kind: ObjectKind, what: &str) -> Result<Cell, Cont
     }
 }
 
+/// The clock of a file, with every length of time between one tick and [`MAX_TICKS`]. The bound keeps the sums
+/// of ticks far from overflowing, and no expedition is that long.
+fn clock(file: &ClockFile) -> Result<Clock, ContentError> {
+    let week_ticks = file
+        .ticks_per_day
+        .checked_mul(file.days_per_week)
+        .unwrap_or(u32::MAX);
+    let lengths = [
+        week_ticks,
+        file.deadline_ticks,
+        file.movement_ticks,
+        file.search_ticks,
+    ];
+    if lengths.iter().any(|&ticks| ticks == 0 || ticks > MAX_TICKS) {
+        return invalid(format!(
+            "the clock's week, deadline, step and search must each be 1..={MAX_TICKS} ticks; they are {lengths:?}"
+        ));
+    }
+    Ok(Clock {
+        week_ticks,
+        deadline_ticks: file.deadline_ticks,
+        movement_ticks: file.movement_ticks,
+        search_ticks: file.search_ticks,
+        weekly_income: file.weekly_income,
+        upkeep_per_creature: file.upkeep_per_living_creature,
+    })
+}
+
 /// Checks where and with what the expedition starts.
 fn check_start(start: &Start, map: &Map, rules: &Rules) -> Result<Cell, ContentError> {
     let cell = Cell {
@@ -503,24 +534,7 @@ impl ExpeditionDef {
             &true,
         )?;
 
-        let clock = Clock {
-            week_ticks: file
-                .clock
-                .ticks_per_day
-                .saturating_mul(file.clock.days_per_week),
-            deadline_ticks: file.clock.deadline_ticks,
-            movement_ticks: file.clock.movement_ticks,
-            search_ticks: file.clock.search_ticks,
-            weekly_income: file.clock.weekly_income,
-            upkeep_per_creature: file.clock.upkeep_per_living_creature,
-        };
-        if clock.week_ticks == 0
-            || clock.deadline_ticks == 0
-            || clock.movement_ticks == 0
-            || clock.search_ticks == 0
-        {
-            return invalid("the clock needs a week, a deadline, and a cost of at least one tick to move and to search".to_owned());
-        }
+        let clock = clock(&file.clock)?;
         let start = check_start(&file.start, &map, &rules)?;
         let town = check_town_and_bands(&file.town, &file.encounters, &map, &rules)?;
         place(
