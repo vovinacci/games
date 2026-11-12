@@ -10,6 +10,12 @@ built and released on its own.
 |---|---|---|
 | [Bounty](bounty/) | A tribute to King's Bounty (1990): explore, recruit, fight, find the sceptre before time runs out | Just begun; nothing to play yet |
 
+## Dedication
+
+In memory of Joseph Rivkind (1952–2026), who taught me to never stop learning.
+
+Пам'яті Йосифа Рівкінда (1952–2026), людини, яка навчила мене постійно вчитися.
+
 ## Building
 
 Rust is pinned in `mise.toml` ([mise](https://mise.jdx.dev) installs it). Then:

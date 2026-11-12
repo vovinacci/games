@@ -61,6 +61,7 @@ device or kit.
 | Data folder and safe file write (temporary file, then replace) | Save envelope, payload, digest, previous-save backup policy |
 | Sound bank: load and play generated WAV data | Which cues exist and how they are synthesised |
 | Crash report, developer hooks (open a screen, scripted keys, screenshot) | Screen names and scenario loading |
+| The dedication: its text in both languages and the screen that shows it, on the first run and in About | Where About sits in the menu |
 | Self-updater (repository, game name and public key as parameters) | Nothing; unused until there is a release |
 
 Random numbers, rule state and saves are never shared between games. Where the kit has no module yet, write it in the
