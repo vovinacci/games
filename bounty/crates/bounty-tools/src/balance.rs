@@ -435,6 +435,32 @@ pub(crate) mod tests {
         );
     }
 
+    // AT-074, AT-080: the whole suite runs, and the unreachable case ends as the diagnosis it expects.
+    #[test]
+    fn the_whole_suite_runs_without_problems() {
+        let report = run(&load(&suite_path()).unwrap(), &[], "test").unwrap();
+        assert_eq!(report.problems, Vec::<String>::new());
+        assert_eq!(
+            (report.coverage.planned, report.coverage.executed),
+            (32, 32)
+        );
+        assert_eq!(report.coverage.cases_not_run, Vec::<String>::new());
+        let unreachable = report
+            .summary
+            .iter()
+            .find(|c| c.case_id == "unreachable_melee")
+            .unwrap();
+        assert_eq!(unreachable.outcomes["budget_exceeded"], 8);
+        assert_eq!(unreachable.casualties.values().sum::<u64>(), 0);
+        for case in report
+            .summary
+            .iter()
+            .filter(|c| c.case_id != "unreachable_melee")
+        {
+            assert!(!case.outcomes.contains_key("budget_exceeded"), "{case:?}");
+        }
+    }
+
     // AT-073, AT-074: an outcome the case does not allow is a problem, not a quiet row.
     #[test]
     fn an_outcome_the_case_does_not_allow_is_a_problem() {
