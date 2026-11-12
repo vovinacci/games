@@ -40,7 +40,6 @@ name = "bounty-ai"
 version = "0.0.0"
 dependencies = [
  "bounty-core",
- "serde_json",
 ]
 
 [[package]]

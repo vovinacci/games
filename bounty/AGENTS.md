@@ -32,15 +32,16 @@ Bounty only. The specification is in `docs/spec/`; `README.md` gives the reading
 ## Measuring a change
 
 `make balance` plays the cases of every suite in `balance/` (prototype, reference, the `modern` variant) with every seed
-and writes a report for each under `target/` (`BALANCE_ARGS="--case melee_exchange"` picks one case). Compare two
-reports with
+and the routes of the demo expedition, and writes a report for each under `target/`
+(`BALANCE_ARGS="--case melee_exchange"` picks one case). Compare two reports with
 
 ```sh
 cargo run -q -p bounty-tools -- balance compare --baseline <before.json> --candidate <after.json>
 ```
 
 and add `--exact` for a change that must not move any result. `make balance-check` does that against the recorded
-baseline, and so does a test, so CI fails when a battle of the suite ends differently. Replacing the baseline:
+baseline, and so does a test, so CI fails when a battle of the suite ends differently or a route of the expedition costs
+something else (`bounty-tools expedition run|compare`; time, gold in and out, losses). Replacing the baseline:
 `balance/README.md`. A report with problems (a refused command, an outcome the case does not allow, a run that does not
 repeat) is a defect to fix, not a result.
 

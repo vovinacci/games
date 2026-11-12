@@ -1,7 +1,7 @@
 [package]
 name = "bounty-tools"
 version = "0.0.0"
-description = "Developer tools of Bounty: fixed-seed battle runs and the comparison of two of them"
+description = "Developer tools of Bounty: fixed-seed battle and expedition runs and the comparison of two of them"
 edition.workspace = true
 license.workspace = true
 authors.workspace = true

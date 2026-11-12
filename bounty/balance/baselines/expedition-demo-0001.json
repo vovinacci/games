@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "identity": {
+    "engine_revision": "178274e",
+    "expedition_id": "demo-expedition-v1",
+    "ruleset_id": "prototype-v0.1",
+    "content_sha256": "a2509c4813e1a5f23f266b7a298305e7fd3e58f3d27e73369f5f62e791977090",
+    "pilot_version": "approach-v1"
+  },
+  "rows": [
+    {
+      "route_id": "complete-route",
+      "status": "victory",
+      "elapsed_ticks": 15,
+      "weeks_settled": 0,
+      "gold_start": 100,
+      "gold_end": 150,
+      "income": 0,
+      "rewards": 90,
+      "upkeep": 0,
+      "recruiting": 40,
+      "lost_in_recovery": 0,
+      "recruited": {
+        "warden": 2
+      },
+      "battles": 2,
+      "battles_won": 2,
+      "battles_stalled": 0,
+      "recoveries": 0,
+      "casualties": {},
+      "casualties_cost": 0,
+      "army_end": {
+        "warden": 12
+      },
+      "accepted_commands": 16,
+      "final_digest": "fc505608c2165a94f991d2fc4788a82b7c37817ecccdd6aea059157b0219fc5d"
+    },
+    {
+      "route_id": "surrender-first-encounter",
+      "status": "adventure",
+      "elapsed_ticks": 7,
+      "weeks_settled": 0,
+      "gold_start": 100,
+      "gold_end": 30,
+      "income": 0,
+      "rewards": 0,
+      "upkeep": 0,
+      "recruiting": 40,
+      "lost_in_recovery": 30,
+      "recruited": {
+        "warden": 2
+      },
+      "battles": 1,
+      "battles_won": 0,
+      "battles_stalled": 0,
+      "recoveries": 1,
+      "casualties": {
+        "warden": 12
+      },
+      "casualties_cost": 240,
+      "army_end": {
+        "warden": 4
+      },
+      "accepted_commands": 5,
+      "final_digest": "04cf53054145a6674ad9b9e5be7b7a216a57792c5c00d9caa98c29554ece5bd0"
+    },
+    {
+      "route_id": "timeout-at-town",
+      "status": "timeout",
+      "elapsed_ticks": 24,
+      "weeks_settled": 1,
+      "gold_start": 100,
+      "gold_end": 110,
+      "income": 20,
+      "rewards": 0,
+      "upkeep": 10,
+      "recruiting": 0,
+      "lost_in_recovery": 0,
+      "recruited": {},
+      "battles": 0,
+      "battles_won": 0,
+      "battles_stalled": 0,
+      "recoveries": 0,
+      "casualties": {},
+      "casualties_cost": 0,
+      "army_end": {
+        "warden": 10
+      },
+      "accepted_commands": 24,
+      "final_digest": "43f11c9f65adff45d4f4d89e74c0e802b4228c281f882194f379d5746a5401c0"
+    },
+    {
+      "route_id": "success-on-deadline",
+      "status": "victory",
+      "elapsed_ticks": 24,
+      "weeks_settled": 1,
+      "gold_start": 100,
+      "gold_end": 158,
+      "income": 20,
+      "rewards": 90,
+      "upkeep": 12,
+      "recruiting": 40,
+      "lost_in_recovery": 0,
+      "recruited": {
+        "warden": 2
+      },
+      "battles": 2,
+      "battles_won": 2,
+      "battles_stalled": 0,
+      "recoveries": 0,
+      "casualties": {},
+      "casualties_cost": 0,
+      "army_end": {
+        "warden": 12
+      },
+      "accepted_commands": 25,
+      "final_digest": "2b99cac12c5b8a9fedb43372e7f474ce30b01ffe8f985ce68bc7686fa3166f43"
+    }
+  ],
+  "problems": []
+}

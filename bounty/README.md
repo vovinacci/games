@@ -17,7 +17,7 @@ still to come.
 | `crates/bounty-core` | rules and state; no graphics, sound or clock |
 | `crates/bounty-ai` | computer players: they see what a player sees and answer with a command |
 | `crates/bounty-app` | the game itself: window, keyboard, drawing; the binary is `bounty` |
-| `crates/bounty-tools` | developer tools: fixed-seed battle runs and their comparison (`make balance`) |
+| `crates/bounty-tools` | developer tools: fixed-seed battle runs, expedition routes with what they cost, and their comparison (`make balance`) |
 | `docs/spec/` | the specification, see below |
 | `prototype/` | synthetic battle rules, scenarios and expected results for testing the engine |
 | `content/reference/` | the first rules and troops taken from a reimplementation of the original, and battles for them |

@@ -55,6 +55,26 @@ army-view rule), on top of revision `e734935`, as the maintainer set the variant
 | `loss_of_control_deep` | 6 | 2 | 489 / 499 | no mutiny; half the Wolves fight |
 | `overmatch` | 8 | 0 | 0 / 80 | the same |
 
+## Expedition routes
+
+Battles alone do not show what a rule costs over a whole game. `bounty-tools expedition run` plays the routes an
+expedition file carries (its `tests`), the pilot fighting the battles, and reports for each route its time, the gold
+that came in (weekly income, rewards) and went out (upkeep, recruits, recovery), the creatures lost and how it ended. A
+route whose gold does not add up, that is refused a command or that does not repeat is a problem, not a row.
+
+`baselines/expedition-demo-0001.json`: the four routes of `content/demo/` under the prototype rules. A test
+(`the_demo_expedition_gives_its_recorded_baseline`) and `make balance-check` hold the code to it, field by field.
+
+| Route | Ends | Ticks | Gold in: income + rewards | Gold out: upkeep + recruits + recovery | Purse, 100 at start | Creatures lost |
+|---|---|---|---|---|---|---|
+| `complete-route` | victory | 15 | 0 + 90 | 0 + 40 + 0 | 150 | none |
+| `surrender-first-encounter` | goes on | 7 | 0 + 0 | 0 + 40 + 30 | 30 | 12 Wardens, the army given up |
+| `timeout-at-town` | timeout | 24 | 20 + 0 | 10 + 0 + 0 | 110 | none |
+| `success-on-deadline` | victory | 24 | 20 + 90 | 12 + 40 + 0 | 158 | none |
+
+These are the fixture's own numbers, synthetic like its rules: they pin the engine down and say nothing about the
+original's economy. The expedition on real troops gets its own baseline when it exists.
+
 ## Replacing a baseline
 
 Only for a change that is meant to move results, in the same pull request as that change:
@@ -62,7 +82,8 @@ Only for a change that is meant to move results, in the same pull request as tha
 1. `make balance`, then compare with the old baseline (`make balance-check` prints every battle that moved).
 2. Read the differences. Each one is either what the change was for, or a surprise to explain before going on.
 3. Save the new report under `baselines/` with the next number (`prototype-0002.json`, `modern-0002.json`), point
-   `baseline_path` in the suite file at it, and keep the old file: the history of baselines stays readable without git.
+   `baseline_path` in the suite file at it (for an expedition: `BALANCE_EXPEDITIONS` in the `Makefile` and the test),
+   and keep the old file: the history of baselines stays readable without git.
 4. Say in the pull request description what moved and why, with the numbers. That text becomes the commit message, so
    the reason travels with the baseline.
 
