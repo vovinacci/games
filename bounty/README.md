@@ -34,6 +34,8 @@ Version 0.3 of 12 November 2026, with the changes in `CHANGELOG.md`. Read in thi
 4. `docs/spec/07-RULES-REGISTER.md`: what is known about the original's rules and how the rest is settled.
 5. `docs/spec/09-BALANCE-REGRESSION.md`: measuring the effect of a rules change.
 6. `docs/spec/05-ACCEPTANCE-TESTS.md`: the tests each milestone needs.
+7. `docs/spec/10-GAMEPLAY-GAPS.md`: where the original falls short as a game, what could be changed, and when; a study
+   with measurements, not a decision.
 
 `docs/spec/REVIEW-RESOLUTION.md` records what a review changed between versions 0.2 and 0.3.
 
