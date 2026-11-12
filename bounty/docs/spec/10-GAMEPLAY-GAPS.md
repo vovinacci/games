@@ -216,11 +216,11 @@ variant gets its own baseline and is never compared with the reference's by acci
 
 `content/modern/rules.json` is the reference rules with one switch for each rule change that can be tried with three
 troops and a battle. Same troops, same chart, same battles; a test holds the content equal to the reference's. Each
-switch stands alone, so each can be measured alone; the file has all four on.
+switch stands alone, so each can be measured alone. Which of them the file has on is decided by the results below.
 
 | Gap | Switch | Reference | Variant |
 |---|---|---|---|
-| B4 | the count that answers a blow | the number before the blow | the survivors |
+| B4 | the count that answers a blow | the number before the blow | the survivors, or the mean of before and after |
 | B5 | the roll of a blow | one roll | the mean of two rolls |
 | B1 | the morale rule | the one the reference attributes to the original | the one the army screen shows |
 | B2 | a stack over the leadership | out of control, an enemy to all | in control; only as many fight as the leadership covers |
@@ -228,8 +228,85 @@ switch stands alone, so each can be measured alone; the file has all four on.
 The first three are choices the reference or the prototype already describe. The fourth is this project's own design:
 the reference offers nothing between obedience and mutiny.
 
-What each does to the tables above is still to be measured; until then none of them is adopted, and the variant's name
-promises nothing about which will stay.
-
 Not in the variant, with the reason: prices (B3) need the whole catalogue; the opponent's play (B6) is a policy, not a
 rule; every campaign point needs a campaign.
+
+## Results of the variant
+
+Measured as before (500 seeds a line, the plain pilot on both sides), by `measure_the_variant` in the same script. Each
+cell is player wins in 100, then the share of its creatures the winner keeps; the player always moves first. Every
+column but the last is one switch alone, the rest as the reference has it.
+
+| Case | Reference | Answer: survivors | Answer: mean | Mean of two rolls | Army-view morale | Leadership caps | `modern-v0.1` |
+|---|---|---|---|---|---|---|---|
+| **The same army on both sides, no hero** | | | | | | | |
+| 20 Wolves | 47 / 40 | 38 / 51 | 41 / 45 | 47 / 34 | 47 / 40 | 47 / 40 | 47 / 40 |
+| 60 Sprites | 61 / 72 | 71 / 67 | 68 / 69 | 53 / 46 | 61 / 72 | 61 / 72 | 61 / 72 |
+| 6 Archers | 69 / 43 | 69 / 43 | 69 / 43 | 71 / 42 | 69 / 43 | 69 / 43 | 69 / 43 |
+| 20 Wolves, 6 Archers, 40 Sprites | 48 / 22 | 74 / 31 | 64 / 24 | 47 / 17 | 48 / 22 | 48 / 22 | 48 / 22 |
+| **One army a tenth larger, no hero** | | | | | | | |
+| 22 Wolves on 20 | 71 / 42 | 58 / 49 | 64 / 45 | 75 / 37 | 71 / 42 | 71 / 42 | 71 / 42 |
+| 20 Wolves on 22 | 30 / 43 | 21 / 56 | 24 / 50 | 23 / 39 | 30 / 43 | 30 / 43 | 30 / 43 |
+| 66 Sprites on 60 | 72 / 68 | 92 / 70 | 78 / 67 | 70 / 45 | 72 / 68 | 72 / 68 | 72 / 68 |
+| 60 Sprites on 66 | 29 / 34 | 61 / 64 | 58 / 46 | 30 / 30 | 29 / 34 | 29 / 34 | 29 / 34 |
+| **The same army on both sides, the player's with a hero** | | | | | | | |
+| 60 Sprites and 10 Wolves | 7 / 37 | 18 / 34 | 14 / 36 | 3 / 40 | 60 / 55 | 7 / 37 | 60 / 55 |
+| 20 Wolves | 85 / 50 | 68 / 52 | 77 / 49 | 93 / 46 | 85 / 50 | 85 / 50 | 85 / 50 |
+| 60 Sprites | 75 / 65 | 100 / 82 | 100 / 68 | 90 / 81 | 75 / 65 | 75 / 65 | 75 / 65 |
+| **20 Wolves (60 health) and 4 Archers against a weaker enemy** | | | | | | | |
+| leadership 60 | 99 / 57 | 98 / 58 | 98 / 58 | 100 / 59 | 99 / 57 | 99 / 57 | 99 / 57 |
+| leadership 59 | 81 / 36 | 90 / 49 | 89 / 44 | 90 / 36 | 82 / 36 | 98 / 56 | 99 / 56 |
+| leadership 45 | 69 / 30 | 73 / 38 | 72 / 34 | 77 / 25 | 69 / 30 | 98 / 50 | 99 / 50 |
+| **40 Wolves (120 health), 6 Archers, 30 Sprites against 30, 6, 30** | | | | | | | |
+| leadership 120 | 93 / 31 | 95 / 35 | 94 / 33 | 97 / 32 | 94 / 31 | 93 / 31 | 94 / 31 |
+| leadership 100 | 63 / 24 | 65 / 30 | 65 / 27 | 74 / 25 | 42 / 20 | 90 / 29 | 92 / 28 |
+| leadership 61 | 17 / 19 | 21 / 23 | 19 / 21 | 16 / 17 | 22 / 21 | 68 / 21 | 76 / 19 |
+
+### What they say
+
+**Leadership caps the fighters (B2): does what it was meant to.** The cliff is gone. Where one point of leadership took
+the first army from 99 to 81 and the reference's deep case fell 93, 63, 17, the switch gives 99, 98, 98 and 93, 90, 68:
+a slope. An army over its leadership is weaker in proportion, not turned on itself. The strongest result of all.
+
+**Army-view morale (B1): moves the penalty, as it says.** With Sprites beside Wolves the reference halves the 60 Sprites
+and the army wins 7 in 100; the switch halves the 10 Wolves and it wins 60. Nothing else moves except where that pairing
+occurs (the deep case at leadership 100, where the Wolves, once back in control, are now the ones at Low). The rule is
+neither kinder nor harsher in itself: it punishes the troop the screen names. With three troops this is one pairing;
+what it does across the catalogue is open.
+
+**The answer from survivors (B4): not what was hoped.** It does make a won fight cheaper, a little: the winner keeps 51
+where it kept 40 (Wolves), 31 where 22 (the mixed army). But it makes striking first worth more than a tenth of an army.
+Sixty Sprites striking first beat sixty-six 61 times in 100, where under the reference they win 29. Of two equal mixed
+armies the one that moves first wins 74, not 48. For troops that must walk up it works the other way, since the one who
+walks is struck first: 22 Wolves walking up to 20 win 58, not 71. Under the reference the larger army wins about 70
+either way round; under this switch the order of blows decides more than the size of the armies. And the player always
+moves first, so everything tilts the player's way.
+
+**The answer from the mean of before and after (B4, second try): half the harm, less than half the good.** It lands
+between the two, as it must: the mixed armies 64 where 48 and 74; the sixty Sprites still beat sixty-six 58 times in
+100. And what it was for barely moves: the winner keeps 45 where 40 (Wolves), 24 where 22 (the mixed army). The dead
+striking back is what keeps the size of an army worth more than the order of blows; any rule that weakens the answer
+buys cheaper victories with that.
+
+**The mean of two rolls (B5): a small gain, paid for in blood.** The larger army of Wolves wins a little more often (75
+and 77 in 100 the two ways round, where 71 and 70), and nothing changes for Sprites, whose roll has only two values. But
+even fights get closer, so the winner keeps less: 46 where 72 for Sprites, 34 where 40 for Wolves. One lucky roll used
+to end a fight early and cheaply; without it both sides grind.
+
+### Decided, 13 November 2026
+
+`modern-v0.1` keeps two switches on: the leadership cap and army-view morale. Both answer switches and the mean of two
+rolls stay in the engine, off, so that the measurements above can be run again; they are not adopted.
+
+### What follows
+
+- B2, the cap: kept. To be played, and shown on screen: how many of a stack fight.
+- B1, army-view morale: kept, to be looked at again when all five morale groups can meet.
+- B4, the cost of a victory: still a gap, and not one to cure inside the battle. The place to try is after it: some of
+  the fallen of a won battle return. That leaves who wins untouched and changes what winning costs. It is a rule of the
+  campaign, so it waits for the expedition.
+- B5, the swing of one roll: left alone. If it still matters once battles are played by hand, the thing to try is a
+  narrower roll for large stacks only.
+
+These are results for three troops and a pilot that walks up and strikes. They decide what to try next, not what the
+game will be.

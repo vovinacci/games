@@ -7,8 +7,10 @@ file are relative to that file. The battles test the engine; they are not a cali
 |---|---|---|---|---|
 | `suite.json` | prototype (`prototype/`) | 4 x 8 | `metrics.json` | `baselines/prototype-0001.json` |
 | `reference-suite.json` | reference (`content/reference/`) | 5 x 8 | `reference-metrics.json` | `baselines/reference-0001.json` |
+| `modern-suite.json` | the variant (`content/modern/`), on the reference's battles | 5 x 8 | `reference-metrics.json` | `baselines/modern-0001.json` |
 
-The numbers of the two suites are never set beside each other: other rules, other troops.
+The prototype's numbers are never set beside the others': other rules, other troops. The reference's and the variant's
+are, on purpose and by hand, in `docs/spec/10-GAMEPLAY-GAPS.md`; the tools hold each to its own baseline.
 
 A test (`each_suite_gives_its_recorded_baseline`) and `make balance-check` compare the code as it stands with the
 baselines, battle by battle, down to the final position. So:
@@ -42,13 +44,24 @@ added at the maintainer's word on 12 November 2026.
 Eight seeds are few: over 500 seeds `loss_of_control` is won 69 times in 100, not 7 in 8. The baseline pins the engine
 down; it is not an estimate of how hard a battle is.
 
+`baselines/modern-0001.json`: the same battles under `modern-v0.1` (the leadership caps the fighters; morale by the
+army-view rule), on top of revision `e734935`, as the maintainer set the variant on 13 November 2026.
+
+| Case | Player wins | Enemy wins | Creatures lost, player / enemy | Against the reference |
+|---|---|---|---|---|
+| `even_fight` | 3 | 5 | 501 / 491 | fewer wins: by the army-view rule the player's Wolves are at Low beside Sprites |
+| `morale_sprites_wolves` | 7 | 1 | 160 / 556 | the ten Wolves are halved, not the sixty Sprites |
+| `loss_of_control` | 8 | 0 | 98 / 144 | no mutiny; all but one of the Wolves fight |
+| `loss_of_control_deep` | 6 | 2 | 489 / 499 | no mutiny; half the Wolves fight |
+| `overmatch` | 8 | 0 | 0 / 80 | the same |
+
 ## Replacing a baseline
 
 Only for a change that is meant to move results, in the same pull request as that change:
 
 1. `make balance`, then compare with the old baseline (`make balance-check` prints every battle that moved).
 2. Read the differences. Each one is either what the change was for, or a surprise to explain before going on.
-3. Save the new report under `baselines/` with the next number (`prototype-0002.json`, `reference-0002.json`), point
+3. Save the new report under `baselines/` with the next number (`prototype-0002.json`, `modern-0002.json`), point
    `baseline_path` in the suite file at it, and keep the old file: the history of baselines stays readable without git.
 4. Say in the pull request description what moved and why, with the numbers. That text becomes the commit message, so
    the reason travels with the baseline.

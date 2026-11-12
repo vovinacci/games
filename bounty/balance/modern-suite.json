@@ -1,0 +1,71 @@
+{
+  "schema_version": 2,
+  "suite_id": "modern-smoke-v1",
+  "status": "cases_for_the_modern_variant",
+  "purpose": "regression_of_the_variant_rules_on_the_reference_battles",
+  "ruleset_id": "modern-v0.1",
+  "rules_path": "../content/modern/rules.json",
+  "scenarios_path": "../content/reference/battles.json",
+  "metrics_path": "reference-metrics.json",
+  "baseline_path": "baselines/modern-0001.json",
+  "pilot": {
+    "id": "approach-v1",
+    "status": "implemented",
+    "definition": "../docs/spec/04-AI-AND-BALANCE.md"
+  },
+  "battle_seeds": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+  ],
+  "policy_randomness": "none",
+  "round_limit": 200,
+  "cases": [
+    {
+      "id": "even_fight",
+      "allowed_outcomes": [
+        "player_win",
+        "enemy_win"
+      ],
+      "purpose": "equal armies of all three troops; the player strikes first and has a hero"
+    },
+    {
+      "id": "morale_sprites_wolves",
+      "allowed_outcomes": [
+        "player_win",
+        "enemy_win"
+      ],
+      "purpose": "equal armies in which the player's Sprites have Low morale and the enemy's have none"
+    },
+    {
+      "id": "loss_of_control",
+      "allowed_outcomes": [
+        "player_win",
+        "enemy_win"
+      ],
+      "purpose": "the player's Wolves start a little over the leadership and come back under control after their first losses"
+    },
+    {
+      "id": "loss_of_control_deep",
+      "allowed_outcomes": [
+        "player_win",
+        "enemy_win"
+      ],
+      "purpose": "the player's Wolves start at twice the leadership and stay out of control for most of the battle"
+    },
+    {
+      "id": "overmatch",
+      "allowed_outcomes": [
+        "player_win"
+      ],
+      "purpose": "a fight the player must win"
+    }
+  ],
+  "planned_runs": 40,
+  "note": "The reference suite's battles under the variant's rules. Its baselines are not compared with the reference's by the tools; docs/spec/10-GAMEPLAY-GAPS.md sets the two side by side."
+}

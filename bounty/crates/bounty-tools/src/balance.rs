@@ -470,7 +470,12 @@ pub(crate) mod tests {
     // a change that is not meant to must leave this test alone.
     #[test]
     fn each_suite_gives_its_recorded_baseline() {
-        for (file, battles) in [("suite.json", 32), ("reference-suite.json", 40)] {
+        let suites = [
+            ("suite.json", 32),
+            ("reference-suite.json", 40),
+            ("modern-suite.json", 40),
+        ];
+        for (file, battles) in suites {
             let path = suite_path().with_file_name(file);
             let loaded = load(&path).unwrap();
             let baseline = path.with_file_name(loaded.suite.baseline_path.as_ref().unwrap());

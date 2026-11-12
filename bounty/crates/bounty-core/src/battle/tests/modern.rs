@@ -10,36 +10,62 @@ use crate::content::{MODERN_RULESET, REFERENCE_RULESET, StackStart, scenarios_fr
 const MODERN: &str = include_str!("../../../../../content/modern/rules.json");
 const REFERENCE: &str = include_str!("../../../../../content/reference/rules.json");
 
-/// The switches as the variant's file and the reference write them: name, variant's text, reference's text.
-const SWITCHES: [(&str, &str, &str); 4] = [
-    (
-        "answer",
-        r#""count_used": "count_at_the_blow",
-    "retaliation_uses_survivors": true,"#,
-        r#""count_used": "count_before_the_exchange",
+/// Each switch as the rules files write it: its settings by name, the reference's first, under the empty name.
+const SWITCHES: [&[(&str, &str)]; 4] = [
+    &[
+        (
+            "",
+            r#""count_used": "count_before_the_exchange",
     "retaliation_uses_survivors": false,"#,
-    ),
-    ("rolls", r#""rolls": "mean_of_two""#, r#""rolls": "one""#),
-    (
-        "morale",
-        r#""rule": "alone_high_else_others_read_self_then_other_any_low_is_low_all_high_is_high""#,
-        r#""rule": "lowest_rank_over_own_side_self_included_chart_read_other_then_self""#,
-    ),
-    (
-        "control",
-        r#""over_leadership": "only_what_leadership_covers_fights""#,
-        r#""over_leadership": "out_of_control""#,
-    ),
+        ),
+        (
+            "answer",
+            r#""count_used": "count_at_the_blow",
+    "retaliation_uses_survivors": true,"#,
+        ),
+        (
+            "answer-mean",
+            r#""count_used": "mean_of_before_and_after_the_blow",
+    "retaliation_uses_survivors": false,"#,
+        ),
+    ],
+    &[
+        ("", r#""rolls": "one""#),
+        ("rolls", r#""rolls": "mean_of_two""#),
+    ],
+    &[
+        (
+            "",
+            r#""rule": "lowest_rank_over_own_side_self_included_chart_read_other_then_self""#,
+        ),
+        (
+            "morale",
+            r#""rule": "alone_high_else_others_read_self_then_other_any_low_is_low_all_high_is_high""#,
+        ),
+    ],
+    &[
+        ("", r#""over_leadership": "out_of_control""#),
+        (
+            "control",
+            r#""over_leadership": "only_what_leadership_covers_fights""#,
+        ),
+    ],
 ];
 
-/// The variant's rules with only the named switches on; the others as the reference has them.
+/// The variant's rules with exactly the named settings; every switch not named is as the reference has it,
+/// whatever the variant's own file says.
 fn modern(on: &[&str]) -> Arc<Rules> {
     let mut text = MODERN.to_owned();
-    for (name, variant, reference) in SWITCHES {
-        assert!(text.contains(variant), "the variant's file sets {name}");
-        if !on.contains(&name) {
-            text = text.replacen(variant, reference, 1);
-        }
+    for settings in SWITCHES {
+        let now = settings
+            .iter()
+            .find(|(_, written)| text.contains(written))
+            .expect("the file sets every switch");
+        let wanted = settings
+            .iter()
+            .find(|(name, _)| on.contains(name))
+            .unwrap_or(&settings[0]);
+        text = text.replacen(now.1, wanted.1, 1);
     }
     Arc::new(Rules::from_json(&text).unwrap())
 }
@@ -64,7 +90,7 @@ fn wolves_on_sprites() -> Vec<StackStart> {
 }
 
 #[test]
-fn the_variant_is_the_reference_with_four_switches() {
+fn the_variant_is_the_reference_with_some_switches_set() {
     let (variant, reference) = (
         Rules::from_json(MODERN).unwrap(),
         Rules::from_json(REFERENCE).unwrap(),
@@ -85,73 +111,79 @@ fn the_variant_is_the_reference_with_four_switches() {
     };
     assert_eq!(ours.morale_chart, theirs.morale_chart);
     assert_eq!(theirs.switches, Switches::default());
-    let all = Switches {
-        answer_from_survivors: true,
-        two_rolls: true,
+    // What the variant has on is what the measurements bore out (`docs/spec/10-GAMEPLAY-GAPS.md`).
+    let kept = Switches {
         army_view_morale: true,
         leadership_caps_fighters: true,
+        ..Switches::default()
     };
-    assert_eq!(ours.switches, all);
+    assert_eq!(ours.switches, kept);
 
     // It plays the reference's battles, and the prototype's not.
     let battles = include_str!("../../../../../content/reference/battles.json");
     assert_eq!(scenarios_from_json(battles, &variant).unwrap().len(), 5);
     assert!(scenarios_from_json(crate::content::tests::BATTLES, &variant).is_err());
 
-    // With every switch back at the reference's value the two fight the same battle, under their own names.
-    let (mut a, mut b) = (
-        fight(modern(&[]), None, wolves_on_sprites()),
-        fight(Arc::new(reference), None, wolves_on_sprites()),
+    // With every switch at the reference's setting the two fight the same battle, under their own names.
+    let mut ours = fight(modern(&[]), None, wolves_on_sprites());
+    let mut theirs = fight(Arc::new(reference), None, wolves_on_sprites());
+    assert_eq!(
+        act(&mut ours, melee("e0")).unwrap(),
+        act(&mut theirs, melee("e0")).unwrap()
     );
-    let (first, second) = (
-        act(&mut a, melee("e0")).unwrap(),
-        act(&mut b, melee("e0")).unwrap(),
+    assert_ne!(
+        ours.digest(),
+        theirs.digest(),
+        "the ruleset is part of the state"
     );
-    assert_eq!(first, second);
-    assert_ne!(a.digest(), b.digest(), "the ruleset is part of the state");
 }
 
 #[test]
-fn the_reference_cannot_take_a_variants_switch() {
-    for (name, variant, reference) in SWITCHES {
-        // The reference file has no `rolls` or `over_leadership` line: those two are set by adding one.
-        let changed = if REFERENCE.contains(reference) {
-            REFERENCE.replacen(reference, variant, 1)
-        } else if name == "rolls" {
-            REFERENCE.replacen(
-                r#""injury_persists_during_battle""#,
-                &format!("{variant},\n    \"injury_persists_during_battle\""),
-                1,
-            )
-        } else {
-            REFERENCE.replacen(
-                r#""checked": "before_every_activation""#,
-                &format!("\"checked\": \"before_every_activation\",\n    {variant}"),
-                1,
-            )
-        };
-        assert_ne!(changed, REFERENCE, "{name}");
-        assert!(
-            matches!(
-                Rules::from_json(&changed),
-                Err(ContentError::Unsupported(_))
-            ),
-            "{name}"
-        );
+fn the_reference_cannot_take_a_variants_setting() {
+    // Each setting of the variant, written into the reference's file, is refused. The reference file has no line
+    // for the rolls or for what happens over the leadership; those two are tried by adding the line.
+    for settings in SWITCHES {
+        let reference = settings[0].1;
+        for (name, written) in &settings[1..] {
+            let changed = if REFERENCE.contains(reference) {
+                REFERENCE.replacen(reference, written, 1)
+            } else if *name == "rolls" {
+                let line = r#""injury_persists_during_battle""#;
+                REFERENCE.replacen(line, &format!("{written},\n    {line}"), 1)
+            } else {
+                let line = r#""checked": "before_every_activation""#;
+                REFERENCE.replacen(line, &format!("{line},\n    {written}"), 1)
+            };
+            assert_ne!(changed, REFERENCE, "{name}");
+            assert!(
+                matches!(
+                    Rules::from_json(&changed),
+                    Err(ContentError::Unsupported(_))
+                ),
+                "{name}"
+            );
+        }
     }
-    let unknown = MODERN.replacen("mean_of_two", "best_of_three", 1);
+    let unknown = MODERN.replacen(r#""rolls": "one""#, r#""rolls": "best_of_three""#, 1);
     assert!(matches!(
         Rules::from_json(&unknown),
         Err(ContentError::Unsupported(_))
     ));
-    let other_battles = MODERN.replacen(
-        r#""plays_battles_of": "reference-v0.1""#,
-        r#""plays_battles_of": "prototype-v0.1""#,
-        1,
-    );
+    let other = r#""plays_battles_of": "prototype-v0.1""#;
+    let other_battles = MODERN.replacen(r#""plays_battles_of": "reference-v0.1""#, other, 1);
     assert!(matches!(
         Rules::from_json(&other_battles),
         Err(ContentError::Invalid(_))
+    ));
+    // The yes-or-no line of the answer must agree with the setting.
+    let disagreeing = MODERN.replacen(
+        r#""retaliation_uses_survivors": false"#,
+        r#""retaliation_uses_survivors": true"#,
+        1,
+    );
+    assert!(matches!(
+        Rules::from_json(&disagreeing),
+        Err(ContentError::Unsupported(_))
     ));
 }
 
@@ -169,6 +201,37 @@ fn with_the_answer_from_survivors_the_dead_do_not_strike_back() {
             // Under the reference the answer was 12 and killed four.
             (1, 18, 7, 2, 8, 1, true),
         ]
+    );
+}
+
+// B4, second try. The answer comes from the mean of the count before and after the blow.
+#[test]
+fn with_the_mean_answer_half_of_the_dead_strike_back() {
+    let mut b = fight(modern(&["answer-mean"]), None, wolves_on_sprites());
+    let events = apply_forced(&mut b, melee("e0"), &[2, 1]).unwrap();
+    assert_eq!(
+        damage_events(&events),
+        [
+            (2, 10, 12, 12, 18, 0, false),
+            // 30 before and 18 after: 24 answer. 1 x 24 = 24, times 4, over ten: 9, three Wolves.
+            // The reference's answer was 12 from all 30; the survivors' 7 from 18.
+            (1, 24, 9, 3, 7, 0, true),
+        ]
+    );
+    // An odd sum rounds down: 30 before, 21 after, 25 answer.
+    let mut odd = fight(
+        modern(&["answer-mean"]),
+        None,
+        vec![
+            stack("p0", "wolves", 8, 1, 2),
+            stack("e0", "sprites", 30, 2, 2),
+        ],
+    );
+    let events = apply_forced(&mut odd, melee("e0"), &[2, 1]).unwrap();
+    // 2 x 8 = 16, times 6, over ten: 9 Sprites die.
+    assert_eq!(
+        (damage_events(&events)[0].3, damage_events(&events)[1].1),
+        (9, 25)
     );
 }
 

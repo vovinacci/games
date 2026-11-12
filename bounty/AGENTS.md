@@ -31,9 +31,9 @@ Bounty only. The specification is in `docs/spec/`; `README.md` gives the reading
 
 ## Measuring a change
 
-`make balance` plays the cases of both suites, `balance/suite.json` (prototype) and `balance/reference-suite.json`, with
-every seed and writes `target/bounty-balance.json` and `target/bounty-balance-reference.json`
-(`BALANCE_ARGS="--case melee_exchange"` picks one case). Compare two reports with
+`make balance` plays the cases of every suite in `balance/` (prototype, reference, the `modern` variant) with every seed
+and writes a report for each under `target/` (`BALANCE_ARGS="--case melee_exchange"` picks one case). Compare two
+reports with
 
 ```sh
 cargo run -q -p bounty-tools -- balance compare --baseline <before.json> --candidate <after.json>
