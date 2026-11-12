@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "id": "reference-v0.1",
+  "status": "reference_derived_not_verified_against_the_original",
+  "provenance": {
+    "source": "https://github.com/dannyheskett/openbounty",
+    "revision": "aace551ca625e0c723adff0cb13b22ca2f806dee",
+    "files": [
+      "assets/kings-bounty/game.json",
+      "docs/OPENBOUNTY-SPEC.md",
+      "engine/combat.c"
+    ],
+    "note": "Values typed in, rules restated; no code copied. See docs/spec/07-RULES-REGISTER.md."
+  },
+  "board": {
+    "width": 6,
+    "height": 5,
+    "max_stacks_per_side": 5
+  },
+  "rng": {
+    "algorithm": "reference-lcg64-v1",
+    "multiplier": 25214903917,
+    "increment": 11,
+    "bits": 64,
+    "sampling": "high_32_bits_modulo_span",
+    "constant_range_consumes_draw": false
+  },
+  "turns": {
+    "order": "player_side_then_enemy_side_by_slot",
+    "flags_reset": "before_each_side"
+  },
+  "movement": {
+    "neighbours": 8,
+    "step_cost": 1,
+    "diagonal_requires_clear_orthogonals": false
+  },
+  "flight": {
+    "flights_per_activation": 2,
+    "costs_movement": false,
+    "last_flight_ends_activation": true
+  },
+  "damage": {
+    "method": "roll_times_count_times_skill_term_over_ten",
+    "skill_term": "attacker_skill_plus_5_minus_target_skill",
+    "count_used": "count_before_the_exchange",
+    "retaliation_uses_survivors": false,
+    "injury_persists_during_battle": true,
+    "injury_heals_after_battle": true
+  },
+  "morale": {
+    "applies_to": "side_with_a_hero_and_stack_under_control",
+    "rule": "lowest_rank_over_own_side_self_included_chart_read_other_then_self",
+    "rank_order": ["normal", "low", "high"],
+    "low": "halve",
+    "high": "add_half",
+    "groups": ["A", "B", "C", "D", "E"],
+    "chart": [
+      "NNNNN",
+      "NNNNN",
+      "NNHNN",
+      "LNLHN",
+      "LLLNN"
+    ]
+  },
+  "control": {
+    "out_of_control_when": "health_each_times_count_exceeds_leadership",
+    "checked": "before_every_activation"
+  },
+  "round_limit": 200,
+  "round_limit_outcome": "budget_exceeded",
+  "hero_magic": {
+    "player_enabled": false,
+    "enemy_enabled": false,
+    "casts_per_round": 0
+  },
+  "troops": [
+    {
+      "id": "sprites",
+      "name": "Sprites",
+      "skill": 1,
+      "hp": 1,
+      "movement": 1,
+      "melee_min": 1,
+      "melee_max": 2,
+      "shots": 0,
+      "flies": true,
+      "morale_group": "C",
+      "recruit_cost": 15
+    },
+    {
+      "id": "wolves",
+      "name": "Wolves",
+      "skill": 2,
+      "hp": 3,
+      "movement": 3,
+      "melee_min": 1,
+      "melee_max": 3,
+      "shots": 0,
+      "flies": false,
+      "morale_group": "D",
+      "recruit_cost": 40
+    },
+    {
+      "id": "archers",
+      "name": "Archers",
+      "skill": 2,
+      "hp": 10,
+      "movement": 2,
+      "melee_min": 1,
+      "melee_max": 2,
+      "ranged_min": 1,
+      "ranged_max": 3,
+      "shots": 12,
+      "flies": false,
+      "morale_group": "B",
+      "recruit_cost": 250
+    }
+  ],
+  "spells": []
+}

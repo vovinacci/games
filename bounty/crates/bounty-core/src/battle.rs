@@ -9,7 +9,7 @@ use std::fmt;
 use std::sync::Arc;
 
 use crate::canon::Value;
-use crate::content::{Cell, ContentError, Rules, Scenario, Side, SpellEffect, Troop};
+use crate::content::{Cell, ContentError, Profile, Rules, Scenario, Side, SpellEffect, Troop};
 use crate::rng::Lcg32;
 
 /// A group of creatures of one kind, acting as one piece on the board.
@@ -319,6 +319,13 @@ impl Battle {
         rng_state: Option<u32>,
     ) -> Result<Self, ContentError> {
         scenario.check(&rules)?;
+        if rules.profile != Profile::Prototype {
+            // The reference rules load and are checked; fighting under them is the next step.
+            return Err(ContentError::Unsupported(format!(
+                "battles under {} are not implemented yet",
+                rules.id
+            )));
+        }
         let mut stacks = Vec::new();
         for start in &scenario.stacks {
             // `check` has seen every troop, so the search finds one.

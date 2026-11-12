@@ -142,3 +142,65 @@ final objective and recovery. Source-backed starting decisions are sufficient to
 require stronger evidence.
 
 No DOS executable, memory experiment or binary parser has been run for v0.3.
+
+## Reference-derived rules in use: `reference-v0.1`
+
+The first rules and numbers of the original game in this repository. All of them are `reference_derived`: read from the
+OpenBounty project [S2] at revision `aace551ca625e0c723adff0cb13b22ca2f806dee` (MIT), restated here and typed into
+`content/reference/rules.json`. No code was copied. None has been observed in the DOS game by this project, and
+OpenBounty describes itself as descended from OpenKB, so the two are one line of evidence, not two.
+
+Files read: `assets/kings-bounty/game.json` (troop table, morale chart), `docs/OPENBOUNTY-SPEC.md` sections 13, 14 and
+25, `engine/combat.c`.
+
+### Troops
+
+Three, chosen to cover the three roles and to make Low morale reachable (groups A, B and C never give Low among
+themselves; it needs a troop of group D or E).
+
+| Troop | Role | Skill | Health | Movement | Melee | Shot | Shots | Flies | Group | Cost |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Sprites | flying | 1 | 1 | 1 | 1-2 | | 0 | yes | C | 15 |
+| Wolves | melee | 2 | 3 | 3 | 1-3 | | 0 | no | D | 40 |
+| Archers | ranged | 2 | 10 | 2 | 1-2 | 1-3 | 12 | no | B | 250 |
+
+These numbers are an exception to the rule that the original's numbers stay out of the repository, allowed by the
+maintainer for these three troops so that the reference rules can be tested in CI. The rest of the catalogue stays out.
+
+### Rules, and how they differ from the prototype
+
+| ID | Rule as the reference has it | Prototype | Doubt |
+|---|---|---|---|
+| U-08 | The player's stacks act in slot order, then the enemy's. There is no speed order. | The same order. | None known. |
+| U-08 | Flags and allowances (struck back, movement, flights) are renewed for every stack before each side's turn, so a stack can strike back once in its own side's turn and once in the other's. | Renewed once a round. | The reference's own code; not checked against DOS. |
+| U-09 | A step goes to any of the eight neighbours; a diagonal step is not stopped by what stands beside it. Stepping onto an enemy is the melee attack. | Diagonal needs both cells beside it free; attack is a separate action. | None known. |
+| U-09 | A flyer has two flights in its turn. A flight costs no movement; the second ends the turn. | One flight, costing a movement point. | None known. |
+| U-10 | Damage: roll x creatures x (attacker's skill + 5 - target's skill) / 10, each step in whole numbers, rounding down. | Roll x creatures. | The reference calls its routine a transcription of the original's. |
+| U-10 | The count used is the stack's count before the exchange, for the answer as well: creatures killed by a blow still strike back. | The answer uses the survivors. | As above. |
+| U-10 | Morale then scales the damage of a stack that is on the hero's side and under control: Low halves, High adds half. The enemy has no hero, so no morale. | No morale. | See below. |
+| U-11 | One answer per stack between renewals; none to a shot. Injury carries over inside a battle, as a health pool. | The same pool; one answer a round. | None known. |
+| U-12 | A stack cannot shoot with an enemy in one of the eight cells around it. A shot uses one of the troop's shots whatever it does. | The same. | None known. |
+| U-06 | A stack is out of control when health of one x count is more than the hero's leadership (equal is still in control). It keeps its turns and counts as an enemy of its own side, until losses bring it back under; checked before every stack acts. | No leadership in battle. | Who moves it during the player's turn is the reference's choice (its computer player). |
+| | Random numbers: a 64-bit generator, state x 25214903917 + 11, the top 32 bits taken modulo the size of the range; a range of one number draws nothing. | A 32-bit generator with rejection. | The modulo favours low numbers slightly; kept as the reference has it. |
+
+### The two morale rules
+
+The reference documents two ways to find a stack's morale and says which content uses which:
+
+- **Ported**, for the King's Bounty content, described there as the original's behaviour "including the documented bug":
+  every living stack of the side, the stack itself included, is looked up in the chart as (other, self); the ranks are
+  ordered Normal, Low, High, and the lowest found wins. So a mixed army falls to Normal as soon as one pairing is
+  Normal, and reaches Low only when no pairing is Normal and one is Low.
+- **Army view**, for its other content: a stack alone is High; every other stack is looked up as (self, other); any Low
+  gives Low, all High gives High, else Normal. This is what the army screen shows the player.
+
+`reference-v0.1` uses the ported rule. The two disagree, for instance, on an army of Sprites and Wolves: ported makes
+the Sprites Low and the Wolves Normal; army view makes the Wolves Low and the Sprites Normal. That army is the morale
+case of the reference suite. Which of the two the DOS game really does is open (U-18) and worth one experiment, since it
+decides what the player is told against what the dice do.
+
+### Not in this subset
+
+Refused on load, not approximated: hero spells in battle, troop abilities other than flying (regeneration, leech,
+absorption, the demon's scythe, magic shots and immunity, undead), artefact powers, siege layout, the random field
+obstacles of an encounter, spoils. Each comes with the first troop or encounter that needs it.

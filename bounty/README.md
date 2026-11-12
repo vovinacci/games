@@ -17,6 +17,7 @@ What can be played is one battle under invented test rules: `cargo run -p bounty
 | `crates/bounty-tools` | developer tools: fixed-seed battle runs and their comparison (`make balance`) |
 | `docs/spec/` | the specification, see below |
 | `prototype/` | synthetic battle rules, scenarios and expected results for testing the engine |
+| `content/reference/` | the first rules and troops taken from a reimplementation of the original; not yet fought under |
 | `content/demo/` | a small synthetic expedition used as an integration test |
 | `balance/` | the fixed set of cases and seeds for before/after comparisons, and recorded baselines |
 | `schemas/` | JSON schemas of the map and save file |
@@ -39,6 +40,7 @@ Version 0.3 of 12 November 2026, with the changes in `CHANGELOG.md`. Read in thi
 `prototype/` and `content/demo/` are invented for testing commands, arithmetic and saving. They are not the original
 game's data and say nothing about its balance.
 
-The original's maps, texts and numbers are not in this repository. The plan is an optional importer that reads them from
-the player's own copy of the DOS game; until it exists, rules taken from documentation or other reimplementations are
-labelled as such in the rules register.
+The original's maps, texts and numbers are not in this repository, with one small exception: `content/reference/` holds
+the rules of battle and the numbers of three troops, taken from another reimplementation and marked as such, so that
+those rules can be tested. For everything else the plan is an optional importer that reads it from the player's own copy
+of the DOS game. `docs/spec/07-RULES-REGISTER.md` says where each rule comes from and what is still in doubt.
