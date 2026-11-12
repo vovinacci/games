@@ -193,9 +193,22 @@ maintainer for these three troops so that the reference rules can be tested in C
 
 ### Implemented so far
 
-Turn order by sides with the renewal of flags, the step rule, flight, shots, damage scaled by skill with the count from
-before the exchange, and the reference generator. Not yet: morale and loss of control, so a battle under
-`reference-v0.1` does not yet give the reference's results for an army those rules touch.
+Everything in the table above: turn order by sides with the renewal of flags, the step rule, flight, shots, damage
+scaled by skill with the count from before the exchange, morale by the ported rule, loss and return of control, and the
+reference generator.
+
+How loss of control is carried out here:
+
+- A scenario gives the leadership of the player's hero. Without it the player's side has no hero in that battle: no
+  morale and no stack out of control. The enemy never has a hero.
+- A stack out of control and any other stack fight each other, whatever their sides: it may be struck and shot by its
+  own side, it may strike and shoot its own side, and a stack of its side standing beside it stops a shooter as an enemy
+  would. Its creatures still count for its side when the battle is decided.
+- It has no morale.
+- Control comes back, and only comes back: a stack that starts within the leadership stays in control, as in the
+  reference, which sets the mark when the battle is set up and only ever clears it.
+- The rules do not say who commands it. The reference hands its turn to its computer player; here the pilot plays it in
+  the runs, and the screen is to do the same.
 
 ### The two morale rules
 

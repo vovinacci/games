@@ -506,6 +506,10 @@ pub struct Scenario {
     pub obstacles: Vec<Cell>,
     /// Charges of each hero spell the player side starts with, by spell ID.
     pub hero_charges: BTreeMap<String, u32>,
+    /// The leadership of the player's hero. Only the reference rules have it; without it the player's side has
+    /// no hero in the battle: no morale, and no stack is ever out of control.
+    #[serde(default)]
+    pub leadership: Option<u32>,
     pub stacks: Vec<StackStart>,
 }
 
@@ -540,6 +544,9 @@ impl Scenario {
     /// [`ContentError::Invalid`] naming the scenario and the first thing wrong.
     pub fn check(&self, rules: &Rules) -> Result<(), ContentError> {
         let here = |why: String| invalid(format!("scenario {:?}: {why}", self.id));
+        if self.leadership.is_some() && rules.profile == Profile::Prototype {
+            return here("the prototype rules have no leadership".to_owned());
+        }
         let mut taken = BTreeSet::new();
         for &cell in &self.obstacles {
             if !rules.board.contains(cell) {

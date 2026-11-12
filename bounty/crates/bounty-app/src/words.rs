@@ -98,6 +98,7 @@ pub fn describe(event: &Event, battle: &Battle) -> Option<String> {
             target, removed, ..
         } => t!("log-healed", name = name(target), removed = *removed),
         Event::SideStarted { .. }
+        | Event::ControlRegained { .. }
         | Event::ActivationStarted { .. }
         | Event::ActivationEnded { .. }
         | Event::SpellCast { .. }

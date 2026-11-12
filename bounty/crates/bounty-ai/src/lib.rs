@@ -2,7 +2,7 @@
 //! a battle or see its random numbers. A player that changes its choices gets a new name, so recorded results always
 //! say which one played.
 
-use bounty_core::battle::{Action, Command, Observation, adjacent};
+use bounty_core::battle::{Action, Command, Observation, adjacent, hostile};
 use bounty_core::content::Cell;
 
 /// The name `approach_v1` goes by in suites and reports.
@@ -41,12 +41,13 @@ fn choose(seen: &Observation, actor: &str) -> Action {
         return Action::Pass;
     };
 
-    // Every free cell beside a living enemy, with the ID of that enemy: where an attack can be made from.
+    // Every free cell beside a living stack this one fights, with that stack's ID: where an attack can be made
+    // from. For a stack out of control that is every other stack, its own side included.
     let mut enemies: Vec<_> = seen
         .stacks
         .iter()
         .map(|s| &s.stack)
-        .filter(|s| s.alive() && s.side != me.side)
+        .filter(|s| s.alive() && hostile(s, me))
         .collect();
     enemies.sort_by(|a, b| a.id.cmp(&b.id));
     let cells = || (0..seen.height).flat_map(|y| (0..seen.width).map(move |x| Cell { x, y }));
@@ -378,6 +379,7 @@ mod tests {
             rng_state: seed,
             obstacles: vec![Cell { x: 2, y: 2 }],
             hero_charges: std::collections::BTreeMap::new(),
+            leadership: None,
             stacks: vec![
                 stack("p0", Side::Player, 0, "wolves", 20, 0, 0),
                 stack("p1", Side::Player, 1, "archers", 6, 0, 2),
@@ -416,6 +418,39 @@ mod tests {
             winners.len(),
             2,
             "over forty seeds both sides win some: {winners:?}"
+        );
+    }
+
+    // With a hero whose leadership the twenty Wolves exceed (60 health against 45), they start out of control. The
+    // pilot moves them like any stack: never refused, every battle ends, and the tape replays.
+    #[test]
+    fn the_pilot_plays_a_stack_out_of_control() {
+        let mut regained = 0;
+        for seed in 0..40 {
+            let (rules, mut scenario) = reference_fight(seed);
+            scenario.leadership = Some(45);
+            let mut battle = Battle::start(Arc::clone(&rules), &scenario, None).unwrap();
+            assert!(battle.stack("p0").unwrap().out_of_control);
+            let mut tape = Tape::new(&scenario, seed);
+            while let Some(command) = approach_v1(&battle.observe()) {
+                tape.apply(&mut battle, &command)
+                    .unwrap_or_else(|e| panic!("seed {seed}: {command:?} refused: {e}"));
+            }
+            assert_ne!(
+                battle.outcome().unwrap(),
+                Outcome::BudgetExceeded,
+                "seed {seed}"
+            );
+            regained += usize::from(!battle.stack("p0").unwrap().out_of_control);
+            assert_eq!(
+                tape.replay(rules, &scenario).unwrap(),
+                battle,
+                "seed {seed}"
+            );
+        }
+        assert!(
+            regained > 0,
+            "in some battles losses bring the Wolves back under control"
         );
     }
 }

@@ -9,7 +9,9 @@ use std::fmt;
 use std::sync::Arc;
 
 use crate::canon::Value;
-use crate::content::{Cell, ContentError, Profile, Rules, Scenario, Side, SpellEffect, Troop};
+use crate::content::{
+    Cell, ContentError, Morale, Profile, Rules, Scenario, Side, SpellEffect, Troop,
+};
 use crate::rng::{Lcg32, Lcg64, Rng};
 
 /// A group of creatures of one kind, acting as one piece on the board.
@@ -32,6 +34,9 @@ pub struct Stack {
     pub retaliated: bool,
     /// Has waited this round.
     pub waited: bool,
+    /// Reference rules: the stack is too large for the hero's leadership. It keeps its turns but is an enemy to
+    /// both sides, its own included, until its losses bring it back under.
+    pub out_of_control: bool,
 }
 
 impl Stack {
@@ -205,6 +210,12 @@ pub enum Event {
         injury: u32,
         /// The blow was the target of an attack striking back.
         retaliation: bool,
+        /// The attacker's morale, where the rules have morale and it applied: it has already scaled `damage`.
+        morale: Option<Morale>,
+    },
+    /// Reference rules: losses brought the stack back within the hero's leadership.
+    ControlRegained {
+        stack: String,
     },
     /// The stack lost its last creature and left the board.
     StackRemoved {
@@ -257,6 +268,13 @@ struct Blow {
     attackers: u32,
     damage: u64,
     retaliation: bool,
+    morale: Option<Morale>,
+}
+
+/// Whether two stacks fight each other: stacks of different sides do, and a stack out of control fights everyone.
+#[must_use]
+pub fn hostile(a: &Stack, b: &Stack) -> bool {
+    a.id != b.id && (a.side != b.side || a.out_of_control || b.out_of_control)
 }
 
 /// Where damage rolls come from: the battle's generator in play, a fixed list in tests.
@@ -330,6 +348,9 @@ pub struct Battle {
     deferred: VecDeque<String>,
     active: Option<Activation>,
     hero_charges: BTreeMap<String, u32>,
+    /// The leadership of the player's hero, where the scenario has a hero. Decides loss of control and, under the
+    /// reference rules, whether morale applies.
+    leadership: Option<u32>,
     /// The player's hero has cast this round.
     cast_this_round: bool,
     outcome: Option<Outcome>,
@@ -365,6 +386,11 @@ impl Battle {
                 shots: rules.troops[troop].shots,
                 retaliated: false,
                 waited: false,
+                out_of_control: start.side == Side::Player
+                    && matches!(rules.profile, Profile::Reference(_))
+                    && scenario
+                        .leadership
+                        .is_some_and(|lead| !within(lead, rules.troops[troop].hp, start.count)),
             });
         }
         stacks.sort_by_key(|s| (s.side, s.slot));
@@ -387,6 +413,7 @@ impl Battle {
             deferred: VecDeque::new(),
             active: None,
             hero_charges: scenario.hero_charges.clone(),
+            leadership: scenario.leadership,
             cast_this_round: false,
             outcome: None,
         };
@@ -453,6 +480,21 @@ impl Battle {
         self.outcome
     }
 
+    /// The leadership of the player's hero, when the scenario has a hero.
+    #[must_use]
+    pub const fn leadership(&self) -> Option<u32> {
+        self.leadership
+    }
+
+    /// The morale of a stack, where the rules give it one: see `docs/spec/07-RULES-REGISTER.md`. `None` in the
+    /// prototype, for the enemy's stacks, without a hero, and for a stack out of control.
+    #[must_use]
+    pub fn morale(&self, id: &str) -> Option<Morale> {
+        self.index(id)
+            .filter(|&i| self.stacks[i].alive())
+            .and_then(|i| self.morale_at(i))
+    }
+
     /// Charges of each hero spell the player side has left.
     #[must_use]
     pub const fn hero_charges(&self) -> &BTreeMap<String, u32> {
@@ -510,7 +552,7 @@ impl Battle {
         };
         let mut living: Vec<&Stack> = self.stacks.iter().filter(|s| s.alive()).collect();
         living.sort_by(|a, b| a.id.cmp(&b.id));
-        let enemies = || living.iter().filter(|s| s.side != actor.side);
+        let enemies = || living.iter().filter(|s| hostile(s, actor));
         let board = &self.rules.board;
         let cells = || (0..board.height).flat_map(|y| (0..board.width).map(move |x| Cell { x, y }));
         let mut actions = Vec::new();
@@ -673,20 +715,20 @@ impl Battle {
         else {
             return Err(RuleError::NoShots);
         };
-        let near =
-            |s: &Stack| s.alive() && s.side != shooter.side && adjacent(s.cell, shooter.cell);
+        let near = |s: &Stack| s.alive() && hostile(s, shooter) && adjacent(s.cell, shooter.cell);
         if self.stacks.iter().any(near) {
             return Err(RuleError::EnemyAdjacent);
         }
         self.stacks[actor].shots -= 1;
         let roll = rolls(&mut self.rng, lo, hi);
         let count = self.stacks[actor].count;
-        let damage = self.damage(actor, defender, roll, count);
+        let (damage, morale) = self.damage(actor, defender, roll, count);
         let blow = Blow {
             roll,
             attackers: count,
             damage,
             retaliation: false,
+            morale,
         };
         self.hurt_by(Some(actor), defender, blow, events);
         if self.outcome.is_none() {
@@ -695,10 +737,11 @@ impl Battle {
         Ok(())
     }
 
-    /// The living enemy stack of `actor` with this ID.
+    /// The living stack with this ID that `actor` may attack: of the other side, or out of control, or any other
+    /// stack when `actor` itself is out of control.
     fn enemy_of(&self, actor: usize, target: &str) -> Result<usize, RuleError> {
         self.index(target)
-            .filter(|&i| self.stacks[i].alive() && self.stacks[i].side != self.stacks[actor].side)
+            .filter(|&i| self.stacks[i].alive() && hostile(&self.stacks[i], &self.stacks[actor]))
             .ok_or_else(|| RuleError::NotAnEnemy {
                 target: target.to_owned(),
             })
@@ -790,6 +833,7 @@ impl Battle {
                     attackers: 1,
                     damage: u64::from(amount),
                     retaliation: false,
+                    morale: None,
                 };
                 self.hurt_by(None, to, blow, events);
             }
@@ -855,31 +899,88 @@ impl Battle {
         let troop = &self.rules.troops[self.stacks[from].troop];
         let (lo, hi) = (troop.melee_min, troop.melee_max);
         let roll = rolls(&mut self.rng, lo, hi);
-        let damage = self.damage(from, to, roll, count);
-        self.hurt_by(
-            Some(from),
-            to,
-            Blow {
-                roll,
-                attackers: count,
-                damage,
-                retaliation,
-            },
-            events,
-        );
+        let (damage, morale) = self.damage(from, to, roll, count);
+        let blow = Blow {
+            roll,
+            attackers: count,
+            damage,
+            retaliation,
+            morale,
+        };
+        self.hurt_by(Some(from), to, blow, events);
     }
 
-    /// What a blow of `count` creatures with this roll takes off the target. Prototype: roll times count.
-    /// Reference: that, times (attacker's skill + 5 - target's skill), divided by ten and rounded down; a term of
-    /// zero or less does no damage.
-    fn damage(&self, from: usize, to: usize, roll: u32, count: u32) -> u64 {
+    /// What a blow of `count` creatures with this roll takes off the target, and the morale that scaled it.
+    /// Prototype: roll times count. Reference: that, times (attacker's skill + 5 - target's skill), divided by ten;
+    /// then Low morale halves it and High adds half. Every step rounds down; a skill term of zero or less does no
+    /// damage.
+    fn damage(&self, from: usize, to: usize, roll: u32, count: u32) -> (u64, Option<Morale>) {
         let base = u64::from(roll) * u64::from(count);
         if !self.reference() {
-            return base;
+            return (base, None);
         }
         let skill = |stack: usize| self.rules.troops[self.stacks[stack].troop].skill;
         let term = (skill(from) + 5).saturating_sub(skill(to));
-        base * u64::from(term) / 10
+        let scaled = base * u64::from(term) / 10;
+        let morale = self.morale_at(from);
+        let damage = match morale {
+            Some(Morale::Low) => scaled / 2,
+            Some(Morale::High) => scaled + scaled / 2,
+            Some(Morale::Normal) | None => scaled,
+        };
+        (damage, morale)
+    }
+
+    /// The morale of a stack, where it has one: under the reference rules, on the side of a hero, and in control.
+    /// Every living stack of the side, the stack itself included, is looked up in the chart as (other, self); the
+    /// results are ranked Normal, Low, High and the lowest counts. So one Normal pairing makes the stack Normal,
+    /// and Low needs every pairing to be Low or High. This is the rule the reference attributes to the original;
+    /// `docs/spec/07-RULES-REGISTER.md` has the other one it documents.
+    fn morale_at(&self, stack: usize) -> Option<Morale> {
+        let Profile::Reference(reference) = &self.rules.profile else {
+            return None;
+        };
+        let me = &self.stacks[stack];
+        if me.side != Side::Player || self.leadership.is_none() || me.out_of_control {
+            return None;
+        }
+        let group = |s: &Stack| self.rules.troops[s.troop].morale_group;
+        let mine = group(me)?;
+        let rank = |morale: Morale| match morale {
+            Morale::Normal => 0,
+            Morale::Low => 1,
+            Morale::High => 2,
+        };
+        let side = self
+            .stacks
+            .iter()
+            .filter(|s| s.alive() && s.side == me.side);
+        let found = side
+            .filter_map(|other| group(other).map(|theirs| reference.morale_chart[theirs][mine]));
+        Some(
+            found
+                .min_by_key(|&morale| rank(morale))
+                .unwrap_or(Morale::High),
+        )
+    }
+
+    /// Brings back under control every stack whose losses have taken it within the hero's leadership. Looked at
+    /// before every activation, so it holds from the next move on.
+    fn renew_control(&mut self, events: &mut Vec<Event>) {
+        let Some(leadership) = self.leadership else {
+            return;
+        };
+        for stack in &mut self.stacks {
+            if stack.out_of_control
+                && stack.alive()
+                && within(leadership, self.rules.troops[stack.troop].hp, stack.count)
+            {
+                stack.out_of_control = false;
+                events.push(Event::ControlRegained {
+                    stack: stack.id.clone(),
+                });
+            }
+        }
     }
 
     /// Takes `damage` off a stack. Removes it when it dies and ends the battle when it was its side's last. `from`
@@ -891,6 +992,7 @@ impl Battle {
             attackers,
             damage,
             retaliation,
+            morale,
         } = blow;
         let hp = self.rules.troops[self.stacks[to].troop].hp;
         let attacker = from.map_or_else(|| "hero".to_owned(), |i| self.stacks[i].id.clone());
@@ -909,6 +1011,7 @@ impl Battle {
             count,
             injury,
             retaliation,
+            morale,
         });
         if count > 0 {
             return;
@@ -952,6 +1055,7 @@ impl Battle {
     /// round is over and the next begins, unless the round limit is reached.
     fn next_activation(&mut self, events: &mut Vec<Event>) {
         loop {
+            self.renew_control(events);
             while let Some(id) = self.queue.pop_front().or_else(|| self.deferred.pop_front()) {
                 let Some(stack) = self.stacks.iter().find(|s| s.id == id && s.alive()) else {
                     continue;
@@ -1012,12 +1116,13 @@ impl Battle {
             Value::Array(queue.iter().map(|id| Value::str(id)).collect())
         };
         let cell = |c: Cell| Value::object([("x", c.x.into()), ("y", c.y.into())]);
+        let reference = self.reference();
         let mut stacks: Vec<&Stack> = self.stacks.iter().collect();
         stacks.sort_by(|a, b| a.id.cmp(&b.id));
         let stacks = stacks
             .into_iter()
             .map(|s| {
-                Value::object([
+                let mut stack = Value::object([
                     ("cell", cell(s.cell)),
                     ("count", s.count.into()),
                     ("id", Value::str(&s.id)),
@@ -1028,7 +1133,11 @@ impl Battle {
                     ("slot", s.slot.into()),
                     ("troop_id", Value::str(&s.troop_id)),
                     ("waited", s.waited.into()),
-                ])
+                ]);
+                if let (true, Value::Object(members)) = (reference, &mut stack) {
+                    members.insert("out_of_control".to_owned(), s.out_of_control.into());
+                }
+                stack
             })
             .collect();
         let active = self.active.as_ref().map_or(Value::Null, |a| {
@@ -1074,6 +1183,10 @@ impl Battle {
         // digests stay as they were recorded.
         if let (true, Value::Object(members)) = (self.reference(), &mut value) {
             members.insert("side".to_owned(), Value::str(self.side.name()));
+            members.insert(
+                "leadership".to_owned(),
+                self.leadership.map_or(Value::Null, Value::from),
+            );
         }
         value
     }
@@ -1097,6 +1210,12 @@ pub fn step_allowed(from: Cell, to: Cell, corners: bool, free: impl Fn(Cell) -> 
         && (straight
             || !corners
             || (free(Cell { x: to.x, y: from.y }) && free(Cell { x: from.x, y: to.y })))
+}
+
+/// Whether a stack of `count` creatures with `hp` health each is within a leadership of `leadership`: its whole
+/// health is not more. Equal is within.
+fn within(leadership: u32, hp: u32, count: u32) -> bool {
+    u64::from(hp) * u64::from(count) <= u64::from(leadership)
 }
 
 /// In one of the eight cells around, not the same cell.

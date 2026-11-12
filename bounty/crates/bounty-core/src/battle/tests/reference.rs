@@ -30,11 +30,17 @@ fn stack(id: &str, troop: &str, count: u32, x: u32, y: u32) -> StackStart {
 }
 
 fn fight(stacks: Vec<StackStart>, obstacles: Vec<Cell>) -> Battle {
+    led(None, stacks, obstacles)
+}
+
+/// A battle in which the player's hero has this leadership, or no hero at all.
+fn led(leadership: Option<u32>, stacks: Vec<StackStart>, obstacles: Vec<Cell>) -> Battle {
     let scenario = Scenario {
         id: "test".to_owned(),
         rng_state: 1,
         obstacles,
         hero_charges: BTreeMap::new(),
+        leadership,
         stacks,
     };
     Battle::start(reference(), &scenario, None).unwrap()
@@ -361,4 +367,223 @@ fn every_legal_action_is_accepted_under_the_reference_rules() {
         let mut copy = b.clone();
         assert!(act(&mut copy, action.clone()).is_ok(), "{action:?}");
     }
+}
+
+/// Twenty Sprites of the player strike enemy Wolves with a roll of 2: before morale that is 2 x 20 = 40, times
+/// (1 + 5 - 2) = 4, over ten: 16. Returns the damage and the morale the event reports.
+fn sprites_strike(leadership: Option<u32>, beside: Option<&str>) -> (u64, Option<Morale>) {
+    let mut stacks = vec![
+        stack("p0", "sprites", 20, 1, 2),
+        stack("e0", "wolves", 50, 2, 2),
+    ];
+    stacks.extend(beside.map(|troop| stack("p1", troop, 3, 0, 0)));
+    let mut b = led(leadership, stacks, vec![]);
+    let events = apply_forced(&mut b, melee("e0"), &[2, 1]).unwrap();
+    let Event::Damage { damage, morale, .. } = &events[0] else {
+        panic!("a blow first")
+    };
+    (*damage, *morale)
+}
+
+// U-10, U-18: morale by the rule the reference attributes to the original.
+#[test]
+fn morale_scales_the_damage_of_the_heros_stacks() {
+    // Alone: Sprites with Sprites is High in the chart. 16 and half again.
+    assert_eq!(sprites_strike(Some(1000), None), (24, Some(Morale::High)));
+    // With Wolves: (Wolves, Sprites) is Low and (Sprites, Sprites) High; the lowest in the order Normal, Low,
+    // High is Low. Halved.
+    assert_eq!(
+        sprites_strike(Some(1000), Some("wolves")),
+        (8, Some(Morale::Low))
+    );
+    // With Archers: (Archers, Sprites) is Normal, and one Normal is enough.
+    assert_eq!(
+        sprites_strike(Some(1000), Some("archers")),
+        (16, Some(Morale::Normal))
+    );
+    // No hero, no morale.
+    assert_eq!(sprites_strike(None, Some("wolves")), (16, None));
+}
+
+#[test]
+fn the_two_morale_rules_part_on_sprites_with_wolves() {
+    // The rule in use makes the Sprites Low and leaves the Wolves Normal: (Sprites, Wolves) is Normal. The other
+    // rule the reference documents would have it the other way round (see the rules register).
+    let b = led(
+        Some(1000),
+        vec![
+            stack("p0", "sprites", 20, 0, 0),
+            stack("p1", "wolves", 3, 0, 2),
+            stack("e0", "wolves", 5, 5, 4),
+        ],
+        vec![],
+    );
+    assert_eq!(
+        (b.morale("p0"), b.morale("p1")),
+        (Some(Morale::Low), Some(Morale::Normal))
+    );
+    assert_eq!(b.morale("e0"), None, "the enemy has no hero");
+    assert_eq!(b.morale("ghost"), None);
+}
+
+#[test]
+fn morale_follows_the_army_as_it_stands_and_applies_to_the_answer_too() {
+    // The enemy's Wolves strike the player's Sprites, who stand with three Wolves: the Sprites answer at Low.
+    let mut b = led(
+        Some(1000),
+        vec![
+            stack("p0", "sprites", 40, 1, 2),
+            stack("p1", "wolves", 3, 1, 3),
+            stack("e0", "wolves", 9, 2, 2),
+        ],
+        vec![],
+    );
+    b.apply(&pass(&b)).unwrap();
+    b.apply(&pass(&b)).unwrap();
+    assert_eq!(b.active().unwrap().stack, "e0");
+    let events = apply_forced(&mut b, melee("p0"), &[1, 2]).unwrap();
+    // The enemy's blow has no morale: 1 x 9 = 9, times 6, over ten: 5.
+    // The answer: 2 x 40 = 80, times 4, over ten: 32, halved by Low morale: 16.
+    assert_eq!(
+        damage_events(&events),
+        [(1, 9, 5, 5, 35, 0, false), (2, 40, 16, 5, 4, 1, true)]
+    );
+    assert!(matches!(
+        &events[1],
+        Event::Damage {
+            morale: Some(Morale::Low),
+            ..
+        }
+    ));
+
+    // Once the player's Wolves are gone the Sprites are alone, and High.
+    let mut alone = led(
+        Some(1000),
+        vec![
+            stack("p0", "sprites", 40, 0, 0),
+            stack("p1", "wolves", 1, 4, 3),
+            stack("e0", "wolves", 30, 5, 4),
+        ],
+        vec![],
+    );
+    assert_eq!(alone.morale("p0"), Some(Morale::Low));
+    alone.apply(&pass(&alone)).unwrap();
+    apply_forced(&mut alone, melee("e0"), &[1, 3]).unwrap(); // the one Wolf strikes and dies of the answer
+    assert!(!alone.stack("p1").unwrap().alive());
+    assert_eq!(alone.morale("p0"), Some(Morale::High));
+}
+
+// U-06: a stack whose whole health is more than the hero's leadership is out of control.
+#[test]
+fn a_stack_too_large_for_the_leadership_is_out_of_control() {
+    let army = |wolves| {
+        vec![
+            stack("p0", "wolves", wolves, 1, 2),
+            stack("p1", "archers", 2, 1, 3),
+            stack("e0", "wolves", 9, 5, 0),
+        ]
+    };
+    // Ten Wolves are 30 health: equal to the leadership is within it.
+    let within = led(Some(30), army(10), vec![]);
+    assert!(!within.stack("p0").unwrap().out_of_control);
+    // Eleven are 33.
+    let over = led(Some(30), army(11), vec![]);
+    assert!(over.stack("p0").unwrap().out_of_control);
+    assert!(!over.stack("p1").unwrap().out_of_control && !over.stack("e0").unwrap().out_of_control);
+    assert_eq!(over.morale("p0"), None, "no morale without control");
+    // It may strike the stack beside it, of its own side.
+    assert_eq!(over.legal_actions()[0], melee("p1"));
+    // Without a hero nothing is out of control, whatever its size.
+    assert!(!fight(army(500), vec![]).stack("p0").unwrap().out_of_control);
+}
+
+#[test]
+fn a_stack_out_of_control_fights_its_own_side_and_is_fought_by_it() {
+    let mut b = led(
+        Some(30),
+        vec![
+            stack("p0", "wolves", 11, 1, 2),
+            stack("p1", "archers", 2, 1, 3),
+            stack("e0", "wolves", 9, 5, 0),
+        ],
+        vec![],
+    );
+    // 2 x 11 = 22, times (2 + 5 - 2) = 5, over ten: 11, with no morale. The two Archers have 20 health.
+    let events = apply_forced(&mut b, melee("p1"), &[2, 1]).unwrap();
+    assert_eq!(damage_events(&events)[0], (2, 11, 11, 1, 1, 1, false));
+    assert!(matches!(&events[0], Event::Damage { morale: None, .. }));
+    // The Archers' turn: the Wolves beside them are an enemy, so they cannot shoot, but may strike them.
+    assert_eq!(b.active().unwrap().stack, "p1");
+    refused(&mut b, shoot("e0"), &RuleError::EnemyAdjacent);
+    assert!(b.legal_actions().contains(&melee("p0")));
+}
+
+#[test]
+fn losses_bring_a_stack_back_under_control_before_the_next_turn() {
+    let mut b = led(
+        Some(30),
+        vec![
+            stack("p0", "wolves", 11, 1, 2),
+            stack("p1", "wolves", 2, 0, 0),
+            stack("e0", "wolves", 20, 2, 2),
+        ],
+        vec![],
+    );
+    assert!(b.stack("p0").unwrap().out_of_control);
+    // The stack out of control strikes the enemy and loses creatures to the answer:
+    // 1 x 20 = 20, times 5, over ten: 10, three Wolves and one health. Eight are left: 24 health, within 30.
+    let events = apply_forced(&mut b, melee("e0"), &[1, 1]).unwrap();
+    assert_eq!(count_and_injury(&b, "p0"), (8, 1));
+    assert!(events.contains(&Event::ControlRegained {
+        stack: "p0".to_owned()
+    }));
+    assert!(!b.stack("p0").unwrap().out_of_control);
+    assert_eq!(b.active().unwrap().stack, "p1");
+    assert_eq!(
+        b.legal_actions()
+            .iter()
+            .filter(|a| matches!(a, Action::Melee { .. }))
+            .count(),
+        0,
+        "a friend again"
+    );
+    assert_eq!(b.morale("p0"), Some(Morale::High), "Wolves among Wolves");
+}
+
+#[test]
+fn leadership_and_control_are_part_of_the_state_and_the_prototype_has_neither() {
+    let b = led(
+        Some(30),
+        vec![
+            stack("p0", "wolves", 11, 1, 2),
+            stack("e0", "wolves", 9, 5, 0),
+        ],
+        vec![],
+    );
+    let Value::Object(state) = b.to_canon() else {
+        panic!("an object")
+    };
+    assert_eq!(state["leadership"], Value::from(30_u32));
+    let Value::Array(stacks) = &state["stacks"] else {
+        panic!("an array")
+    };
+    let Value::Object(first) = &stacks[1] else {
+        panic!("an object")
+    };
+    assert_eq!(
+        (&first["id"], &first["out_of_control"]),
+        (&Value::str("p0"), &Value::Bool(true))
+    );
+
+    // A prototype scenario cannot ask for leadership, and its state has no such fields.
+    let mut scenario = scenario("melee_exchange");
+    scenario.leadership = Some(30);
+    assert!(matches!(
+        Battle::start(Arc::new(rules()), &scenario, None),
+        Err(ContentError::Invalid(_))
+    ));
+    let Value::Object(prototype) = battle("melee_exchange").to_canon() else {
+        panic!("an object")
+    };
+    assert!(!prototype.contains_key("leadership") && !prototype.contains_key("side"));
 }

@@ -56,6 +56,5 @@ repeat) is a defect to fix, not a result.
 ## Not here yet
 
 - Sound, a menu, saving a battle, the campaign.
-- Morale and loss of control under the reference rules. Battles under `content/reference/rules.json` are fought with its
-  turn order, movement, flight and skill-scaled damage, but without those two, so they are not yet the reference's
-  battles. No scenario file, suite or baseline for them yet.
+- For the reference rules (`content/reference/rules.json`): a scenario file, a suite and a baseline, and the screen. The
+  rules themselves are implemented and tested by hand-computed cases.
