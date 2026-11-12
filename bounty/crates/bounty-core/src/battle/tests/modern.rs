@@ -115,6 +115,7 @@ fn the_variant_is_the_reference_with_some_switches_set() {
     let kept = Switches {
         army_view_morale: true,
         leadership_caps_fighters: true,
+        fallen_return_percent: 25,
         ..Switches::default()
     };
     assert_eq!(ours.switches, kept);

@@ -79,6 +79,10 @@
     "checked": "before_every_activation",
     "over_leadership": "only_what_leadership_covers_fights"
   },
+  "campaign": {
+    "unpaid_week": "purse_emptied_every_stack_stays",
+    "fallen_of_a_won_battle_return_percent": 25
+  },
   "round_limit": 200,
   "round_limit_outcome": "budget_exceeded",
   "hero_magic": {

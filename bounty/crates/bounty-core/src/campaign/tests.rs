@@ -3,7 +3,7 @@
 
 use super::*;
 use crate::battle;
-use crate::content::ContentError;
+use crate::content::{ContentError, Rules};
 
 const MAP: &str = include_str!("../../../../content/demo/map.json");
 const EXPEDITION: &str = include_str!("../../../../content/demo/expedition.json");
@@ -932,4 +932,102 @@ fn the_digest_follows_the_state() {
         (&state["gold"], &state["status"]),
         (&Value::from(80_u32), &Value::str("adventure"))
     );
+}
+
+const MEADOW: &str = include_str!("../../../../content/meadow/expedition.json");
+const MEADOW_MAP: &str = include_str!("../../../../content/meadow/map.json");
+const REFERENCE: &str = include_str!("../../../../content/reference/rules.json");
+const MODERN: &str = include_str!("../../../../content/modern/rules.json");
+
+// The second expedition's file says more than the fixture's: upkeep by rule, the troops of recovery by name, a
+// band of several stacks. Each is read, and each mistake in it refused.
+#[test]
+fn the_meadow_loads_and_its_mistakes_are_refused() {
+    let def = ExpeditionDef::from_texts(MEADOW, MEADOW_MAP, REFERENCE).unwrap();
+    assert_eq!(def.clock.upkeep, Upkeep::TenthOfCost);
+    assert_eq!(
+        (def.recovery.troop_id.as_str(), def.recovery.count),
+        ("sprites", 20)
+    );
+    assert_eq!(def.encounter("meadow-company").unwrap().also.len(), 1);
+    assert!(ExpeditionDef::from_texts(MEADOW, MEADOW_MAP, MODERN).is_ok());
+    assert_eq!(
+        self::def().clock.upkeep,
+        Upkeep::PerCreature(1),
+        "the fixture keeps its flat upkeep"
+    );
+
+    let changed = |old: &str, new: &str| {
+        assert!(MEADOW.contains(old), "{old}");
+        ExpeditionDef::from_texts(&MEADOW.replacen(old, new, 1), MEADOW_MAP, REFERENCE)
+    };
+    let refused = |old: &str, new: &str| changed(old, new).is_err();
+    assert!(refused(
+        r#""upkeep_rule": "tenth_of_recruit_cost""#,
+        r#""upkeep_rule": "a_fifth""#
+    ));
+    assert!(
+        refused(
+            r#""upkeep_per_living_creature": 0"#,
+            r#""upkeep_per_living_creature": 2"#
+        ),
+        "a flat upkeep and a rule together"
+    );
+    assert!(
+        refused(r#""troop": "sprites""#, r#""troop": "dragons""#),
+        "an unknown troop in a band"
+    );
+    assert!(
+        refused(r#""count": 30"#, r#""count": 0"#),
+        "an empty stack in a band"
+    );
+    assert!(
+        refused(
+            r#""count": 20,
+    "retains"#,
+            r#""warden_count": 4, "count": 20,
+    "retains"#
+        ),
+        "the troops of recovery named both ways"
+    );
+    // The enemy's column must be free as far down as the largest band reaches.
+    assert!(
+        refused(
+            r#""x": 3,
+        "y": 2"#,
+            r#""x": 5,
+        "y": 2"#
+        ),
+        "a rock where the band's second stack stands"
+    );
+
+    // The campaign's switches belong to the variant: the reference may not set them, and no share is over all.
+    let rules = |text: &str, old: &str, new: &str| {
+        assert!(text.contains(old), "{old}");
+        Rules::from_json(&text.replacen(old, new, 1))
+    };
+    let section = r#""round_limit": 200,"#;
+    let with = |unpaid: &str, share: u32| {
+        format!(
+            r#""campaign": {{"unpaid_week": "{unpaid}", "fallen_of_a_won_battle_return_percent": {share}}}, {section}"#
+        )
+    };
+    let stay = "purse_emptied_every_stack_stays";
+    let leave = "stacks_paid_in_slot_order_unpaid_leave";
+    assert!(
+        rules(REFERENCE, section, &with(stay, 0)).is_ok(),
+        "the reference's own values, spelled out"
+    );
+    assert!(rules(REFERENCE, section, &with(leave, 0)).is_err());
+    assert!(rules(REFERENCE, section, &with(stay, 25)).is_err());
+    assert!(
+        rules(
+            MODERN,
+            "\"fallen_of_a_won_battle_return_percent\": 25",
+            "\"fallen_of_a_won_battle_return_percent\": 101"
+        )
+        .is_err()
+    );
+    assert!(rules(MODERN, stay, leave).is_ok());
+    assert!(rules(MODERN, stay, "everyone_is_paid_anyway").is_err());
 }

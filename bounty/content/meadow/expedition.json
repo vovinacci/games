@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "id": "meadow-expedition-v1",
+  "status": "own_small_scenario_on_reference_troops_not_the_original_map_or_economy",
+  "map_path": "map.json",
+  "battle_rules_path": "../reference/rules.json",
+  "start": {
+    "map_id": "meadow",
+    "x": 1,
+    "y": 1,
+    "gold": 3000,
+    "leadership": 100,
+    "elapsed_ticks": 0,
+    "army": [
+      {
+        "id": "p0",
+        "troop_id": "sprites",
+        "count": 20,
+        "injury": 0
+      }
+    ],
+    "contract": null,
+    "clues": []
+  },
+  "clock": {
+    "ticks_per_day": 4,
+    "days_per_week": 5,
+    "deadline_ticks": 80,
+    "movement_ticks": 1,
+    "search_ticks": 4,
+    "success_on_exact_deadline": "victory",
+    "weekly_income": 500,
+    "upkeep_per_living_creature": 0,
+    "upkeep_rule": "tenth_of_recruit_cost"
+  },
+  "town": {
+    "object_id": "meadow-town",
+    "stock": {
+      "archers": 12,
+      "sprites": 100,
+      "wolves": 40
+    },
+    "price_per_creature": {
+      "archers": 250,
+      "sprites": 15,
+      "wolves": 40
+    }
+  },
+  "encounters": [
+    {
+      "object_id": "meadow-pack",
+      "enemy_troop": "wolves",
+      "enemy_count": 12,
+      "battle_rng_state": 11,
+      "gold_reward": 800,
+      "grants_clue": false
+    },
+    {
+      "object_id": "meadow-company",
+      "enemy_troop": "archers",
+      "enemy_count": 6,
+      "battle_rng_state": 12,
+      "gold_reward": 1500,
+      "grants_clue": true,
+      "also": [
+        {
+          "troop": "sprites",
+          "count": 30
+        }
+      ]
+    },
+    {
+      "object_id": "meadow-swarm",
+      "enemy_troop": "sprites",
+      "enemy_count": 60,
+      "battle_rng_state": 13,
+      "gold_reward": 400,
+      "grants_clue": false
+    }
+  ],
+  "battle_layout": {
+    "player": {
+      "x": 0,
+      "y": 0
+    },
+    "enemy": {
+      "x": 5,
+      "y": 1
+    },
+    "obstacles": [
+      {
+        "x": 3,
+        "y": 2
+      }
+    ]
+  },
+  "objective": {
+    "object_id": "meadow-objective",
+    "hidden_until_clue": true,
+    "search_requires_clue": false
+  },
+  "recovery": {
+    "destination_object_id": "meadow-town",
+    "gold": "floor(current_gold/2)",
+    "ticks": 8,
+    "troop_id": "sprites",
+    "count": 20,
+    "retains_contract_and_clues": true
+  },
+  "tests": [
+    {
+      "id": "errand",
+      "commands": [
+        {
+          "kind": "pilot",
+          "pilot": "errand-v1"
+        }
+      ]
+    }
+  ]
+}

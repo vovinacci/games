@@ -6,7 +6,7 @@ use std::fs;
 use std::path::Path;
 use std::sync::Arc;
 
-use bounty_ai::{APPROACH_V1, approach_v1};
+use bounty_ai::{APPROACH_V1, ERRAND_V1, approach_v1, errand_v1};
 use bounty_core::campaign::{Action, Command, Event, Expedition, ExpeditionDef, Status};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -14,7 +14,8 @@ use serde_json::Value;
 /// Version of the report format. Reports of different versions are not compared.
 pub const REPORT_SCHEMA: u32 = 1;
 
-/// The most commands one battle of a route may take before the run gives up on it.
+/// The most commands one battle of a route, or one handing-over to the expedition pilot, may take before the run
+/// gives up on it.
 const BATTLE_BUDGET: u32 = 100_000;
 
 /// Creature counts by troop ID.
@@ -48,6 +49,12 @@ pub struct Row {
     pub recruiting: u64,
     pub lost_in_recovery: u64,
     pub recruited: Counts,
+    /// Creatures of stacks that left because a week could not pay them.
+    #[serde(default)]
+    pub left_unpaid: Counts,
+    /// Fallen of won battles that returned; the casualties are counted without them.
+    #[serde(default)]
+    pub returned: Counts,
     pub battles: u32,
     pub battles_won: u32,
     pub battles_stalled: u32,
@@ -79,6 +86,17 @@ pub struct Report {
 /// # Errors
 /// A file that cannot be read, or content the rules refuse.
 pub fn load(expedition_path: &Path) -> Result<Arc<ExpeditionDef>, String> {
+    load_under(expedition_path, None)
+}
+
+/// As [`load`], under the rules of another file when one is given: a variant of the rules the expedition names.
+///
+/// # Errors
+/// As [`load`].
+pub fn load_under(
+    expedition_path: &Path,
+    rules: Option<&Path>,
+) -> Result<Arc<ExpeditionDef>, String> {
     let read =
         |path: &Path| fs::read_to_string(path).map_err(|e| format!("{}: {e}", path.display()));
     let text = read(expedition_path)?;
@@ -90,7 +108,11 @@ pub fn load(expedition_path: &Path) -> Result<Arc<ExpeditionDef>, String> {
             .ok_or_else(|| format!("the expedition names no {field}"))?;
         read(&dir.join(path))
     };
-    let def = ExpeditionDef::from_texts(&text, &beside("map_path")?, &beside("battle_rules_path")?);
+    let rules = match rules {
+        Some(path) => read(path)?,
+        None => beside("battle_rules_path")?,
+    };
+    let def = ExpeditionDef::from_texts(&text, &beside("map_path")?, &rules);
     def.map(Arc::new).map_err(|e| e.to_string())
 }
 
@@ -106,6 +128,8 @@ fn army(expedition: &Expedition) -> Counts {
 enum Step {
     Act(Action),
     ResolveBattle,
+    /// The expedition pilot plays on until the expedition is over.
+    Pilot,
 }
 
 fn step(command: &Value) -> Result<Step, String> {
@@ -139,6 +163,15 @@ fn step(command: &Value) -> Result<Step, String> {
                 ));
             }
             return Ok(Step::ResolveBattle);
+        }
+        "pilot" => {
+            let pilot = text("pilot")?;
+            if pilot != ERRAND_V1 {
+                return Err(format!(
+                    "the route asks for the pilot {pilot:?}, there is {ERRAND_V1:?}"
+                ));
+            }
+            return Ok(Step::Pilot);
         }
         other => {
             return Err(format!(
@@ -203,6 +236,12 @@ impl<F: FnMut(&mut Expedition)> Run<'_, F> {
                 row.rewards += reward;
                 self.count_casualties(&army(&self.expedition));
             }
+            Event::StackLeft { troop_id, count } => {
+                *row.left_unpaid.entry(troop_id.clone()).or_default() += u64::from(*count);
+            }
+            Event::FallenReturned { troop_id, count } => {
+                *row.returned.entry(troop_id.clone()).or_default() += u64::from(*count);
+            }
             Event::BattleStalled { .. } => {
                 row.battles_stalled += 1;
                 self.count_casualties(&army(&self.expedition));
@@ -241,6 +280,16 @@ impl<F: FnMut(&mut Expedition)> Run<'_, F> {
         }
         Err(format!("a battle took more than {BATTLE_BUDGET} commands"))
     }
+
+    fn pilot(&mut self) -> Result<(), String> {
+        for _ in 0..BATTLE_BUDGET {
+            let Some(action) = errand_v1(&self.expedition) else {
+                return Ok(());
+            };
+            self.act(action)?;
+        }
+        Err(format!("the pilot took more than {BATTLE_BUDGET} commands"))
+    }
 }
 
 /// Plays one route of `def` from the start. `after` sees the expedition after every accepted command and may
@@ -269,6 +318,7 @@ pub fn play_route(
         match step(command)? {
             Step::Act(action) => run.act(action)?,
             Step::ResolveBattle => run.resolve_battle()?,
+            Step::Pilot => run.pilot()?,
         }
     }
     let Run {
@@ -461,11 +511,31 @@ mod tests {
         assert!(timeout.weeks_settled > 0 && timeout.income > 0);
     }
 
-    // The code as it stands gives exactly the recorded baseline; see bounty/balance/README.md for replacing it.
+    // The code as it stands gives exactly the recorded baselines; see bounty/balance/README.md for replacing one.
     #[test]
-    fn the_demo_expedition_gives_its_recorded_baseline() {
-        let difference = compare(&baseline(), &run(&demo(), "test"));
-        assert_eq!(difference, Vec::<String>::new());
+    fn each_expedition_gives_its_recorded_baseline() {
+        let content = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../content");
+        let recorded = |name: &str| -> Report {
+            let path = content
+                .join("../balance/baselines")
+                .join(format!("{name}.json"));
+            serde_json::from_str(&fs::read_to_string(path).unwrap()).unwrap()
+        };
+        assert_eq!(
+            compare(&baseline(), &run(&demo(), "test")),
+            Vec::<String>::new()
+        );
+        for rules in ["reference", "modern"] {
+            let under = content.join(rules).join("rules.json");
+            let meadow = load_under(&content.join("meadow/expedition.json"), Some(&under)).unwrap();
+            let report = run(&meadow, "test");
+            assert_eq!(report.identity.ruleset_id, format!("{rules}-v0.1"));
+            let difference = compare(
+                &recorded(&format!("expedition-meadow-{rules}-0001")),
+                &report,
+            );
+            assert_eq!(difference, Vec::<String>::new(), "{rules}");
+        }
     }
 
     #[test]

@@ -3,7 +3,7 @@
 //! here.
 
 use bounty_core::campaign::{Action, ObjectKind};
-use bounty_core::content::Cell;
+use bounty_core::content::{Cell, MODERN_RULESET, REFERENCE_RULESET};
 use gamekit::t;
 use gamekit::text::{text_at, text_centered_fit, text_fit};
 use macroquad::prelude::*;
@@ -13,13 +13,20 @@ use crate::view::{CURSOR, ENEMY, GROUND, LINE, PANEL, PLAYER, SIDEBAR, TARGET, b
 use crate::words::{named, place_name, status_text};
 
 /// Side of a map cell, and where the map's top-left corner is.
-const CELL: f32 = 56.0;
-const MAP: Vec2 = vec2(64.0, 112.0);
+const LARGEST_CELL: f32 = 56.0;
+const MAP: Vec2 = vec2(32.0, 80.0);
+/// Where the log's panel begins, which the map must stay above.
+const LOG_TOP: f32 = 640.0;
+const ROCK: Color = Color::new(0.2, 0.2, 0.22, 1.0);
 const WATER: Color = Color::new(0.08, 0.14, 0.26, 1.0);
 const WAVE: Color = Color::new(0.2, 0.32, 0.5, 1.0);
 
-fn corner(cell: Cell) -> Vec2 {
-    MAP + vec2(cell.x as f32, cell.y as f32) * CELL
+/// The side of a cell for a map of this size: as large as fits between the header, the sidebar and the log,
+/// and no larger than suits the marks.
+fn cell_size(width: u32, height: u32) -> f32 {
+    let across = (SIDEBAR.x - 16.0 - MAP.x) / width.max(1) as f32;
+    let down = (LOG_TOP - 16.0 - MAP.y) / height.max(1) as f32;
+    across.min(down).min(LARGEST_CELL).floor()
 }
 
 pub fn draw(adventure: &Adventure) {
@@ -53,35 +60,57 @@ fn header() {
     );
 }
 
+/// Which rules the expedition is played under, where it can be more than one set.
+fn rules_line(id: &str) -> Option<String> {
+    match id {
+        MODERN_RULESET => Some(t!("modern-note")),
+        REFERENCE_RULESET => Some(t!("reference-note")),
+        _ => None,
+    }
+}
+
 fn map(adventure: &Adventure) {
     let expedition = &adventure.expedition;
     let def = expedition.def();
+    let size = cell_size(def.map.width, def.map.height);
+    let corner = |cell: Cell| MAP + vec2(cell.x as f32, cell.y as f32) * size;
     for y in 0..def.map.height {
         for x in 0..def.map.width {
             let cell = Cell { x, y };
             let at = corner(cell);
+            let water = def.map.terrain(cell).is_some_and(|t| t.id == "water");
             if def.map.passable(cell) {
-                draw_rectangle(at.x, at.y, CELL, CELL, GROUND);
-            } else {
-                // Ground nobody can walk is marked by its lines as well as its colour.
-                draw_rectangle(at.x, at.y, CELL, CELL, WATER);
-                for row in [18.0, 36.0] {
+                draw_rectangle(at.x, at.y, size, size, GROUND);
+            } else if water {
+                // Ground nobody can walk is marked by its lines as well as its colour: waves on water.
+                draw_rectangle(at.x, at.y, size, size, WATER);
+                for row in [size / 3.0, size * 2.0 / 3.0] {
                     draw_line(
                         at.x + 10.0,
                         at.y + row,
-                        at.x + CELL - 10.0,
+                        at.x + size - 10.0,
                         at.y + row,
                         2.0,
                         WAVE,
                     );
                 }
+            } else {
+                // And a peak on anything else that bars the way.
+                draw_rectangle(at.x, at.y, size, size, ROCK);
+                let (left, top, right) = (
+                    at + vec2(10.0, size - 12.0),
+                    at + vec2(size / 2.0, 12.0),
+                    at + vec2(size - 10.0, size - 12.0),
+                );
+                draw_line(left.x, left.y, top.x, top.y, 2.0, LINE);
+                draw_line(top.x, top.y, right.x, right.y, 2.0, LINE);
             }
-            draw_rectangle_lines(at.x, at.y, CELL, CELL, 1.0, LINE);
+            draw_rectangle_lines(at.x, at.y, size, size, 1.0, LINE);
         }
     }
     let clue = expedition.objective_known();
     for object in &def.map.objects {
-        let centre = corner(object.cell()) + vec2(CELL / 2.0, CELL / 2.0 - 6.0);
+        let centre = corner(object.cell()) + vec2(size / 2.0, size / 2.0 - 6.0);
         match object.kind {
             // A house: the town.
             ObjectKind::Town => {
@@ -105,12 +134,12 @@ fn map(adventure: &Adventure) {
             ObjectKind::Encounter | ObjectKind::Objective => continue,
         }
         let name = place_name(&object.id);
-        let foot = corner(object.cell()) + vec2(CELL / 2.0, CELL - 5.0);
-        text_centered_fit(&name, foot.x, foot.y, CELL * 2.0 - 8.0, 12.0, WHITE);
+        let foot = corner(object.cell()) + vec2(size / 2.0, size - 5.0);
+        text_centered_fit(&name, foot.x, foot.y, size * 2.0 - 8.0, 12.0, WHITE);
     }
     // The hero: a filled circle, as the player's own are filled in battle; in a corner of the cell, so that what
     // stands there still shows.
-    let hero = corner(expedition.hero()) + vec2(CELL - 14.0, 14.0);
+    let hero = corner(expedition.hero()) + vec2(size - 14.0, 14.0);
     draw_circle(hero.x, hero.y, 8.0, PLAYER);
     draw_circle_lines(hero.x, hero.y, 11.0, 2.0, WHITE);
 }
@@ -134,7 +163,7 @@ fn sidebar(adventure: &Adventure) {
     );
     line(&time, 22.0, WHITE);
     let to_week = clock.week_ticks - expedition.ticks() % clock.week_ticks;
-    let upkeep = clock.upkeep_per_creature * expedition.creatures();
+    let upkeep = expedition.upkeep();
     let week = t!(
         "adv-week",
         n = to_week,
@@ -176,6 +205,9 @@ fn sidebar(adventure: &Adventure) {
                 LIGHTGRAY,
             );
         }
+    }
+    if let Some(rules) = rules_line(&def.rules.id) {
+        line(&rules, 16.0, GRAY);
     }
     if adventure.unsaved {
         line(&t!("adv-save-failed"), 18.0, TARGET);

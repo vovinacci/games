@@ -12,13 +12,13 @@ use std::fmt;
 use std::sync::Arc;
 
 pub use content::{
-    ArmyStart, BattleLayout, Clock, Encounter, ExpeditionDef, Map, MapObject, ObjectKind, Recovery,
-    Terrain,
+    ArmyStart, BandStack, BattleLayout, Clock, Encounter, ExpeditionDef, Map, MapObject,
+    ObjectKind, Recovery, Terrain, Upkeep,
 };
 
 use crate::battle::{self, Battle, Outcome};
 use crate::canon::Value;
-use crate::content::{Cell, Profile, Scenario, Side, StackStart};
+use crate::content::{Cell, Profile, Scenario, Side, StackStart, Switches, Unpaid};
 use crate::save::{Reader, SaveError, invalid};
 
 /// How an expedition stands.
@@ -211,6 +211,16 @@ pub enum Event {
     },
     /// Something happened in the battle.
     Battle(battle::Event),
+    /// A stack that could not be paid at the week's end left the army.
+    StackLeft {
+        troop_id: String,
+        count: u32,
+    },
+    /// After a won battle some of a stack's fallen came back to it.
+    FallenReturned {
+        troop_id: String,
+        count: u32,
+    },
     /// The band is beaten; the reward is in the purse.
     BattleWon {
         band: String,
@@ -388,6 +398,65 @@ impl Expedition {
             .then(|| self.def.objective())
     }
 
+    /// What the army as it stands costs at the end of a week.
+    #[must_use]
+    pub fn upkeep(&self) -> u64 {
+        self.army.iter().map(|stack| self.upkeep_of(stack)).sum()
+    }
+
+    fn upkeep_of(&self, stack: &ArmyStack) -> u64 {
+        let each = match self.def.clock.upkeep {
+            Upkeep::PerCreature(each) => each,
+            Upkeep::TenthOfCost => {
+                let troop = self.def.rules.troop(&stack.troop_id);
+                troop.map_or(0, |troop| u64::from(troop.recruit_cost / 10))
+            }
+        };
+        each.saturating_mul(u64::from(stack.count))
+    }
+
+    /// The switches of the rules the expedition is played under; all off under rules that have none.
+    fn switches(&self) -> Switches {
+        match &self.def.rules.profile {
+            Profile::Reference(reference) => reference.switches,
+            Profile::Prototype => Switches::default(),
+        }
+    }
+
+    /// Takes a week's upkeep from the purse and gives what was paid, or `None` when the week cannot be paid and
+    /// the rules end the expedition for it. Under the reference rules a purse too small is emptied and every
+    /// stack stays; under the variant's switch the stacks are paid in slot order, each in full or not at all,
+    /// and a stack not paid leaves.
+    fn pay_upkeep(&mut self, events: &mut Vec<Event>) -> Option<u64> {
+        let due = self.upkeep();
+        if self.switches().unpaid == Unpaid::Leave {
+            let mut paid = 0;
+            let army = std::mem::take(&mut self.army);
+            for stack in army {
+                let cost = self.upkeep_of(&stack);
+                if cost <= self.gold {
+                    self.gold -= cost;
+                    paid += cost;
+                    self.army.push(stack);
+                } else {
+                    events.push(Event::StackLeft {
+                        troop_id: stack.troop_id,
+                        count: stack.count,
+                    });
+                }
+            }
+            return Some(paid);
+        }
+        if self.gold >= due {
+            self.gold -= due;
+            return Some(due);
+        }
+        match self.def.rules.profile {
+            Profile::Prototype => None,
+            Profile::Reference(_) => Some(std::mem::take(&mut self.gold)),
+        }
+    }
+
     /// Every living creature of the army.
     #[must_use]
     pub fn creatures(&self) -> u64 {
@@ -523,6 +592,18 @@ impl Expedition {
             x: layout.enemy.x,
             y: layout.enemy.y,
         });
+        for (stack, slot) in encounter.also.iter().zip(1..) {
+            stacks.push(StackStart {
+                id: format!("e{slot}"),
+                side: Side::Enemy,
+                slot,
+                troop_id: stack.troop.clone(),
+                count: stack.count,
+                injury: 0,
+                x: layout.enemy.x,
+                y: (layout.enemy.y + slot) % height,
+            });
+        }
         let scenario = Scenario {
             id: band.clone(),
             rng_state: encounter.battle_rng_state,
@@ -559,7 +640,7 @@ impl Expedition {
             Some(Outcome::EnemyWin) => self.recover(events),
             Some(Outcome::BudgetExceeded) => {
                 // Nobody won. The army is what the battle left of it; the band stands as before.
-                self.keep_survivors();
+                self.keep_survivors(0, events);
                 if let Some(engagement) = self.engagement.take() {
                     events.push(Event::BattleStalled {
                         band: engagement.band,
@@ -571,16 +652,25 @@ impl Expedition {
         Ok(())
     }
 
-    /// The army as the battle left it: each stack with its survivors, the dead stacks gone. Injury is healed.
-    fn keep_survivors(&mut self) {
+    /// The army as the battle left it: each stack with its survivors and, where the rules have it so, `returning`
+    /// in a hundred of its fallen; the stacks left empty gone. Injury is healed.
+    fn keep_survivors(&mut self, returning: u32, events: &mut Vec<Event>) {
         let Some(engagement) = &self.engagement else {
             return;
         };
         for stack in &mut self.army {
-            stack.count = engagement
-                .battle
-                .stack(&stack.id)
-                .map_or(0, |fought| fought.count);
+            let fought = engagement.battle.stack(&stack.id);
+            let survivors = fought.map_or(0, |fought| fought.count).min(stack.count);
+            let fallen = u64::from(stack.count - survivors);
+            // At most the fallen, so it fits.
+            let back = u32::try_from(fallen * u64::from(returning) / 100).unwrap_or(0);
+            stack.count = survivors + back;
+            if back > 0 {
+                events.push(Event::FallenReturned {
+                    troop_id: stack.troop_id.clone(),
+                    count: back,
+                });
+            }
         }
         self.army.retain(|stack| stack.count > 0);
     }
@@ -588,7 +678,7 @@ impl Expedition {
     /// The band is beaten: survivors kept, the hero on the band's cell, the reward paid, and the clue given if
     /// the hero held the band's contract. Battles take no time of the campaign.
     fn win(&mut self, events: &mut Vec<Event>) {
-        self.keep_survivors();
+        self.keep_survivors(self.switches().fallen_return_percent, events);
         let Some(Engagement { band, arrival, .. }) = self.engagement.take() else {
             return;
         };
@@ -737,19 +827,17 @@ impl Expedition {
     fn pass(&mut self, ticks: u32, events: &mut Vec<Event>) -> Passed {
         let clock = &self.def.clock;
         let (week_ticks, deadline) = (clock.week_ticks, clock.deadline_ticks);
-        let (income, per_creature) = (clock.weekly_income, clock.upkeep_per_creature);
+        let income = clock.weekly_income;
         let from = self.ticks;
         let mut passed = Passed::All;
         for done in 1..=ticks {
             self.ticks += 1;
             if self.ticks.is_multiple_of(week_ticks) {
-                let upkeep = self.creatures().saturating_mul(per_creature);
                 self.gold = self.gold.saturating_add(income);
-                if self.gold < upkeep {
+                let Some(upkeep) = self.pay_upkeep(events) else {
                     passed = Passed::Insolvent;
                     break;
-                }
-                self.gold -= upkeep;
+                };
                 events.push(Event::WeekSettled {
                     week: self.ticks / week_ticks,
                     income,

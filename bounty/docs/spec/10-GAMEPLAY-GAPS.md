@@ -117,7 +117,8 @@ A change that costs one of these has to be worth it.
 
 ## Campaign
 
-Nothing here is measured: there is no campaign yet. Each point names what would measure it.
+What could be measured with the small expedition is at the end of this document; the rest still waits for a campaign.
+Each point names what would measure it.
 
 ### C1. Upkeep has no teeth
 
@@ -304,9 +305,56 @@ rolls stay in the engine, off, so that the measurements above can be run again; 
 - B1, army-view morale: kept, to be looked at again when all five morale groups can meet.
 - B4, the cost of a victory: still a gap, and not one to cure inside the battle. The place to try is after it: some of
   the fallen of a won battle return. That leaves who wins untouched and changes what winning costs. It is a rule of the
-  campaign, so it waits for the expedition.
+  campaign, tried on the expedition: see the last section.
 - B5, the swing of one roll: left alone. If it still matters once battles are played by hand, the thing to try is a
   narrower roll for large stacks only.
 
 These are results for three troops and a pilot that walks up and strikes. They decide what to try next, not what the
 game will be.
+
+## The campaign's switches, measured on an expedition
+
+With the expedition there is a clock, a purse and a map, so two of the campaign's points and the open end of B4 can be
+measured. What is measured on is `content/meadow/`: this project's own small scenario on the reference's three troops (a
+town, three bands, one of two stacks, a prize, 80 ticks, a leadership of 100, upkeep by the reference's rule of a tenth
+of a creature's cost a week). It is not a map or an economy of the original. It is played by the expedition pilot
+`errand-v1`: recruit the dearest troops the purse can keep, take the contract that leads to the clue, walk to the bands
+in order, fight with the plain pilot, search where the clue points. 500 runs a line, each band's battle from another
+random state (`measure` in `crates/bounty-tools/tests/expedition_study.rs`).
+
+| Rules | Won | Out of time | Battles per run | Recoveries per run | Losses at the town's prices | Gold at the end | Creatures at the end |
+|---|---|---|---|---|---|---|---|
+| reference | 380 | 120 | 2.72 | 0.96 | 2466 | 2380 | 10 |
+| variant, battle switches only | 480 | 20 | 2.12 | 0.16 | 1568 | 2845 | 7 |
+| + a quarter of the fallen return | 496 | 4 | 2.02 | 0.03 | 1184 | 2896 | 9 |
+| + half of the fallen return | 499 | 1 | 2.00 | 0.00 | 750 | 2872 | 15 |
+| + unpaid stacks leave | as without it | | | | | | |
+
+Won runs take 24 ticks in every line: the pilot's route is the same, and a run is lost by losing battles until the clock
+runs out.
+
+### What it says
+
+- **B4, what a victory costs.** Under the reference the pilot buys about 2700 gold of troops and loses 2466 of it; a run
+  that wins ends with ten creatures. The battle switches of the variant take a third off that, mostly because the hero's
+  own Wolves no longer turn on him. Letting a share of the fallen of a won battle return takes off more, in proportion:
+  a quarter brings the losses to 1184, a half to 750.
+- The return does not decide a battle, since it happens after one. It does carry into the next: fewer second battles are
+  lost (recoveries from 0.16 a run to 0.03 and to none), so a few more runs are won.
+- With a half returning nothing is at stake any more for this pilot on this map: no run in 500 loses a battle. A quarter
+  keeps a lost battle possible and a won one costly.
+- **C1, the week that cannot be paid.** Never happens here: the pilot keeps back the week's upkeep when it buys, and a
+  beaten hero comes home with a small army. The switch is built and tested (stacks paid in slot order, each in full or
+  not at all, as the reference's second content pack does), and cannot be judged on this run. It needs a player who
+  overspends, or a longer game with a commission that falls behind the army.
+- **C3, the search.** The screen says what a search costs before it is made. No rule changed.
+
+### Decided, 13 November 2026
+
+`modern-v0.1` has a quarter of the fallen of a won battle return (`campaign.fallen_of_a_won_battle_return_percent`: 25).
+Unpaid stacks leaving stays in the engine, off, until something can measure it. The maintainer left the choice to the
+numbers; they are above, and the share is one number in one file.
+
+One pilot, one map, three troops: this says that the rule does what it was meant to do, not that a quarter is the right
+share for a whole campaign. C5 (how troops come back to a dwelling) is the neighbouring rule and is not touched; with
+dwellings in the game the two are to be looked at together.

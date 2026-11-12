@@ -101,6 +101,12 @@ pub fn describe_campaign(event: &campaign::Event, battle: Option<&Battle>) -> Op
         E::BattleStalled { band } => t!("log-stalled", name = place_name(band)),
         E::Recovered { gold } => t!("log-recovered", gold = *gold),
         E::Ended { status } => status_text(*status),
+        E::StackLeft { troop_id, count } => {
+            t!("log-left", troop = named("troop", troop_id), n = *count)
+        }
+        E::FallenReturned { troop_id, count } => {
+            t!("log-returned", troop = named("troop", troop_id), n = *count)
+        }
         E::Moved { .. } | E::TimePassed { .. } => return None,
     })
 }
@@ -243,14 +249,11 @@ mod tests {
             .map(|o| format!("outcome-{}", o.name())),
         );
         needed.extend(["log-damage", "log-retaliation", "log-flew", "log-moved"].map(String::from));
-        let expedition = content::expedition();
-        needed.extend(
-            expedition
-                .map
-                .objects
-                .iter()
-                .map(|o| format!("object-{}", o.id)),
-        );
+        for name in ["demo", "meadow"] {
+            let expedition = content::expedition_named(name, None).unwrap();
+            let objects = expedition.map.objects.iter();
+            needed.extend(objects.map(|o| format!("object-{}", o.id)));
+        }
         needed.extend(
             [Status::Victory, Status::Timeout, Status::Insolvent]
                 .map(|s| format!("status-{}", s.name())),

@@ -2,6 +2,10 @@
 //! a battle or see its random numbers. A player that changes its choices gets a new name, so recorded results always
 //! say which one played.
 
+mod errand;
+
+pub use errand::{ERRAND_V1, errand_v1};
+
 use bounty_core::battle::{Action, Command, Observation, adjacent, hostile};
 use bounty_core::content::Cell;
 

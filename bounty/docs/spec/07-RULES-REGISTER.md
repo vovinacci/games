@@ -42,7 +42,7 @@ verified-parity claim, not for every provisional release. "Observed" means repro
 | U-02 | Starting values and progression for every class/difficulty? | Capture start states and each promotion; compare tables and exact thresholds. | M3 |
 | U-03 | Travel cost, terrain penalties and boundary ordering? | Walk controlled paths at day/week edges; record before/after state and enemy updates. | M3 |
 | U-04 | Sailing/flight access, landing, expiry and region transitions? | Test valid and invalid terrain, lost eligibility, coast transitions and return routes. | M3 |
-| U-05 | Weekly income, upkeep, recruitment refresh and insolvency? | Test exact funds, one below, zero, multiple boundaries and temporary modifiers. | M3 |
+| U-05 | Weekly income, upkeep, recruitment refresh and insolvency? Reference lead, implemented for `content/meadow/`: upkeep is a tenth of a creature's recruiting cost a week, rounded down, taken after the income; a purse too small is emptied and every troop stays (OpenBounty spec 13.4, REQ-264). Not observed in the original. | Test exact funds, one below, zero, multiple boundaries and temporary modifiers. | M3 |
 | U-06 | Leadership equality, injury interactions and loss of control? | Test below/at/above threshold, growth during battle and modifier expiry. | M1b implemented subset |
 | U-07 | Permitted army operations and garrison behaviour? | Test same-type recruitment, full army, splitting/merging, dismissal and transfers. | M3 |
 | U-08 | Battle turn order, wait queue and phase resets? | Compare slot order with differing movement rates, waits and deaths; do not assume speed initiative. | M1b implemented subset |
