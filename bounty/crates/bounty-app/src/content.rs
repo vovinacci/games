@@ -1,6 +1,9 @@
 //! The content compiled into the game: the synthetic prototype rules with their battles, and the first rules
 //! taken from a reimplementation of the original with theirs.
 
+use std::sync::Arc;
+
+use bounty_core::campaign::ExpeditionDef;
 use bounty_core::content::{ContentError, Profile, Rules, Scenario, scenarios_from_json};
 
 const RULES: &str = include_str!("../../../prototype/rules.json");
@@ -8,6 +11,19 @@ const BATTLES: &str = include_str!("../../../prototype/battles.json");
 const REFERENCE_RULES: &str = include_str!("../../../content/reference/rules.json");
 const MODERN_RULES: &str = include_str!("../../../content/modern/rules.json");
 const REFERENCE_BATTLES: &str = include_str!("../../../content/reference/battles.json");
+
+const EXPEDITION: &str = include_str!("../../../content/demo/expedition.json");
+const EXPEDITION_MAP: &str = include_str!("../../../content/demo/map.json");
+
+/// The small test expedition, under the prototype rules.
+///
+/// # Panics
+/// As [`rules`].
+#[must_use]
+pub fn expedition() -> Arc<ExpeditionDef> {
+    let def = ExpeditionDef::from_texts(EXPEDITION, EXPEDITION_MAP, RULES);
+    Arc::new(def.expect("the compiled-in expedition loads"))
+}
 
 /// The prototype rules. The file is part of the program and checked by the tests, so it loads.
 ///

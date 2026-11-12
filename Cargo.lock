@@ -48,6 +48,7 @@ version = "0.0.0"
 dependencies = [
  "bounty-ai",
  "bounty-core",
+ "bounty-tools",
  "gamekit",
  "macroquad",
 ]

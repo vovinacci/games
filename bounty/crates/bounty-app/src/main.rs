@@ -1,12 +1,19 @@
-//! Bounty: for now one battle, under the synthetic prototype rules or the first rules taken from a remake of the
-//! original. The player's stacks by keyboard or mouse, the enemy's by the plain pilot.
+//! Bounty: a small test expedition (map, town, battles, a prize to find before time runs out), saved after every
+//! command and continued at the next start; or, with `--rules` or `--scenario`, one battle by itself. The player's
+//! stacks by keyboard or mouse, the enemy's by the plain pilot.
 //!
-//! Developer flags: `--rules prototype|reference` picks the rules, `--scenario <id>` and `--seed <n>` the battle; `--lang <id>` the language; `--steps <n>`
-//! lets the pilot play that many commands for both sides first; `--shot <file.png>` saves a screenshot and quits.
-//! With `--shot` the user's settings are neither read nor written and the dedication is skipped.
+//! Developer flags: `--rules prototype|reference|modern` and `--scenario <id>` pick one battle and `--seed <n>` its
+//! seed; `--route <id>` picks a route of the expedition's file for `--steps`; `--lang <id>` the language;
+//! `--steps <n>` plays that many commands first (the pilot's in a battle, the route's in the expedition);
+//! `--shot <file.png>` saves a screenshot and quits. With `--shot` or `--steps` the user's files are neither read
+//! nor written, and with `--shot` the dedication is skipped.
 
+mod adventure;
 mod content;
 mod control;
+mod input;
+mod map;
+mod saves;
 mod settings;
 mod view;
 mod words;
@@ -15,17 +22,18 @@ use std::sync::Arc;
 
 use bounty_ai::approach_v1;
 use bounty_core::battle::{Action, Battle, Command};
+use bounty_core::campaign::{self, Expedition, ExpeditionDef, Status};
 use bounty_core::content::{Cell, Rules, Scenario, Side};
 use gamekit::dedication::Intro;
 use gamekit::{dev, i18n, screen};
 use macroquad::prelude::*;
 
+use crate::adventure::Adventure;
+use crate::input::ENEMY_PACE;
+use crate::saves::Saves;
 use crate::settings::Store;
 
-/// Seconds the pilot takes over each command of the enemy, or of a stack out of control, so that a player can
-/// follow them.
-const ENEMY_PACE: f32 = 0.45;
-
+/// One battle by itself.
 struct Game {
     rules: Arc<Rules>,
     scenario: Scenario,
@@ -118,58 +126,114 @@ impl Game {
             }
             return;
         }
-        let board = &self.rules.board;
-        for (keys, dx, dy) in [
-            ([KeyCode::Left, KeyCode::Kp4], -1, 0),
-            ([KeyCode::Right, KeyCode::Kp6], 1, 0),
-            ([KeyCode::Up, KeyCode::Kp8], 0, -1),
-            ([KeyCode::Down, KeyCode::Kp2], 0, 1),
-        ] {
-            if keys.into_iter().any(is_key_pressed) {
-                self.cursor = control::moved(self.cursor, dx, dy, board.width, board.height);
-            }
+        if let Some(action) = input::battle_action(&self.battle, &mut self.cursor) {
+            self.act(action);
         }
-        let mut confirm = is_key_pressed(KeyCode::Enter) || is_key_pressed(KeyCode::KpEnter);
-        let mouse = screen::mouse();
-        if is_mouse_button_pressed(MouseButton::Left)
-            && let Some(cell) = view::cell_at(mouse, board.width, board.height)
-        {
-            self.cursor = cell;
-            confirm = true;
+    }
+
+    fn draw(&self) {
+        let shown = view::Shown {
+            scenario: &self.scenario.id,
+            seed: self.seed,
+            cursor: self.cursor,
+            log: &self.log,
+            in_expedition: false,
+        };
+        view::draw(&self.battle, &shown);
+    }
+}
+
+/// The keys of the expedition: those of its battle while one is fought, those of the map otherwise.
+fn update_adventure(adventure: &mut Adventure) {
+    if adventure.over() {
+        if is_key_pressed(KeyCode::N) {
+            adventure.restart();
         }
-        let seen = self.battle.observe();
-        if confirm {
-            if let Some(action) = control::action_at(&seen, self.cursor) {
-                self.act(action);
+        return;
+    }
+    if let Some(battle) = adventure.expedition.battle() {
+        if is_key_pressed(KeyCode::G) {
+            adventure.act(campaign::Action::Surrender);
+        } else if !view::player_commands(battle) {
+            adventure.waited += get_frame_time();
+            if adventure.waited >= ENEMY_PACE {
+                adventure.pilot();
             }
-        } else if is_key_pressed(KeyCode::W) && seen.legal.contains(&Action::Wait) {
-            self.act(Action::Wait);
-        } else if is_key_pressed(KeyCode::Space) {
-            self.act(Action::Pass);
         } else {
-            let keys = [KeyCode::Key1, KeyCode::Key2, KeyCode::Key3, KeyCode::Key4];
-            let spells: Vec<String> = self.battle.hero_charges().keys().cloned().collect();
-            for (spell, key) in spells.iter().zip(keys) {
-                if is_key_pressed(key)
-                    && let Some(action) = control::cast_at(&seen, self.cursor, spell)
-                {
-                    self.act(action);
-                    break;
-                }
+            let mut cursor = adventure.cursor;
+            let action = input::battle_action(battle, &mut cursor);
+            adventure.cursor = cursor;
+            if let Some(action) = action {
+                adventure.fight(action);
+            }
+        }
+        return;
+    }
+    for (keys, dx, dy) in [
+        ([KeyCode::Left, KeyCode::Kp4], -1, 0),
+        ([KeyCode::Right, KeyCode::Kp6], 1, 0),
+        ([KeyCode::Up, KeyCode::Kp8], 0, -1),
+        ([KeyCode::Down, KeyCode::Kp2], 0, 1),
+    ] {
+        if keys.into_iter().any(is_key_pressed) {
+            return adventure.act(campaign::Action::Move { dx, dy });
+        }
+    }
+    if is_key_pressed(KeyCode::S) {
+        adventure.act(campaign::Action::Search);
+    } else if is_key_pressed(KeyCode::W) {
+        adventure.act(campaign::Action::WaitTick);
+    } else if is_key_pressed(KeyCode::C) {
+        // The key does what the sidebar offers; where it offers nothing, nothing is asked.
+        if let Some(id) = adventure.contract_offer().map(str::to_owned) {
+            adventure.act(campaign::Action::TakeContract { id });
+        }
+    } else {
+        let keys = [KeyCode::Key1, KeyCode::Key2, KeyCode::Key3, KeyCode::Key4];
+        let sold: Vec<String> = adventure.on_sale().iter().map(|s| s.0.to_owned()).collect();
+        let in_town = adventure.expedition.hero() == adventure.expedition.def().town;
+        for (troop_id, key) in sold.into_iter().zip(keys) {
+            if in_town && is_key_pressed(key) {
+                let quantity = 1;
+                return adventure.act(campaign::Action::Recruit { troop_id, quantity });
             }
         }
     }
 }
 
-struct Options {
-    scenario: String,
-    seed: Option<u32>,
-    language: Option<String>,
-    steps: u32,
-    shot: Option<String>,
+fn draw_adventure(adventure: &Adventure) {
+    let expedition = &adventure.expedition;
+    let (Some(battle), Some(band)) = (expedition.battle(), expedition.engaged_with()) else {
+        return map::draw(adventure);
+    };
+    let seed = expedition
+        .def()
+        .encounter(band)
+        .map_or(0, |e| e.battle_rng_state);
+    let shown = view::Shown {
+        scenario: &words::place_name(band),
+        seed,
+        cursor: adventure.cursor,
+        log: &adventure.log,
+        in_expedition: true,
+    };
+    view::draw(battle, &shown);
 }
 
-async fn run(options: Options, rules: Arc<Rules>, scenario: Scenario) {
+/// What is played: one battle, or the expedition.
+enum Play {
+    Battle(Box<Game>),
+    Expedition(Box<Adventure>),
+}
+
+struct Options {
+    language: Option<String>,
+    shot: Option<String>,
+    /// Commands were played before the first frame: a developer's run, which leaves the user's files alone.
+    stepped: bool,
+}
+
+async fn run(options: Options, mut play: Play) {
     // A developer's screenshot run leaves the user's files alone.
     let store = if options.shot.is_some() {
         Store(None)
@@ -183,12 +247,15 @@ async fn run(options: Options, rules: Arc<Rules>, scenario: Scenario) {
         .clone()
         .or_else(|| settings.language.clone());
     i18n::set_language(wanted.map_or_else(i18n::detect, |id| i18n::place_of(&id)));
-
-    let seed = options.seed.unwrap_or(scenario.rng_state);
-    let mut game = Game::new(rules, scenario, seed);
-    for _ in 0..options.steps {
-        game.pilot();
+    if let Play::Expedition(adventure) = &mut play
+        && options.shot.is_none()
+        && !options.stepped
+    {
+        // Only now, with the languages set, can a continued game say that it is one.
+        let def = Arc::clone(adventure.expedition.def_shared());
+        **adventure = Adventure::new(def, Saves::of_the_user());
     }
+
     let mut intro = (!settings.dedication_seen && options.shot.is_none()).then(Intro::default);
     let mut frame = 0_u32;
     loop {
@@ -208,16 +275,20 @@ async fn run(options: Options, rules: Arc<Rules>, scenario: Scenario) {
                 settings.language = Some(words::LANGUAGES[next].id.to_owned());
                 store.save(&settings);
             }
-            if options.shot.is_none() {
-                game.update();
+            match &mut play {
+                Play::Battle(game) => {
+                    if options.shot.is_none() {
+                        game.update();
+                    }
+                    game.draw();
+                }
+                Play::Expedition(adventure) => {
+                    if options.shot.is_none() {
+                        update_adventure(adventure);
+                    }
+                    draw_adventure(adventure);
+                }
             }
-            let shown = view::Shown {
-                scenario: &options.scenario,
-                seed: game.seed,
-                cursor: game.cursor,
-                log: &game.log,
-            };
-            view::draw(&game.battle, &shown);
             if is_key_pressed(KeyCode::Escape) {
                 break;
             }
@@ -232,8 +303,37 @@ async fn run(options: Options, rules: Arc<Rules>, scenario: Scenario) {
     }
 }
 
+/// The expedition after the first `steps` commands of a route its file carries, battles' commands counted too;
+/// past the route's end, the state it ends in.
+fn expedition_after(
+    def: &Arc<ExpeditionDef>,
+    route: &str,
+    steps: u32,
+) -> Result<Expedition, String> {
+    let ids = || def.test_routes.iter().filter_map(|r| r["id"].as_str());
+    let Some(found) = def.test_routes.iter().find(|r| r["id"] == route) else {
+        let names: Vec<&str> = ids().collect();
+        return Err(format!(
+            "no route {route:?}; there are: {}",
+            names.join(", ")
+        ));
+    };
+    if steps == 0 {
+        return Ok(Expedition::start(Arc::clone(def)));
+    }
+    let (mut taken, mut at) = (0, None);
+    let mut watch = |expedition: &mut Expedition| {
+        taken += 1;
+        if taken == steps {
+            at = Some(expedition.clone());
+        }
+    };
+    let (end, _) = bounty_tools::expedition::play_route(def, found, &mut watch)?;
+    Ok(at.unwrap_or(end))
+}
+
 /// Reads the command line; a message for the user when something on it cannot be used.
-fn options(rules: &Rules) -> Result<Options, String> {
+fn start() -> Result<(Options, Play), String> {
     let number = |flag: &str| match dev::arg_after(flag) {
         Some(text) => text
             .parse::<u32>()
@@ -247,26 +347,37 @@ fn options(rules: &Rules) -> Result<Options, String> {
     {
         return Err(format!("--shot {path}: {problem}"));
     }
-    Ok(Options {
-        scenario: dev::arg_after("--scenario")
-            .unwrap_or_else(|| content::first_scenario(rules).to_owned()),
-        seed: number("--seed")?,
+    let steps = number("--steps")?.unwrap_or(0);
+    let options = Options {
         language: dev::arg_after("--lang"),
-        steps: number("--steps")?.unwrap_or(0),
         shot,
-    })
+        stepped: steps > 0,
+    };
+    let (rules, scenario) = (dev::arg_after("--rules"), dev::arg_after("--scenario"));
+    let play = if rules.is_some() || scenario.is_some() {
+        let rules = content::rules_named(&rules.unwrap_or_else(|| "prototype".to_owned()))?;
+        let id = scenario.unwrap_or_else(|| content::first_scenario(&rules).to_owned());
+        let scenario = content::scenario(&rules, &id).map_err(|e| e.to_string())?;
+        let seed = number("--seed")?.unwrap_or(scenario.rng_state);
+        let mut game = Game::new(Arc::new(rules), scenario, seed);
+        for _ in 0..steps {
+            game.pilot();
+        }
+        Play::Battle(Box::new(game))
+    } else {
+        let def = content::expedition();
+        let route = dev::arg_after("--route").unwrap_or_else(|| "complete-route".to_owned());
+        let expedition = expedition_after(&def, &route, steps)?;
+        debug_assert!(expedition.status() != Status::Battle || expedition.battle().is_some());
+        Play::Expedition(Box::new(Adventure::at(expedition, Saves(None))))
+    };
+    Ok((options, play))
 }
 
 fn main() {
-    let rules = dev::arg_after("--rules").unwrap_or_else(|| "prototype".to_owned());
-    let start = content::rules_named(&rules).and_then(|rules| {
-        let options = options(&rules)?;
-        let scenario = content::scenario(&rules, &options.scenario).map_err(|e| e.to_string())?;
-        Ok((options, Arc::new(rules), scenario))
-    });
-    match start {
-        Ok((options, rules, scenario)) => {
-            macroquad::Window::from_config(screen::window("Bounty"), run(options, rules, scenario));
+    match start() {
+        Ok((options, play)) => {
+            macroquad::Window::from_config(screen::window("Bounty"), run(options, play));
         }
         Err(message) => {
             eprintln!("{message}");

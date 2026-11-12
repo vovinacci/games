@@ -50,7 +50,12 @@ repeat) is a defect to fix, not a result.
 - All text on screen goes through `t!("key")`, with the key in both `crates/bounty-app/assets/i18n/en-GB.ftl` (British
   spelling) and `uk.ftl`. Never hard-code on-screen text; tests check the keys. A stack is always named with its side
   and in one form ("your Wardens", "ваші Вартові"), and sentences are built so that the name is never declined.
-- The screen offers only what `Battle::legal_actions` lists (`control.rs`); it has no rules of its own.
+- The screen offers only what `Battle::legal_actions` lists (`control.rs`); it has no rules of its own. On the map it
+  asks `Expedition::refusal` before it offers a key, and a command refused all the same is told in the log in the
+  player's language (`words::refusal_text`).
+- Without flags the game is the expedition: `adventure.rs` holds its state, log and save and reads no key, so tests play
+  it; `map.rs` draws the map, `view.rs` the battle, alone or inside the expedition (`input.rs` reads both). It is saved
+  after every accepted command and continued at the next start; `--rules` or `--scenario` gives one battle instead.
 - `--rules reference` plays under the reference rules (battles in `content/reference/battles.json`), `--rules modern`
   under the variant on the same battles; without it the prototype's. The header always says which rules are in use.
 - What the rules do to a stack is told where it is shown: its morale with the stacks that lower it, and how many of it
@@ -58,10 +63,12 @@ repeat) is a defect to fix, not a result.
   battle; it works nothing out by itself.
 - Check a changed screen in both languages by screenshot, not by eye on a window:
   `cargo run -p bounty-app -- --lang uk --scenario flight_barrier --steps 3 --shot shot.png`. `--steps` lets the pilot
-  play that many commands first. With `--shot` the user's settings are neither read nor written.
+  play that many commands first; in the expedition it plays that many commands of a route of the fixture
+  (`--route <id>`, `complete-route` unless named; 5 stands in the first battle, 99 at the end). With `--shot` or
+  `--steps` the user's files are neither read nor written.
 - Ukrainian runs longer than English: text with a fixed place uses `text_fit` or `text_wrapped` from `gamekit`.
-- A run without `--shot` reads and writes `settings.txt` in the user's data folder. The user may be playing: stop only
-  your own process, by its ID.
+- A run without `--shot` reads and writes `settings.txt` and, in the expedition, `expedition.json` with
+  `expedition.json.previous` in the user's data folder. The user may be playing: stop only your own process, by its ID.
 
 ## Saving
 
@@ -72,12 +79,12 @@ repeat) is a defect to fix, not a result.
 - A new field of `Expedition` or `Battle` goes into `to_canon`, `from_canon` and `check` together; the round-trip tests
   (`save/tests.rs`, `bounty-ai/tests/save_battles.rs`, `expedition_routes.rs`) fail when one is forgotten. A change to
   what is written is a new `SCHEMA_VERSION`; there is no migration yet, an older save is refused by its version.
-- The application writes a save with `gamekit::files::write_keeping_previous` and reads it with `read_newest`: one
-  current file and the one before it. A file that cannot be read is never deleted or overwritten.
+- The application (`saves.rs`) writes a save with `gamekit::files::write_keeping_previous` and reads it with
+  `read_newest`: one current file and the one before it. A file that cannot be read is never deleted or overwritten.
 
 ## Not here yet
 
 - Sound, a menu.
-- Most of the campaign. `bounty-core::campaign` has the expedition of `content/demo/` whole: map, clock and weekly
-  budget, recruiting, contract, battles with their reward and clue, surrender and recovery, search, and its save. The
-  adventure screen, which will also be what saves and continues, is to come.
+- Most of the campaign. The expedition of `content/demo/` is whole in the rules and on screen: map, clock and weekly
+  budget, recruiting, contract, battles with their reward and clue, surrender and recovery, search, save and continue.
+  An expedition on real troops and the campaign's own rule switches are to come.

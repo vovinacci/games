@@ -14,7 +14,7 @@ use crate::words::{morale_text, named, outcome_text, stack_name};
 pub const CELL: f32 = 96.0;
 pub const BOARD: Vec2 = vec2(112.0, 96.0);
 
-const SIDEBAR: Rect = Rect {
+pub const SIDEBAR: Rect = Rect {
     x: 800.0,
     y: 48.0,
     w: 464.0,
@@ -27,15 +27,15 @@ const LOG: Rect = Rect {
     h: 64.0,
 };
 
-const PANEL: Color = Color::new(0.07, 0.08, 0.12, 1.0);
-const LINE: Color = Color::new(0.3, 0.34, 0.42, 1.0);
-const GROUND: Color = Color::new(0.11, 0.15, 0.13, 1.0);
+pub const PANEL: Color = Color::new(0.07, 0.08, 0.12, 1.0);
+pub const LINE: Color = Color::new(0.3, 0.34, 0.42, 1.0);
+pub const GROUND: Color = Color::new(0.11, 0.15, 0.13, 1.0);
 const ROCK: Color = Color::new(0.24, 0.24, 0.27, 1.0);
-const PLAYER: Color = Color::new(0.45, 0.72, 1.0, 1.0);
-const ENEMY: Color = Color::new(1.0, 0.55, 0.35, 1.0);
+pub const PLAYER: Color = Color::new(0.45, 0.72, 1.0, 1.0);
+pub const ENEMY: Color = Color::new(1.0, 0.55, 0.35, 1.0);
 const REACH: Color = Color::new(0.35, 0.8, 0.5, 0.22);
-const TARGET: Color = Color::new(1.0, 0.3, 0.3, 1.0);
-const CURSOR: Color = Color::new(1.0, 0.9, 0.3, 1.0);
+pub const TARGET: Color = Color::new(1.0, 0.3, 0.3, 1.0);
+pub const CURSOR: Color = Color::new(1.0, 0.9, 0.3, 1.0);
 
 /// The corner of a cell on the virtual screen.
 #[must_use]
@@ -61,13 +61,15 @@ pub struct Shown<'a> {
     pub cursor: Cell,
     /// The last lines of the log, oldest first.
     pub log: &'a [String],
+    /// The battle is part of an expedition: it can be given up, and it is not fought again.
+    pub in_expedition: bool,
 }
 
 pub fn draw(battle: &Battle, shown: &Shown<'_>) {
     let seen = battle.observe();
     header(battle, shown);
     board(battle, &seen, shown.cursor);
-    sidebar(battle, &seen, shown.cursor);
+    sidebar(battle, &seen, shown);
     log(shown.log);
     if let Some(outcome) = battle.outcome() {
         banner(&outcome_text(outcome));
@@ -232,7 +234,8 @@ pub fn player_commands(battle: &Battle) -> bool {
     active.is_some_and(|s| s.side == Side::Player && !s.out_of_control)
 }
 
-fn sidebar(battle: &Battle, seen: &Observation, cursor: Cell) {
+fn sidebar(battle: &Battle, seen: &Observation, shown: &Shown<'_>) {
+    let cursor = shown.cursor;
     draw_rectangle(SIDEBAR.x, SIDEBAR.y, SIDEBAR.w, SIDEBAR.h, PANEL);
     draw_rectangle_lines(SIDEBAR.x, SIDEBAR.y, SIDEBAR.w, SIDEBAR.h, 2.0, LINE);
     let (x, width) = (SIDEBAR.x + 16.0, SIDEBAR.w - 32.0);
@@ -331,6 +334,9 @@ fn sidebar(battle: &Battle, seen: &Observation, cursor: Cell) {
         );
         line(&text, 18.0, if can { LIGHTGRAY } else { DARKGRAY });
     }
+    if shown.in_expedition {
+        line(&t!("key-surrender"), 18.0, LIGHTGRAY);
+    }
     line("", 10.0, WHITE);
     line(&t!("key-language"), 16.0, GRAY);
     line(&t!("key-quit"), 16.0, GRAY);
@@ -342,7 +348,7 @@ fn keys_after_the_battle(line: &mut impl FnMut(&str, f32, Color)) {
     line(&t!("key-quit"), 16.0, GRAY);
 }
 
-fn log(lines: &[String]) {
+pub fn log(lines: &[String]) {
     draw_rectangle(LOG.x, LOG.y, LOG.w, LOG.h, PANEL);
     draw_rectangle_lines(LOG.x, LOG.y, LOG.w, LOG.h, 2.0, LINE);
     let shown = &lines[lines.len().saturating_sub(3)..];
@@ -359,8 +365,8 @@ fn log(lines: &[String]) {
     }
 }
 
-/// The result of the battle, at the foot of the sidebar, where it covers nothing of the board.
-fn banner(text: &str) {
+/// A result, at the foot of the sidebar, where it covers nothing of the board or the map.
+pub fn banner(text: &str) {
     let band = Rect {
         x: SIDEBAR.x + 16.0,
         y: SIDEBAR.y + SIDEBAR.h - 100.0,
