@@ -64,4 +64,7 @@ repeat) is a defect to fix, not a result.
 
 ## Not here yet
 
-- Sound, a menu, saving a battle, the campaign.
+- Sound, a menu, saving.
+- Most of the campaign. `bounty-core::campaign` has the expedition of `content/demo/`: map, clock and weekly budget,
+  recruiting, contract and search. Its battles, recovery after a defeat, saving and the adventure screen are to come; a
+  band on the map still refuses the step onto it.
