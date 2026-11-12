@@ -11,6 +11,11 @@ BIN = $(VENV)/bin
 ascii-check: ## Check that code and config are ASCII (see tools/check_ascii.sh)
 	git ls-files -z | grep -zE '(\.(rs|toml|py|nix|sh)|Makefile|\.editorconfig)$$' | xargs -0 tools/check_ascii.sh
 
+.PHONY: balance
+balance: ## Bounty: play the fixed battles and write the report to target/bounty-balance.json
+	cargo run --quiet --release -p bounty-tools -- balance run --suite bounty/balance/suite.json \
+		--out target/bounty-balance.json --revision "$$(git describe --always --dirty)" $(BALANCE_ARGS)
+
 .PHONY: build
 build: ## Build optimised, without running
 	cargo build --release --workspace

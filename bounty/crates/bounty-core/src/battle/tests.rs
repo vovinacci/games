@@ -166,3 +166,314 @@ fn the_digest_follows_the_state() {
     b.apply(&pass(&b)).unwrap();
     assert_ne!(b.digest(), start);
 }
+
+/// Applies a command with the damage rolls given, each checked against the range it is asked for.
+fn apply_forced(
+    battle: &mut Battle,
+    action: Action,
+    forced: &[u32],
+) -> Result<Vec<Event>, RuleError> {
+    let command = Command {
+        revision: battle.revision(),
+        actor: battle.active().unwrap().stack.clone(),
+        action,
+    };
+    let mut left = forced.iter();
+    let events = battle.apply_with(&command, &mut |_, lo, hi| {
+        let roll = *left.next().expect("a forced roll for every roll asked");
+        assert!(
+            (lo..=hi).contains(&roll),
+            "forced roll {roll} is outside {lo}..={hi}"
+        );
+        roll
+    });
+    assert!(
+        events.is_err() || left.next().is_none(),
+        "every forced roll was used"
+    );
+    events
+}
+
+fn melee(target: &str) -> Action {
+    Action::Melee {
+        target: target.to_owned(),
+    }
+}
+
+fn count_and_injury(battle: &Battle, id: &str) -> (u32, u32) {
+    let stack = battle.stack(id).unwrap();
+    (stack.count, stack.injury)
+}
+
+fn blows(events: &[Event]) -> usize {
+    events
+        .iter()
+        .filter(|e| matches!(e, Event::Damage { .. }))
+        .count()
+}
+
+/// The cases of `expected_cases.json` whose ID starts with `prefix`.
+fn expected_cases(prefix: &str) -> Vec<serde_json::Value> {
+    let file: serde_json::Value =
+        serde_json::from_str(include_str!("../../../../prototype/expected_cases.json")).unwrap();
+    let cases = file["cases"].as_array().unwrap();
+    cases
+        .iter()
+        .filter(|c| c["id"].as_str().unwrap().starts_with(prefix))
+        .cloned()
+        .collect()
+}
+
+fn number(value: &serde_json::Value) -> u32 {
+    u32::try_from(value.as_u64().unwrap()).unwrap()
+}
+
+// AT-012 and the other health cases of the fixture file.
+#[test]
+fn health_arithmetic_matches_the_fixture() {
+    let cases = expected_cases("health_");
+    assert_eq!(cases.len(), 3);
+    for case in cases {
+        let (input, expected) = (&case["input"], &case["expected"]);
+        let hp = number(&input["hp_each"]);
+        let damage = u64::from(number(&input["damage"]));
+        let (count, injury) = health_after(
+            hp,
+            number(&input["count"]),
+            number(&input["injury"]),
+            damage,
+        );
+        assert_eq!(
+            (count, injury),
+            (number(&expected["count"]), number(&expected["injury"])),
+            "{}",
+            case["id"]
+        );
+        assert_eq!(
+            count * hp - injury,
+            number(&expected["total_hp"]),
+            "{}",
+            case["id"]
+        );
+    }
+    assert_eq!(health_after(10, 10, 0, 26), (8, 6));
+    assert_eq!(
+        health_after(10, 1, 9, 1),
+        (0, 0),
+        "the last point of health"
+    );
+    assert_eq!(health_after(10, 3, 4, 0), (3, 4), "no damage");
+    assert_eq!(
+        health_after(u32::MAX, u32::MAX, 0, u64::MAX),
+        (0, 0),
+        "no overflow"
+    );
+}
+
+// AT-013: the fixture's melee exchange with forced rolls 3 then 2.
+#[test]
+fn a_melee_exchange_matches_the_fixture() {
+    let case = &expected_cases("melee_exchange")[0];
+    let forced: Vec<u32> = case["forced_damage_rolls"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(number)
+        .collect();
+    let mut b = battle(case["scenario_id"].as_str().unwrap());
+    let rng = b.rng_state();
+    let events = apply_forced(
+        &mut b,
+        melee(case["command"]["target"].as_str().unwrap()),
+        &forced,
+    )
+    .unwrap();
+
+    let expected = &case["expected"];
+    assert_eq!(
+        count_and_injury(&b, "e0"),
+        (
+            number(&expected["e0"]["count"]),
+            number(&expected["e0"]["injury"])
+        )
+    );
+    assert_eq!(
+        count_and_injury(&b, "p0"),
+        (
+            number(&expected["p0"]["count"]),
+            number(&expected["p0"]["injury"])
+        )
+    );
+    assert!(b.stack("e0").unwrap().retaliated);
+    assert_eq!(
+        b.active().unwrap().stack,
+        "e0",
+        "the attacker's activation ended"
+    );
+    assert_eq!(b.rng_state(), rng, "forced rolls draw nothing");
+    assert_eq!(
+        events[0],
+        Event::Damage {
+            attacker: "p0".to_owned(),
+            target: "e0".to_owned(),
+            roll: 3,
+            attackers: 10,
+            damage: 30,
+            losses: 3,
+            count: 7,
+            injury: 0,
+            retaliation: false,
+        }
+    );
+    assert!(matches!(
+        &events[1],
+        Event::Damage {
+            damage: 14,
+            losses: 1,
+            retaliation: true,
+            ..
+        }
+    ));
+}
+
+// AT-014: a stack strikes back once in a round, and again in the next.
+#[test]
+fn a_second_attack_in_the_round_is_not_struck_back() {
+    let mut scenario = scenario("blocked_shooter");
+    let p1 = scenario.stacks.iter_mut().find(|s| s.id == "p1").unwrap();
+    (p1.x, p1.y) = (3, 3);
+    let mut b = Battle::start(Arc::new(rules()), &scenario, None).unwrap();
+
+    assert_eq!(
+        blows(&apply_forced(&mut b, melee("e0"), &[1, 2]).unwrap()),
+        2
+    );
+    let slingers = count_and_injury(&b, "p0");
+
+    assert_eq!(blows(&apply_forced(&mut b, melee("e0"), &[2]).unwrap()), 1);
+    assert_eq!(count_and_injury(&b, "p1"), (5, 0));
+    assert_eq!(count_and_injury(&b, "p0"), slingers);
+
+    // The enemy passes; in round 2 it strikes back again.
+    b.apply(&pass(&b)).unwrap();
+    assert_eq!(b.round(), 2);
+    assert!(!b.stack("e0").unwrap().retaliated);
+    assert_eq!(
+        blows(&apply_forced(&mut b, melee("e0"), &[1, 2]).unwrap()),
+        2
+    );
+}
+
+#[test]
+fn a_killing_blow_is_not_struck_back_and_can_end_the_battle() {
+    let mut scenario = scenario("melee_exchange");
+    scenario
+        .stacks
+        .iter_mut()
+        .find(|s| s.id == "e0")
+        .unwrap()
+        .count = 2;
+    let mut b = Battle::start(Arc::new(rules()), &scenario, None).unwrap();
+    let events = apply_forced(&mut b, melee("e0"), &[2]).unwrap();
+    assert_eq!(count_and_injury(&b, "e0"), (0, 0));
+    assert_eq!(count_and_injury(&b, "p0"), (10, 0));
+    assert_eq!(b.outcome(), Some(Outcome::PlayerWin));
+    assert!(b.active().is_none() && b.legal_actions().is_empty());
+    let removed = Event::StackRemoved {
+        stack: "e0".to_owned(),
+    };
+    assert_eq!(
+        events[1..],
+        [
+            removed,
+            Event::BattleEnded {
+                outcome: Outcome::PlayerWin
+            }
+        ]
+    );
+}
+
+#[test]
+fn an_attacker_killed_by_the_answer_loses_its_turn_and_the_battle_goes_on() {
+    let mut scenario = scenario("blocked_shooter");
+    scenario
+        .stacks
+        .iter_mut()
+        .find(|s| s.id == "p0")
+        .unwrap()
+        .count = 1;
+    let mut b = Battle::start(Arc::new(rules()), &scenario, None).unwrap();
+    apply_forced(&mut b, melee("e0"), &[1, 2]).unwrap();
+    assert!(!b.stack("p0").unwrap().alive());
+    assert_eq!(b.outcome(), None);
+    assert_eq!(b.active().unwrap().stack, "p1");
+    // The dead stack never comes back into the order.
+    b.apply(&pass(&b)).unwrap();
+    b.apply(&pass(&b)).unwrap();
+    assert_eq!((b.round(), b.active().unwrap().stack.as_str()), (2, "p1"));
+}
+
+#[test]
+fn melee_is_refused_without_a_neighbouring_living_enemy() {
+    let mut b = battle("blocked_shooter");
+    let refuse = |b: &mut Battle, target: &str| {
+        let before = b.digest();
+        let error = apply_forced(b, melee(target), &[]).unwrap_err();
+        assert_eq!(b.digest(), before, "refusing {target} changed nothing");
+        error
+    };
+    assert_eq!(
+        refuse(&mut b, "p1"),
+        RuleError::NotAnEnemy {
+            target: "p1".to_owned()
+        }
+    );
+    assert_eq!(
+        refuse(&mut b, "p0"),
+        RuleError::NotAnEnemy {
+            target: "p0".to_owned()
+        }
+    );
+    assert_eq!(
+        refuse(&mut b, "ghost"),
+        RuleError::NotAnEnemy {
+            target: "ghost".to_owned()
+        }
+    );
+    b.apply(&pass(&b)).unwrap();
+    assert_eq!(
+        refuse(&mut b, "e0"),
+        RuleError::NotAdjacent {
+            target: "e0".to_owned()
+        }
+    );
+}
+
+#[test]
+fn legal_actions_list_what_apply_accepts() {
+    let b = battle("blocked_shooter");
+    assert_eq!(b.legal_actions(), [melee("e0"), Action::Pass]);
+    for action in b.legal_actions() {
+        let command = Command {
+            revision: 0,
+            actor: "p0".to_owned(),
+            action,
+        };
+        assert!(b.clone().apply(&command).is_ok());
+    }
+    assert_eq!(battle("flight_barrier").legal_actions(), [Action::Pass]);
+}
+
+#[test]
+fn real_rolls_come_from_the_battles_generator() {
+    let mut a = battle("melee_exchange");
+    let mut b = battle("melee_exchange");
+    let command = Command {
+        revision: 0,
+        actor: "p0".to_owned(),
+        action: melee("e0"),
+    };
+    assert_eq!(a.apply(&command), b.apply(&command));
+    assert_eq!(a.digest(), b.digest());
+    assert_ne!(a.rng_state(), 1, "rolls were drawn");
+}

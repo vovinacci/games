@@ -1,0 +1,17 @@
+[package]
+name = "bounty-tools"
+version = "0.0.0"
+description = "Developer tools of Bounty: fixed-seed battle runs and the comparison of two of them"
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+bounty-ai = { workspace = true }
+bounty-core = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }

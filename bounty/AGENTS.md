@@ -26,7 +26,21 @@ Bounty only. The specification is in `docs/spec/`; `README.md` gives the reading
   release.
 - Report only checks that were run.
 
+## Measuring a change
+
+`make balance` plays the cases of `balance/suite.json` with every seed and writes `target/bounty-balance.json`
+(`BALANCE_ARGS="--case melee_exchange"` picks one case). Compare two reports with
+
+```sh
+cargo run -q -p bounty-tools -- balance compare --baseline <before.json> --candidate <after.json>
+```
+
+and add `--exact` for a change that must not move any result. A report with problems (a refused command, an outcome the
+case does not allow, a run that does not repeat) is a defect to fix, not a result.
+
 ## Not here yet
 
-- `bounty-ai`, `bounty-tools`, `bounty-app`: added when their first code arrives.
+- `bounty-app`: added when its first code arrives.
+- A recorded baseline: `balance/baselines/bootstrap.json` says `not_recorded` until all four cases of the suite can be
+  played and the first numbers have been looked at.
 - On-screen text: English and Ukrainian from the first screen, through `gamekit`.

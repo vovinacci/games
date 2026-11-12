@@ -2,7 +2,7 @@
 # nothing is published to crates.io.
 [workspace]
 resolver = "3"
-members = ["bounty/crates/bounty-core"]
+members = ["bounty/crates/bounty-ai", "bounty/crates/bounty-core", "bounty/crates/bounty-tools"]
 
 [workspace.package]
 edition = "2024"
@@ -12,6 +12,8 @@ publish = false
 
 # Versions of dependencies are set here once; a crate takes one with `{ workspace = true }`.
 [workspace.dependencies]
+bounty-ai = { path = "bounty/crates/bounty-ai" }
+bounty-core = { path = "bounty/crates/bounty-core" }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
 sha2 = "0.11.1"
