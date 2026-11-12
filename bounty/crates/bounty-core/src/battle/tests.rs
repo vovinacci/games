@@ -317,6 +317,7 @@ fn a_melee_exchange_matches_the_fixture() {
             attacker: "p0".to_owned(),
             target: "e0".to_owned(),
             roll: 3,
+            rolls: 1,
             attackers: 10,
             damage: 30,
             losses: 3,
@@ -979,4 +980,5 @@ fn every_legal_action_is_accepted_in_every_fixture() {
     }
 }
 
+mod modern;
 mod reference;

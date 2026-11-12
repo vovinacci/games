@@ -20,6 +20,7 @@ to come.
 | `docs/spec/` | the specification, see below |
 | `prototype/` | synthetic battle rules, scenarios and expected results for testing the engine |
 | `content/reference/` | the first rules and troops taken from a reimplementation of the original, and battles for them |
+| `content/modern/` | a variant of the reference rules with this project's own rule changes switched on, to be measured |
 | `content/demo/` | a small synthetic expedition used as an integration test |
 | `balance/` | the fixed set of cases and seeds for before/after comparisons, and recorded baselines |
 | `schemas/` | JSON schemas of the map and save file |

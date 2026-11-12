@@ -18,6 +18,9 @@ Bounty only. The specification is in `docs/spec/`; `README.md` gives the reading
   balance, and never use their numbers where a number of the original is missing.
 - A rule taken from documentation or another reimplementation is recorded in `docs/spec/07-RULES-REGISTER.md` with its
   source and status. Never present it as observed in the original.
+- The reference rules (`content/reference/`) never change for the sake of better play. A rule change is a switch of the
+  variant `content/modern/`, measured before and after (`docs/spec/10-GAMEPLAY-GAPS.md`), and adopted or dropped by its
+  numbers and by play.
 - A change to rules, data or a computer player comes with a before/after run of the fixed cases (`balance/`) and a
   sentence on what moved and why. The old baseline stays in git; a missing baseline is not a pass.
 - A change in behaviour updates the requirement, its data and its test together (`docs/spec/`, IDs like `G-CMB-005`,

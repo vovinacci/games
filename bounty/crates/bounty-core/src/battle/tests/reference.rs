@@ -10,7 +10,7 @@ fn reference() -> Arc<Rules> {
     Arc::new(Rules::from_json(include_str!("../../../../../content/reference/rules.json")).unwrap())
 }
 
-fn stack(id: &str, troop: &str, count: u32, x: u32, y: u32) -> StackStart {
+pub(super) fn stack(id: &str, troop: &str, count: u32, x: u32, y: u32) -> StackStart {
     let side = if id.starts_with('p') {
         Side::Player
     } else {
@@ -46,7 +46,7 @@ fn led(leadership: Option<u32>, stacks: Vec<StackStart>, obstacles: Vec<Cell>) -
     Battle::start(reference(), &scenario, None).unwrap()
 }
 
-fn damage_events(events: &[Event]) -> Vec<(u32, u32, u64, u32, u32, u32, bool)> {
+pub(super) fn damage_events(events: &[Event]) -> Vec<(u32, u32, u64, u32, u32, u32, bool)> {
     events
         .iter()
         .filter_map(|e| match e {

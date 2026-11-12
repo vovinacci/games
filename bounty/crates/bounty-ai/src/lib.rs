@@ -453,4 +453,36 @@ mod tests {
             "in some battles losses bring the Wolves back under control"
         );
     }
+
+    // The `modern` variant, every switch on, with a hero whose leadership the Wolves exceed: the pilot is never
+    // refused, no stack is ever out of control, every battle ends and replays.
+    #[test]
+    fn the_pilot_plays_the_modern_variant() {
+        let modern =
+            Arc::new(Rules::from_json(include_str!("../../../content/modern/rules.json")).unwrap());
+        for seed in 0..40 {
+            let (_, mut scenario) = reference_fight(seed);
+            scenario.leadership = Some(45);
+            let mut battle = Battle::start(Arc::clone(&modern), &scenario, None).unwrap();
+            let mut tape = Tape::new(&scenario, seed);
+            while let Some(command) = approach_v1(&battle.observe()) {
+                tape.apply(&mut battle, &command)
+                    .unwrap_or_else(|e| panic!("seed {seed}: {command:?} refused: {e}"));
+                assert!(
+                    battle.stacks().iter().all(|s| !s.out_of_control),
+                    "seed {seed}"
+                );
+            }
+            assert_ne!(
+                battle.outcome().unwrap(),
+                Outcome::BudgetExceeded,
+                "seed {seed}"
+            );
+            assert_eq!(
+                tape.replay(Arc::clone(&modern), &scenario).unwrap(),
+                battle,
+                "seed {seed}"
+            );
+        }
+    }
 }

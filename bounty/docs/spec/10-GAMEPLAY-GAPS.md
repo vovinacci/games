@@ -205,9 +205,31 @@ variant gets its own baseline and is never compared with the reference's by acci
 | With a tactical opponent | B6, and B3 again with shooters played properly. | The plain pilot cannot show it. |
 | Before any release called faithful | One experiment in the DOS game on B1: which morale rule it really uses. | It decides whether B1 is the original's or the reference's. |
 
-## For the maintainer to decide
+## Decided by the maintainer, 13 November 2026
 
-1. Whether to start a variant profile now with B4 and B5, or to finish the foundation (M2) first.
-2. Whether "telling" changes may go into the reference profile's screens as they are built, as proposed, or need
-   approval one by one.
-3. Which of the gaps are not gaps: anything here that is part of what the game is and should be left alone.
+1. A variant profile is started now, before the expedition.
+2. No kind of change is ruled in or out beforehand: what is measured and played to be better is adopted, whichever it
+   is. The reference rules stay as they are only because everything is measured against them.
+3. None of the gaps listed is out of bounds.
+
+## The variant: `modern-v0.1`
+
+`content/modern/rules.json` is the reference rules with one switch for each rule change that can be tried with three
+troops and a battle. Same troops, same chart, same battles; a test holds the content equal to the reference's. Each
+switch stands alone, so each can be measured alone; the file has all four on.
+
+| Gap | Switch | Reference | Variant |
+|---|---|---|---|
+| B4 | the count that answers a blow | the number before the blow | the survivors |
+| B5 | the roll of a blow | one roll | the mean of two rolls |
+| B1 | the morale rule | the one the reference attributes to the original | the one the army screen shows |
+| B2 | a stack over the leadership | out of control, an enemy to all | in control; only as many fight as the leadership covers |
+
+The first three are choices the reference or the prototype already describe. The fourth is this project's own design:
+the reference offers nothing between obedience and mutiny.
+
+What each does to the tables above is still to be measured; until then none of them is adopted, and the variant's name
+promises nothing about which will stay.
+
+Not in the variant, with the reason: prices (B3) need the whole catalogue; the opponent's play (B6) is a policy, not a
+rule; every campaign point needs a campaign.

@@ -6,8 +6,8 @@
 use serde::Deserialize;
 
 use super::{
-    Board, ContentError, Profile, REFERENCE_RULESET, Rules, Troop, check_board, invalid, only,
-    read, unique,
+    Board, ContentError, MODERN_RULESET, Profile, REFERENCE_RULESET, Rules, Troop, check_board,
+    invalid, only, read, unique,
 };
 
 /// What a stack's morale does to the damage it deals.
@@ -26,6 +26,28 @@ pub struct Reference {
     /// `chart[a][b]`: the entry in the row of group `a` and the column of group `b`. Which of the two is the
     /// troop whose morale is asked is the rule's business, not the chart's.
     pub morale_chart: [[Morale; GROUPS]; GROUPS],
+    /// Where a variant of these rules departs from the reference. All off in the reference itself.
+    pub switches: Switches,
+}
+
+/// The rules a variant may set differently from the reference: one switch for each gap the study
+/// (`docs/spec/10-GAMEPLAY-GAPS.md`) proposes a rule change for. Each stands alone, so each can be measured alone.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "four switches that have nothing to do with each other"
+)]
+pub struct Switches {
+    /// B4. The answer to a blow comes from the creatures left after it, not from the number before it.
+    pub answer_from_survivors: bool,
+    /// B5. A blow takes the mean of two rolls instead of one: the same average, less swing.
+    pub two_rolls: bool,
+    /// B1. Morale by the rule the army screen shows: a stack alone is High; every other stack of the side is
+    /// looked up as (self, other); any Low gives Low, all High gives High, else Normal.
+    pub army_view_morale: bool,
+    /// B2. A stack too large for the leadership does not turn on its side; only as many of its creatures fight as
+    /// the leadership covers.
+    pub leadership_caps_fighters: bool,
 }
 
 /// Morale groups, A to E.
@@ -39,6 +61,9 @@ struct File {
     id: String,
     #[serde(rename = "status")]
     _status: String,
+    /// The ruleset whose battle files this one plays: a variant names the reference here.
+    #[serde(default)]
+    plays_battles_of: Option<String>,
     provenance: Provenance,
     board: Board,
     rng: Rng,
@@ -107,6 +132,9 @@ struct Damage {
     skill_term: String,
     count_used: String,
     retaliation_uses_survivors: bool,
+    /// Absent in the reference file, which rolls once.
+    #[serde(default)]
+    rolls: Option<String>,
     injury_persists_during_battle: bool,
     injury_heals_after_battle: bool,
 }
@@ -128,6 +156,9 @@ struct MoraleRule {
 struct Control {
     out_of_control_when: String,
     checked: String,
+    /// Absent in the reference file, where a stack over the leadership is out of control.
+    #[serde(default)]
+    over_leadership: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -160,7 +191,12 @@ struct FileTroop {
 
 fn check_switches(file: &File) -> Result<(), ContentError> {
     only("schema_version", &file.schema_version, &1)?;
-    only("id", &file.id.as_str(), &REFERENCE_RULESET)?;
+    if file.id != REFERENCE_RULESET && file.id != MODERN_RULESET {
+        return Err(ContentError::Unsupported(format!(
+            "id is {:?}; only {REFERENCE_RULESET:?} and {MODERN_RULESET:?} are read here",
+            file.id
+        )));
+    }
     only(
         "rng.algorithm",
         &file.rng.algorithm.as_str(),
@@ -219,16 +255,6 @@ fn check_switches(file: &File) -> Result<(), ContentError> {
         &"attacker_skill_plus_5_minus_target_skill",
     )?;
     only(
-        "damage.count_used",
-        &file.damage.count_used.as_str(),
-        &"count_before_the_exchange",
-    )?;
-    only(
-        "damage.retaliation_uses_survivors",
-        &file.damage.retaliation_uses_survivors,
-        &false,
-    )?;
-    only(
         "damage.injury_persists_during_battle",
         &file.damage.injury_persists_during_battle,
         &true,
@@ -248,8 +274,6 @@ fn check_morale_control_and_magic(file: &File) -> Result<(), ContentError> {
         &morale.applies_to.as_str(),
         &"side_with_a_hero_and_stack_under_control",
     )?;
-    let rule = "lowest_rank_over_own_side_self_included_chart_read_other_then_self";
-    only("morale.rule", &morale.rule.as_str(), &rule)?;
     let ranks: Vec<&str> = morale.rank_order.iter().map(String::as_str).collect();
     only("morale.rank_order", &ranks, &vec!["normal", "low", "high"])?;
     only("morale.low", &morale.low.as_str(), &"halve")?;
@@ -290,6 +314,73 @@ fn check_morale_control_and_magic(file: &File) -> Result<(), ContentError> {
     )?;
     only("spells", &file.spells.len(), &0)?;
     Ok(())
+}
+
+/// Reads one switch: the reference's value, or the variant's where the ruleset is a variant. Anything else, and
+/// the variant's value in the reference itself, is refused.
+fn switch(
+    what: &str,
+    found: &str,
+    reference: &str,
+    variant: &str,
+    may_vary: bool,
+) -> Result<bool, ContentError> {
+    if found == reference {
+        Ok(false)
+    } else if found == variant && may_vary {
+        Ok(true)
+    } else {
+        let allowed = if may_vary {
+            format!("{reference:?} or {variant:?}")
+        } else {
+            format!("{reference:?}")
+        };
+        Err(ContentError::Unsupported(format!(
+            "{what} is {found:?}; this ruleset allows {allowed}"
+        )))
+    }
+}
+
+/// The switches of a file. The reference must have every one at the reference's value; `modern` may set each.
+fn switches(file: &File) -> Result<Switches, ContentError> {
+    let vary = file.id == MODERN_RULESET;
+    let damage = &file.damage;
+    let answer_from_survivors = switch(
+        "damage.count_used",
+        &damage.count_used,
+        "count_before_the_exchange",
+        "count_at_the_blow",
+        vary,
+    )?;
+    only(
+        "damage.retaliation_uses_survivors",
+        &damage.retaliation_uses_survivors,
+        &answer_from_survivors,
+    )?;
+    let rolls = damage.rolls.as_deref().unwrap_or("one");
+    let control = file
+        .control
+        .over_leadership
+        .as_deref()
+        .unwrap_or("out_of_control");
+    Ok(Switches {
+        answer_from_survivors,
+        two_rolls: switch("damage.rolls", rolls, "one", "mean_of_two", vary)?,
+        army_view_morale: switch(
+            "morale.rule",
+            &file.morale.rule,
+            "lowest_rank_over_own_side_self_included_chart_read_other_then_self",
+            "alone_high_else_others_read_self_then_other_any_low_is_low_all_high_is_high",
+            vary,
+        )?,
+        leadership_caps_fighters: switch(
+            "control.over_leadership",
+            control,
+            "out_of_control",
+            "only_what_leadership_covers_fights",
+            vary,
+        )?,
+    })
 }
 
 fn chart(rows: &[String]) -> Result<[[Morale; GROUPS]; GROUPS], ContentError> {
@@ -377,6 +468,19 @@ pub(super) fn load(text: &str) -> Result<Rules, ContentError> {
         );
     }
     let morale_chart = chart(&file.morale.chart)?;
+    let switches = switches(&file)?;
+    // The reference plays its own battles; a variant plays those of the ruleset it names, which must be the
+    // reference: there are no others.
+    let battles_id = file
+        .plays_battles_of
+        .clone()
+        .unwrap_or_else(|| file.id.clone());
+    if battles_id != file.id && (file.id != MODERN_RULESET || battles_id != REFERENCE_RULESET) {
+        return invalid(format!(
+            "{} cannot play the battles of {battles_id:?}",
+            file.id
+        ));
+    }
     unique("troop", file.troops.iter().map(|t| t.id.as_str()))?;
     let flights = file.flight.flights_per_activation;
     let troops = file
@@ -386,7 +490,11 @@ pub(super) fn load(text: &str) -> Result<Rules, ContentError> {
         .collect::<Result<Vec<_>, _>>()?;
     Ok(Rules {
         id: file.id,
-        profile: Profile::Reference(Reference { morale_chart }),
+        battles_id,
+        profile: Profile::Reference(Reference {
+            morale_chart,
+            switches,
+        }),
         board: file.board,
         round_limit: file.round_limit,
         troops,

@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use crate::canon::Value;
 use crate::content::{
-    Cell, ContentError, Morale, Profile, Rules, Scenario, Side, SpellEffect, Troop,
+    Cell, ContentError, Morale, Profile, Rules, Scenario, Side, SpellEffect, Switches, Troop,
 };
 use crate::rng::{Lcg32, Lcg64, Rng};
 
@@ -197,8 +197,11 @@ pub enum Event {
     Damage {
         attacker: String,
         target: String,
-        /// The damage roll for one creature; for a spell, its fixed damage.
+        /// The damage roll for one creature, or the sum of the rolls where a blow takes more than one; for a
+        /// spell, its fixed damage.
         roll: u32,
+        /// How many rolls `roll` is the sum of: 1, or 2 under the variant rule that takes their mean.
+        rolls: u32,
         /// Attacking creatures at the moment of the blow; for a spell, 1.
         attackers: u32,
         /// What the blow takes off the target: `roll` times `attackers`, scaled as the ruleset says.
@@ -265,6 +268,7 @@ pub fn health_after(hp: u32, count: u32, injury: u32, damage: u64) -> (u32, u32)
 #[derive(Clone, Copy)]
 struct Blow {
     roll: u32,
+    rolls: u32,
     attackers: u32,
     damage: u64,
     retaliation: bool,
@@ -387,7 +391,7 @@ impl Battle {
                 retaliated: false,
                 waited: false,
                 out_of_control: start.side == Side::Player
-                    && matches!(rules.profile, Profile::Reference(_))
+                    && matches!(&rules.profile, Profile::Reference(r) if !r.switches.leadership_caps_fighters)
                     && scenario
                         .leadership
                         .is_some_and(|lead| !within(lead, rules.troops[troop].hp, start.count)),
@@ -720,16 +724,8 @@ impl Battle {
             return Err(RuleError::EnemyAdjacent);
         }
         self.stacks[actor].shots -= 1;
-        let roll = rolls(&mut self.rng, lo, hi);
         let count = self.stacks[actor].count;
-        let (damage, morale) = self.damage(actor, defender, roll, count);
-        let blow = Blow {
-            roll,
-            attackers: count,
-            damage,
-            retaliation: false,
-            morale,
-        };
+        let blow = self.blow(actor, defender, count, false, (lo, hi), rolls);
         self.hurt_by(Some(actor), defender, blow, events);
         if self.outcome.is_none() {
             self.end_activation(events);
@@ -830,6 +826,7 @@ impl Battle {
             SpellEffect::Damage(amount) => {
                 let blow = Blow {
                     roll: amount,
+                    rolls: 1,
                     attackers: 1,
                     damage: u64::from(amount),
                     retaliation: false,
@@ -857,8 +854,8 @@ impl Battle {
 
     /// The attacker strikes; a defender that survives and has not struck back since its flag was last renewed does
     /// so once. In the prototype it answers with the creatures it has left; under the reference rules with the
-    /// number it had before the blow, so creatures killed by the blow still strike. Then the attacker's
-    /// activation ends.
+    /// number it had before the blow, so creatures killed by the blow still strike; a variant may switch that back
+    /// to the survivors. Then the attacker's activation ends.
     fn melee(
         &mut self,
         attacker: usize,
@@ -874,7 +871,8 @@ impl Battle {
             && !self.stacks[defender].retaliated
         {
             self.stacks[defender].retaliated = true;
-            let answering = if self.reference() {
+            let from_before = self.reference() && !self.switches().answer_from_survivors;
+            let answering = if from_before {
                 before
             } else {
                 self.stacks[defender].count
@@ -886,7 +884,7 @@ impl Battle {
         }
     }
 
-    /// One melee blow by `count` creatures: one roll from the attacker's range.
+    /// One melee blow by `count` creatures.
     fn strike(
         &mut self,
         from: usize,
@@ -897,45 +895,91 @@ impl Battle {
         events: &mut Vec<Event>,
     ) {
         let troop = &self.rules.troops[self.stacks[from].troop];
-        let (lo, hi) = (troop.melee_min, troop.melee_max);
-        let roll = rolls(&mut self.rng, lo, hi);
-        let (damage, morale) = self.damage(from, to, roll, count);
-        let blow = Blow {
-            roll,
-            attackers: count,
-            damage,
-            retaliation,
-            morale,
-        };
+        let range = (troop.melee_min, troop.melee_max);
+        let blow = self.blow(from, to, count, retaliation, range, rolls);
         self.hurt_by(Some(from), to, blow, events);
     }
 
-    /// What a blow of `count` creatures with this roll takes off the target, and the morale that scaled it.
-    /// Prototype: roll times count. Reference: that, times (attacker's skill + 5 - target's skill), divided by ten;
-    /// then Low morale halves it and High adds half. Every step rounds down; a skill term of zero or less does no
-    /// damage.
-    fn damage(&self, from: usize, to: usize, roll: u32, count: u32) -> (u64, Option<Morale>) {
-        let base = u64::from(roll) * u64::from(count);
+    /// Rolls for a blow of `count` creatures and works out what it takes off the target.
+    ///
+    /// The roll: one from the range, or under the variant switch two, whose mean counts. The fighters: `count`,
+    /// or under the variant switch at most as many as the hero's leadership covers. Prototype: roll times
+    /// fighters. Reference: that, times (attacker's skill + 5 - target's skill), over ten; then Low morale halves
+    /// it and High adds half. Every division rounds down; a skill term of zero or less does no damage.
+    fn blow(
+        &mut self,
+        from: usize,
+        to: usize,
+        count: u32,
+        retaliation: bool,
+        (lo, hi): (u32, u32),
+        rolls: Rolls<'_>,
+    ) -> Blow {
+        let dice = if self.switches().two_rolls { 2 } else { 1 };
+        let roll = (0..dice).map(|_| rolls(&mut self.rng, lo, hi)).sum::<u32>();
+        let attackers = self.fighters(from, count);
+        let base = u64::from(roll) * u64::from(attackers);
         if !self.reference() {
-            return (base, None);
+            return Blow {
+                roll,
+                rolls: dice,
+                attackers,
+                damage: base,
+                retaliation,
+                morale: None,
+            };
         }
         let skill = |stack: usize| self.rules.troops[self.stacks[stack].troop].skill;
         let term = (skill(from) + 5).saturating_sub(skill(to));
-        let scaled = base * u64::from(term) / 10;
+        // The mean of the rolls is taken here, in the one division, so nothing is rounded twice.
+        let scaled = base * u64::from(term) / (10 * u64::from(dice));
         let morale = self.morale_at(from);
         let damage = match morale {
             Some(Morale::Low) => scaled / 2,
             Some(Morale::High) => scaled + scaled / 2,
             Some(Morale::Normal) | None => scaled,
         };
-        (damage, morale)
+        Blow {
+            roll,
+            rolls: dice,
+            attackers,
+            damage,
+            retaliation,
+            morale,
+        }
+    }
+
+    /// The switches of a variant of the reference rules; all off in the reference and in the prototype.
+    fn switches(&self) -> Switches {
+        match &self.rules.profile {
+            Profile::Reference(reference) => reference.switches,
+            Profile::Prototype => Switches::default(),
+        }
+    }
+
+    /// How many of `count` creatures of a stack fight. All of them, except under the variant switch that lets the
+    /// hero's leadership cap them: then a stack of the player's fights with as many as the leadership covers.
+    fn fighters(&self, stack: usize, count: u32) -> u32 {
+        let stack = &self.stacks[stack];
+        match self.leadership {
+            Some(leadership)
+                if self.switches().leadership_caps_fighters && stack.side == Side::Player =>
+            {
+                count.min(leadership / self.rules.troops[stack.troop].hp)
+            }
+            _ => count,
+        }
     }
 
     /// The morale of a stack, where it has one: under the reference rules, on the side of a hero, and in control.
-    /// Every living stack of the side, the stack itself included, is looked up in the chart as (other, self); the
-    /// results are ranked Normal, Low, High and the lowest counts. So one Normal pairing makes the stack Normal,
-    /// and Low needs every pairing to be Low or High. This is the rule the reference attributes to the original;
-    /// `docs/spec/07-RULES-REGISTER.md` has the other one it documents.
+    ///
+    /// The reference's rule, which it attributes to the original: every living stack of the side, the stack
+    /// itself included, is looked up in the chart as (other, self); the results are ranked Normal, Low, High and
+    /// the lowest counts. So one Normal pairing makes the stack Normal, and Low needs every pairing to be Low or
+    /// High.
+    ///
+    /// The variant's rule, the one the army screen shows: a stack alone is High; every other living stack is
+    /// looked up as (self, other); any Low gives Low, all High gives High, else Normal.
     fn morale_at(&self, stack: usize) -> Option<Morale> {
         let Profile::Reference(reference) = &self.rules.profile else {
             return None;
@@ -946,15 +990,28 @@ impl Battle {
         }
         let group = |s: &Stack| self.rules.troops[s.troop].morale_group;
         let mine = group(me)?;
+        let side = self
+            .stacks
+            .iter()
+            .filter(|s| s.alive() && s.side == me.side);
+        if reference.switches.army_view_morale {
+            let others: Vec<Morale> = side
+                .filter(|other| other.id != me.id)
+                .filter_map(|other| group(other).map(|theirs| reference.morale_chart[mine][theirs]))
+                .collect();
+            return Some(if others.contains(&Morale::Low) {
+                Morale::Low
+            } else if others.iter().all(|&found| found == Morale::High) {
+                Morale::High
+            } else {
+                Morale::Normal
+            });
+        }
         let rank = |morale: Morale| match morale {
             Morale::Normal => 0,
             Morale::Low => 1,
             Morale::High => 2,
         };
-        let side = self
-            .stacks
-            .iter()
-            .filter(|s| s.alive() && s.side == me.side);
         let found = side
             .filter_map(|other| group(other).map(|theirs| reference.morale_chart[theirs][mine]));
         Some(
@@ -989,6 +1046,7 @@ impl Battle {
     fn hurt_by(&mut self, from: Option<usize>, to: usize, blow: Blow, events: &mut Vec<Event>) {
         let Blow {
             roll,
+            rolls,
             attackers,
             damage,
             retaliation,
@@ -1005,6 +1063,7 @@ impl Battle {
             attacker,
             target: id.clone(),
             roll,
+            rolls,
             attackers,
             damage,
             losses: before - count,
