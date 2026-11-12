@@ -1,4 +1,4 @@
-//! `bounty-tools balance run|compare`: see `usage` below.
+//! `bounty-tools balance run|compare` and `expedition run|compare`: see `usage` below.
 
 use std::path::Path;
 use std::process::ExitCode;
@@ -6,14 +6,19 @@ use std::{env, fs};
 
 use bounty_tools::balance::{Report, load, run};
 use bounty_tools::compare::compare;
+use bounty_tools::expedition;
 
 const USAGE: &str = "usage:
   bounty-tools balance run --suite <suite.json> --out <report.json> [--case <id>]... [--revision <text>]
   bounty-tools balance compare --baseline <report.json> --candidate <report.json> [--exact]
+  bounty-tools expedition run --expedition <expedition.json> --out <report.json> [--revision <text>]
+  bounty-tools expedition compare --baseline <report.json> --candidate <report.json>
 
 run      plays every case of the suite with every seed and writes the report. Exit 1 when the run found problems.
 compare  prints what differs between two reports. Exit 1 with --exact when any battle ended differently,
-         exit 2 when the reports cannot be compared.";
+         exit 2 when the reports cannot be compared.
+expedition run      plays every route the expedition file carries and writes what each cost. Exit 1 on problems.
+expedition compare  prints what differs between two such reports. Exit 1 when anything does.";
 
 /// The value after `--name`, wherever it stands; every one of them for an option given more than once.
 fn values(args: &[String], name: &str) -> Vec<String> {
@@ -78,6 +83,53 @@ fn main_inner(args: &[String]) -> Result<ExitCode, String> {
                 ExitCode::from(1)
             } else {
                 ExitCode::SUCCESS
+            })
+        }
+        (Some("expedition"), Some("run")) => {
+            let def = expedition::load(Path::new(&value(args, "--expedition")?))?;
+            let revision = values(args, "--revision")
+                .pop()
+                .unwrap_or_else(|| "unknown".to_owned());
+            let report = expedition::run(&def, &revision);
+            let out = value(args, "--out")?;
+            let text = serde_json::to_string_pretty(&report).map_err(|e| e.to_string())?;
+            fs::write(&out, text + "\n").map_err(|e| format!("{out}: {e}"))?;
+            println!("{} routes played, written to {out}", report.rows.len());
+            for row in &report.rows {
+                println!(
+                    "  {}: {} after {} ticks, gold {} -> {}, lost {:?}",
+                    row.route_id,
+                    row.status,
+                    row.elapsed_ticks,
+                    row.gold_start,
+                    row.gold_end,
+                    row.casualties
+                );
+            }
+            for problem in &report.problems {
+                eprintln!("problem: {problem}");
+            }
+            Ok(if report.problems.is_empty() {
+                ExitCode::SUCCESS
+            } else {
+                ExitCode::from(1)
+            })
+        }
+        (Some("expedition"), Some("compare")) => {
+            let read = |name: &str| -> Result<expedition::Report, String> {
+                let path = value(args, name)?;
+                let text = fs::read_to_string(&path).map_err(|e| format!("{path}: {e}"))?;
+                serde_json::from_str(&text).map_err(|e| format!("{path}: {e}"))
+            };
+            let lines = expedition::compare(&read("--baseline")?, &read("--candidate")?);
+            for line in &lines {
+                println!("{line}");
+            }
+            println!("{} differences", lines.len());
+            Ok(if lines.is_empty() {
+                ExitCode::SUCCESS
+            } else {
+                ExitCode::from(1)
             })
         }
         _ => Err(USAGE.to_owned()),

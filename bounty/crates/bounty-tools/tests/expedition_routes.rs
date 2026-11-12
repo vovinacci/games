@@ -1,55 +1,35 @@
-//! The routes the demo expedition's fixture carries (`content/demo/expedition.json`), played as written, with the
-//! pilot fighting where the fixture says `resolve_battle`. Each must end with the numbers the fixture expects.
-//! Those numbers were worked out by its author by hand and had never been run before this test.
+//! The routes the demo expedition's fixture carries (`content/demo/expedition.json`), played as written by the
+//! tool that reports on them, with the pilot fighting where the fixture says `resolve_battle`. Each must end with
+//! the numbers the fixture expects. Those numbers were worked out by its author by hand and had never been run
+//! before this test. Every state on the way is also saved and read back.
 
+use std::cell::Cell;
+use std::path::Path;
 use std::sync::Arc;
 
-use bounty_ai::approach_v1;
-use bounty_core::campaign::{Action, Command, Expedition, ExpeditionDef, Status};
+use bounty_core::campaign::{Expedition, ExpeditionDef, Status};
 use bounty_core::save;
+use bounty_tools::expedition::{load, play_route};
 use serde_json::Value;
 
-fn def() -> ExpeditionDef {
-    ExpeditionDef::from_texts(
-        include_str!("../../../content/demo/expedition.json"),
-        include_str!("../../../content/demo/map.json"),
-        include_str!("../../../prototype/rules.json"),
-    )
-    .unwrap()
-}
-
-fn act(expedition: &mut Expedition, action: Action) {
-    let said = format!("{action:?}");
-    let command = Command {
-        revision: expedition.revision(),
-        action,
-    };
-    expedition
-        .apply(&command)
-        .unwrap_or_else(|refused| panic!("{said} refused: {refused}"));
-    // Every state a route passes through, in battle or out of it, comes back from its save as it was.
-    let saved = save::encode(expedition);
-    let loaded = save::decode(&saved, Arc::clone(expedition.def_shared()))
-        .unwrap_or_else(|error| panic!("the save after {said}: {error}"));
-    assert_eq!(&loaded, expedition, "after {said}");
-    assert_eq!(save::encode(&loaded), saved, "after {said}");
-    if RELOAD.with(std::cell::Cell::get) {
-        *expedition = loaded;
-    }
+fn def() -> Arc<ExpeditionDef> {
+    load(&Path::new(env!("CARGO_MANIFEST_DIR")).join("../../content/demo/expedition.json")).unwrap()
 }
 
 thread_local! {
     /// While set, play goes on from the reloaded save after every command.
-    static RELOAD: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    static RELOAD: Cell<bool> = const { Cell::new(false) };
 }
 
-/// Plays the battle being fought to its end, the named pilot giving the commands of both sides. Never a result
-/// handed in from outside: the fixture forbids that, and the expedition has no command for it.
-fn resolve_battle(expedition: &mut Expedition, pilot: &str) {
-    assert_eq!(pilot, bounty_ai::APPROACH_V1);
-    while expedition.status() == Status::Battle {
-        let seen = expedition.battle().unwrap().observe();
-        act(expedition, Action::Battle(approach_v1(&seen).unwrap()));
+/// Every state a route passes through, in battle or out of it, comes back from its save as it was.
+fn saved_and_read_back(expedition: &mut Expedition) {
+    let saved = save::encode(expedition);
+    let loaded = save::decode(&saved, Arc::clone(expedition.def_shared()))
+        .unwrap_or_else(|error| panic!("the save at revision {}: {error}", expedition.revision()));
+    assert_eq!(&loaded, expedition);
+    assert_eq!(save::encode(&loaded), saved);
+    if RELOAD.with(Cell::get) {
+        *expedition = loaded;
     }
 }
 
@@ -60,33 +40,9 @@ fn number(value: &Value) -> i64 {
 }
 
 fn play(route: &Value) -> Expedition {
-    let mut expedition = Expedition::start(Arc::new(def()));
-    for command in route["commands"].as_array().unwrap() {
-        let text = |field: &str| command[field].as_str().unwrap().to_owned();
-        match command["kind"].as_str().unwrap() {
-            "take_contract" => act(&mut expedition, Action::TakeContract { id: text("id") }),
-            "recruit" => {
-                let quantity = number(&command["quantity"]) as u32;
-                act(
-                    &mut expedition,
-                    Action::Recruit {
-                        troop_id: text("troop_id"),
-                        quantity,
-                    },
-                );
-            }
-            "move" => {
-                let (dx, dy) = (number(&command["dx"]) as i32, number(&command["dy"]) as i32);
-                act(&mut expedition, Action::Move { dx, dy });
-            }
-            "wait_tick" => act(&mut expedition, Action::WaitTick),
-            "search" => act(&mut expedition, Action::Search),
-            "surrender" => act(&mut expedition, Action::Surrender),
-            "resolve_battle" => resolve_battle(&mut expedition, &text("pilot")),
-            other => panic!("the route has a command this test does not know: {other}"),
-        }
-    }
-    expedition
+    let (end, row) = play_route(&def(), route, &mut saved_and_read_back).unwrap();
+    assert_eq!((row.gold_end, row.elapsed_ticks), (end.gold(), end.ticks()));
+    end
 }
 
 #[test]
@@ -167,7 +123,7 @@ fn a_route_played_from_its_saves_ends_as_the_route_played_through() {
         RELOAD.with(|reload| reload.set(false));
         assert_eq!(reloaded, through, "{}", route["id"]);
         // AT-044: the ended expedition loads as ended, and takes nothing more.
-        let again = save::decode(&save::encode(&through), Arc::new(def.clone())).unwrap();
+        let again = save::decode(&save::encode(&through), Arc::clone(&def)).unwrap();
         assert_eq!(
             (again.status(), again.gold()),
             (through.status(), through.gold())
