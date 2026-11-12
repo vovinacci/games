@@ -29,6 +29,12 @@ that game only.
 - A crate without graphics never depends on one with graphics. Rules, computer players and tools must build and test on
   a machine with no window and no sound device.
 
+## Dedication
+
+The games are dedicated to the memory of Joseph Rivkind; the words are in `README.md`, in English and Ukrainian, and are
+not to be reworded. Every game shows them on its first run and in its About screen; `gamekit` will hold the text and the
+screen so that no game carries a copy of its own.
+
 ## Shell scripts
 
 Shell scripts (`tools/*.sh`) follow the [Google Shell Style Guide](https://google.github.io/styleguide/shellguide.html)
