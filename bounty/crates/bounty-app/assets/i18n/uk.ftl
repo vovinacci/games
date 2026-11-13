@@ -127,3 +127,4 @@ object-meadow-pack = вовча зграя
 object-meadow-company = загін лучників
 object-meadow-swarm = рій фей
 object-meadow-objective = закопаний скарб
+version = Версія { $v }

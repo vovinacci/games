@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Bounty
+GenericName=Strategy game
+Comment=A tribute to King's Bounty (1990)
+Exec=bounty
+Icon=bounty
+Terminal=false
+Categories=Game;StrategyGame;

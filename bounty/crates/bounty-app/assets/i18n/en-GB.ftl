@@ -127,3 +127,4 @@ object-meadow-pack = the wolf pack
 object-meadow-company = the archers' company
 object-meadow-swarm = the swarm
 object-meadow-objective = the buried prize
+version = Version { $v }

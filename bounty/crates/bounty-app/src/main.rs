@@ -35,6 +35,9 @@ use crate::input::ENEMY_PACE;
 use crate::saves::Saves;
 use crate::settings::Store;
 
+/// The version of this build, as the sidebar shows it and a release is named.
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 /// One battle by itself.
 struct Game {
     rules: Arc<Rules>,

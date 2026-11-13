@@ -8,7 +8,7 @@ game only.
 |---|---|
 | `bounty/` | Bounty, a tribute to King's Bounty (1990). Crates under `bounty/crates/`; only the application may use graphics and sound; see `bounty/AGENTS.md` |
 | `gamekit/` | what the games share around their rules: virtual screen, text and font, translations, a game's own files, the dedication, developer aids. Only a game's application depends on it |
-| `tools/` | scripts used by the hooks and CI |
+| `tools/` | scripts used by the hooks, CI and releases; `build-linux.sh` and `package.sh` take the game as their first argument |
 | `docs/REPOSITORY.md` | GitHub settings, rulesets, CI and Dependabot |
 
 ## Rules for every change
@@ -92,10 +92,17 @@ and ends with `main "$@"`, an empty line and `# EOF` (a truncated file then show
 - A script that guards something (like `check_ascii.sh`) is finished only once it has been seen failing on the input it
   exists to catch.
 
+## Packaging
+
+What is particular to a game's packages is in `<game>/packaging/`: `Info.plist` for the macOS bundle, `<game>.desktop`
+for the AppImage, and the icon as PNGs in `icon/` (`<game>-16.png` to `<game>-1024.png`). The scripts in `tools/` do the
+rest for any game, and name every file `<game>-vX.Y.Z-<system>-<arch>`. The CI build jobs build and package each game as
+a release does, so a broken package shows in a pull request, not on release day.
+
 ## Not here yet
 
 - NixOS: `shell.nix` is copied from Scorch and has not been run from this repository; there is no flake yet.
-- Releases: no release workflow. It comes with the first application that has something to ship.
+- Releases: packages are built, nothing is published yet. The release workflow, signing and the update channel are next.
 
 ## Rejected Findings
 
