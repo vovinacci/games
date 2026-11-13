@@ -14,6 +14,8 @@ Bounty only. The specification is in `docs/spec/`; `README.md` gives the reading
   outcome.
 - Random numbers for rules, for a computer player's planning and for presentation come from separate generators; a
   computer player never sees the rules' generator.
+- `content/meadow/` is this project's own scenario on the reference's troops, for measuring the campaign's rules with
+  the expedition pilot `errand-v1`. Its map and numbers are not the original's, and are never quoted as such.
 - `prototype/` and `content/demo/` test the engine. Never tune a computer player on them or quote them as the original's
   balance, and never use their numbers where a number of the original is missing.
 - A rule taken from documentation or another reimplementation is recorded in `docs/spec/07-RULES-REGISTER.md` with its
@@ -32,8 +34,8 @@ Bounty only. The specification is in `docs/spec/`; `README.md` gives the reading
 ## Measuring a change
 
 `make balance` plays the cases of every suite in `balance/` (prototype, reference, the `modern` variant) with every seed
-and the routes of the demo expedition, and writes a report for each under `target/`
-(`BALANCE_ARGS="--case melee_exchange"` picks one case). Compare two reports with
+and the routes of the expeditions (the demo's, and the meadow's under the reference rules and the variant), and writes a
+report for each under `target/` (`BALANCE_ARGS="--case melee_exchange"` picks one case). Compare two reports with
 
 ```sh
 cargo run -q -p bounty-tools -- balance compare --baseline <before.json> --candidate <after.json>
@@ -55,7 +57,8 @@ repeat) is a defect to fix, not a result.
   player's language (`words::refusal_text`).
 - Without flags the game is the expedition: `adventure.rs` holds its state, log and save and reads no key, so tests play
   it; `map.rs` draws the map, `view.rs` the battle, alone or inside the expedition (`input.rs` reads both). It is saved
-  after every accepted command and continued at the next start; `--rules` or `--scenario` gives one battle instead.
+  after every accepted command and continued at the next start; `--rules` or `--scenario` alone gives one battle
+  instead. `--expedition demo|meadow` picks the expedition, `meadow` under `--rules reference` or `modern`.
 - `--rules reference` plays under the reference rules (battles in `content/reference/battles.json`), `--rules modern`
   under the variant on the same battles; without it the prototype's. The header always says which rules are in use.
 - What the rules do to a stack is told where it is shown: its morale with the stacks that lower it, and how many of it
@@ -67,8 +70,9 @@ repeat) is a defect to fix, not a result.
   (`--route <id>`, `complete-route` unless named; 5 stands in the first battle, 99 at the end). With `--shot` or
   `--steps` the user's files are neither read nor written.
 - Ukrainian runs longer than English: text with a fixed place uses `text_fit` or `text_wrapped` from `gamekit`.
-- A run without `--shot` reads and writes `settings.txt` and, in the expedition, `expedition.json` with
-  `expedition.json.previous` in the user's data folder. The user may be playing: stop only your own process, by its ID.
+- A run without `--shot` reads and writes `settings.txt` and, in an expedition, `save-<expedition>-<rules>.json` with
+  its `.previous` in the user's data folder: each expedition under each rules has its own save. The user may be playing:
+  stop only your own process, by its ID.
 
 ## Saving
 
@@ -85,6 +89,6 @@ repeat) is a defect to fix, not a result.
 ## Not here yet
 
 - Sound, a menu.
-- Most of the campaign. The expedition of `content/demo/` is whole in the rules and on screen: map, clock and weekly
-  budget, recruiting, contract, battles with their reward and clue, surrender and recovery, search, save and continue.
-  An expedition on real troops and the campaign's own rule switches are to come.
+- Most of the campaign. Two small expeditions are whole in the rules and on screen: map, clock and weekly budget,
+  recruiting, contract, battles with their reward and clue, surrender and recovery, search, save and continue.
+  Dwellings, castles, spells on the map, the original's world: not yet.

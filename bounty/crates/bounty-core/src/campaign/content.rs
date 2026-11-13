@@ -196,7 +196,24 @@ pub struct Clock {
     pub movement_ticks: u32,
     pub search_ticks: u32,
     pub weekly_income: u64,
-    pub upkeep_per_creature: u64,
+    pub upkeep: Upkeep,
+}
+
+/// What a creature costs to keep for a week.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Upkeep {
+    /// The same for every creature.
+    PerCreature(u64),
+    /// A tenth of the troop's recruiting cost in the rules, rounded down: the reference's rule.
+    TenthOfCost,
+}
+
+/// A further stack of a band, beside its first.
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct BandStack {
+    pub troop: String,
+    pub count: u32,
 }
 
 /// An enemy band standing on an encounter object.
@@ -211,6 +228,9 @@ pub struct Encounter {
     pub gold_reward: u64,
     /// Beaten while its contract is held, it gives the clue to the objective.
     pub grants_clue: bool,
+    /// The band's further stacks, down the enemy's column of the layout below its first.
+    #[serde(default)]
+    pub also: Vec<BandStack>,
 }
 
 /// Where the two sides stand when a battle of the expedition begins.
@@ -308,6 +328,9 @@ struct ClockFile {
     success_on_exact_deadline: String,
     weekly_income: u64,
     upkeep_per_living_creature: u64,
+    /// Absent, upkeep is `upkeep_per_living_creature`. Present, that field must be 0.
+    #[serde(default)]
+    upkeep_rule: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -332,7 +355,14 @@ struct RecoveryFile {
     destination_object_id: String,
     gold: String,
     ticks: u32,
-    warden_count: u32,
+    /// The fixture's way of naming the troops of recovery: so many Wardens.
+    #[serde(default)]
+    warden_count: Option<u32>,
+    /// The general way: a troop and a number. One of the two ways is used.
+    #[serde(default)]
+    troop_id: Option<String>,
+    #[serde(default)]
+    count: Option<u32>,
     retains_contract_and_clues: bool,
 }
 
@@ -376,13 +406,22 @@ fn clock(file: &ClockFile) -> Result<Clock, ContentError> {
             "the clock's week, deadline, step and search must each be 1..={MAX_TICKS} ticks; they are {lengths:?}"
         ));
     }
+    let upkeep = match (file.upkeep_rule.as_deref(), file.upkeep_per_living_creature) {
+        (None, each) => Upkeep::PerCreature(each),
+        (Some("tenth_of_recruit_cost"), 0) => Upkeep::TenthOfCost,
+        (Some(rule), each) => {
+            return unsupported(format!(
+                "clock.upkeep_rule is {rule:?} with {each} a creature; only \"tenth_of_recruit_cost\" with 0 is implemented"
+            ));
+        }
+    };
     Ok(Clock {
         week_ticks,
         deadline_ticks: file.deadline_ticks,
         movement_ticks: file.movement_ticks,
         search_ticks: file.search_ticks,
         weekly_income: file.weekly_income,
-        upkeep_per_creature: file.upkeep_per_living_creature,
+        upkeep,
     })
 }
 
@@ -435,7 +474,18 @@ fn check_town_and_bands(
     for band in bands {
         place(map, &band.object_id, ObjectKind::Encounter, "the encounter")?;
         known(rules, &band.enemy_troop, "an encounter")?;
-        if band.enemy_count == 0 || !seen.insert(band.object_id.as_str()) {
+        for stack in &band.also {
+            known(rules, &stack.troop, "an encounter")?;
+        }
+        let stacks = 1 + band.also.len();
+        let empty = band.enemy_count == 0 || band.also.iter().any(|stack| stack.count == 0);
+        if stacks > rules.board.max_stacks_per_side as usize {
+            return invalid(format!(
+                "encounter {:?} has {stacks} stacks",
+                band.object_id
+            ));
+        }
+        if empty || !seen.insert(band.object_id.as_str()) {
             return invalid(format!(
                 "encounter {:?} must be unique and not empty",
                 band.object_id
@@ -446,16 +496,24 @@ fn check_town_and_bands(
 }
 
 /// The army stands down the player's column of the layout, one stack a row from the player's cell, coming round
-/// at the foot of the board; the band on the enemy's cell. Every cell that can be used must be on the board and
-/// free.
-fn check_layout(layout: &BattleLayout, rules: &Rules) -> Result<(), ContentError> {
+/// at the foot of the board; the band down the enemy's column in the same way, as many rows as the largest band
+/// has stacks. Every cell that can be used must be on the board and free.
+fn check_layout(
+    layout: &BattleLayout,
+    bands: &[Encounter],
+    rules: &Rules,
+) -> Result<(), ContentError> {
     let board = &rules.board;
-    let column = (0..board.max_stacks_per_side.min(board.height)).map(|slot| Cell {
-        x: layout.player.x,
-        y: (layout.player.y + slot) % board.height.max(1),
-    });
-    let mut used: Vec<Cell> = column.collect();
-    used.push(layout.enemy);
+    let column = |top: Cell, stacks: u32| {
+        (0..stacks.min(board.height)).map(move |slot| Cell {
+            x: top.x,
+            y: (top.y + slot) % board.height.max(1),
+        })
+    };
+    let largest = bands.iter().map(|band| 1 + band.also.len()).max();
+    let largest = u32::try_from(largest.unwrap_or(1)).unwrap_or(u32::MAX);
+    let mut used: Vec<Cell> = column(layout.player, board.max_stacks_per_side).collect();
+    used.extend(column(layout.enemy, largest));
     let on_board = used
         .iter()
         .chain(&layout.obstacles)
@@ -473,8 +531,16 @@ fn check_layout(layout: &BattleLayout, rules: &Rules) -> Result<(), ContentError
 }
 
 fn recovery(file: &RecoveryFile, map: &Map, rules: &Rules) -> Result<Recovery, ContentError> {
-    // The file names the troop of recovery in its field's name; the fixture has only Wardens.
-    let troop_id = "warden";
+    let (troop_id, count) = match (file.warden_count, file.troop_id.as_deref(), file.count) {
+        (Some(count), None, None) => ("warden", count),
+        (None, Some(troop_id), Some(count)) => (troop_id, count),
+        _ => {
+            return invalid(
+                "recovery names its troops either as warden_count or as troop_id with count"
+                    .to_owned(),
+            );
+        }
+    };
     known(rules, troop_id, "recovery")?;
     let Some(destination) = map.object(&file.destination_object_id) else {
         return invalid(format!(
@@ -482,7 +548,7 @@ fn recovery(file: &RecoveryFile, map: &Map, rules: &Rules) -> Result<Recovery, C
             file.destination_object_id
         ));
     };
-    if file.warden_count == 0 || file.ticks == 0 {
+    if count == 0 || file.ticks == 0 {
         return invalid(
             "recovery must give at least one creature and take at least one tick".to_owned(),
         );
@@ -491,7 +557,7 @@ fn recovery(file: &RecoveryFile, map: &Map, rules: &Rules) -> Result<Recovery, C
         destination: destination.cell(),
         ticks: file.ticks,
         troop_id: troop_id.to_owned(),
-        count: file.warden_count,
+        count,
     })
 }
 
@@ -559,7 +625,7 @@ impl ExpeditionDef {
             ObjectKind::Objective,
             "the objective",
         )?;
-        check_layout(&file.battle_layout, &rules)?;
+        check_layout(&file.battle_layout, &file.encounters, &rules)?;
         let recovery = recovery(&file.recovery, &map, &rules)?;
 
         Ok(Self {

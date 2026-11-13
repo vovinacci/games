@@ -11,10 +11,12 @@ use gamekit::files;
 pub struct Saves(pub Option<PathBuf>);
 
 impl Saves {
-    /// The user's own file.
+    /// The user's own file for this expedition under these rules: each has its own, so that playing one never
+    /// touches the save of another.
     #[must_use]
-    pub fn of_the_user() -> Self {
-        Self(files::data_file("bounty", "expedition.json"))
+    pub fn of_the_user(def: &ExpeditionDef) -> Self {
+        let name = format!("save-{}-{}.json", def.id, def.rules.id);
+        Self(files::data_file("bounty", &name))
     }
 
     /// The saved expedition of `def`, with whether it comes from the file before the current one. `None` when

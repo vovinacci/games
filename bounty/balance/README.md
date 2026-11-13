@@ -63,7 +63,7 @@ that came in (weekly income, rewards) and went out (upkeep, recruits, recovery),
 route whose gold does not add up, that is refused a command or that does not repeat is a problem, not a row.
 
 `baselines/expedition-demo-0001.json`: the four routes of `content/demo/` under the prototype rules. A test
-(`the_demo_expedition_gives_its_recorded_baseline`) and `make balance-check` hold the code to it, field by field.
+(`each_expedition_gives_its_recorded_baseline`) and `make balance-check` hold the code to it, field by field.
 
 | Route | Ends | Ticks | Gold in: income + rewards | Gold out: upkeep + recruits + recovery | Purse, 100 at start | Creatures lost |
 |---|---|---|---|---|---|---|
@@ -73,7 +73,20 @@ route whose gold does not add up, that is refused a command or that does not rep
 | `success-on-deadline` | victory | 24 | 20 + 90 | 12 + 40 + 0 | 158 | none |
 
 These are the fixture's own numbers, synthetic like its rules: they pin the engine down and say nothing about the
-original's economy. The expedition on real troops gets its own baseline when it exists.
+original's economy.
+
+`baselines/expedition-meadow-reference-0001.json` and `expedition-meadow-modern-0001.json`: the one route of
+`content/meadow/`, which hands the whole expedition to the pilot `errand-v1`, under the reference rules and under the
+variant (`--rules` names the rules file; without it the expedition's own are used).
+
+| Rules | Ends | Ticks | Purse, 3000 at start | Bought | Creatures lost | Returned | Left at the end |
+|---|---|---|---|---|---|---|---|
+| reference | victory | 24 | 3025 | 10 Archers, 5 Wolves | 7 Archers, 20 Sprites, 5 Wolves | none | 3 Archers |
+| variant | victory | 24 | 2924 | 10 Archers, 5 Wolves | 3 Archers, 19 Sprites, 5 Wolves | 2 Archers, 1 Sprite | 7 Archers, 1 Sprite |
+
+One run each pins the engine down; what the rules cost over 500 runs is in `docs/spec/10-GAMEPLAY-GAPS.md`. The
+variant's battle baseline `modern-0001.json` stands: its rules file gained the campaign's section, which no battle
+reads, so the comparison notes another hash of the rules and no battle that ended differently.
 
 ## Replacing a baseline
 
@@ -82,8 +95,9 @@ Only for a change that is meant to move results, in the same pull request as tha
 1. `make balance`, then compare with the old baseline (`make balance-check` prints every battle that moved).
 2. Read the differences. Each one is either what the change was for, or a surprise to explain before going on.
 3. Save the new report under `baselines/` with the next number (`prototype-0002.json`, `modern-0002.json`), point
-   `baseline_path` in the suite file at it (for an expedition: `BALANCE_EXPEDITIONS` in the `Makefile` and the test),
-   and keep the old file: the history of baselines stays readable without git.
+   `baseline_path` in the suite file at it (for an expedition: `BALANCE_EXPEDITIONS` in the `Makefile` and the test
+   `each_expedition_gives_its_recorded_baseline`), and keep the old file: the history of baselines stays readable
+   without git.
 4. Say in the pull request description what moved and why, with the numbers. That text becomes the commit message, so
    the reason travels with the baseline.
 

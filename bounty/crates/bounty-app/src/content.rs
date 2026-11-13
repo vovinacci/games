@@ -25,6 +25,35 @@ pub fn expedition() -> Arc<ExpeditionDef> {
     Arc::new(def.expect("the compiled-in expedition loads"))
 }
 
+const MEADOW: &str = include_str!("../../../content/meadow/expedition.json");
+const MEADOW_MAP: &str = include_str!("../../../content/meadow/map.json");
+
+/// The expedition called `name` on the command line, under the rules called `rules` when the expedition can be
+/// played under more than one: `demo` under the prototype rules only, `meadow` under `reference` (unless named
+/// otherwise) or `modern`.
+///
+/// # Errors
+/// Another name, or rules the expedition is not played under; the message lists what there is.
+///
+/// # Panics
+/// As [`rules`].
+pub fn expedition_named(name: &str, rules: Option<&str>) -> Result<Arc<ExpeditionDef>, String> {
+    let def = match (name, rules) {
+        ("demo", None | Some("prototype")) => return Ok(expedition()),
+        ("meadow", None | Some("reference")) => {
+            ExpeditionDef::from_texts(MEADOW, MEADOW_MAP, REFERENCE_RULES)
+        }
+        ("meadow", Some("modern")) => ExpeditionDef::from_texts(MEADOW, MEADOW_MAP, MODERN_RULES),
+        ("demo" | "meadow", Some(other)) => {
+            return Err(format!(
+                "the expedition {name:?} is not played under the rules {other:?}; demo: prototype; meadow: reference, modern"
+            ));
+        }
+        (other, _) => return Err(format!("no expedition {other:?}; there are: demo, meadow")),
+    };
+    Ok(Arc::new(def.expect("the compiled-in expedition loads")))
+}
+
 /// The prototype rules. The file is part of the program and checked by the tests, so it loads.
 ///
 /// # Panics
@@ -90,6 +119,29 @@ mod tests {
         assert!(scenario(&rules, "melee_exchange").is_ok());
         let error = scenario(&rules, "siege").unwrap_err().to_string();
         assert!(error.contains("flight_barrier"), "{error}");
+    }
+
+    #[test]
+    fn each_expedition_loads_under_the_rules_it_is_played_under() {
+        let id = |name, rules| {
+            let def = expedition_named(name, rules).unwrap();
+            (def.id.clone(), def.rules.id.clone())
+        };
+        let demo = ("demo-expedition-v1".to_owned(), "prototype-v0.1".to_owned());
+        assert_eq!(id("demo", None), demo);
+        assert_eq!(id("demo", Some("prototype")), demo);
+        assert_eq!(id("meadow", None).1, "reference-v0.1");
+        assert_eq!(id("meadow", Some("modern")).1, "modern-v0.1");
+        assert!(
+            expedition_named("demo", Some("modern"))
+                .unwrap_err()
+                .contains("meadow: reference, modern")
+        );
+        assert!(
+            expedition_named("swamp", None)
+                .unwrap_err()
+                .contains("demo, meadow")
+        );
     }
 
     #[test]

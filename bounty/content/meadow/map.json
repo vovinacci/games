@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "id": "meadow",
+  "width": 14,
+  "height": 9,
+  "terrain_legend": {
+    "~": {
+      "id": "water",
+      "passable": false
+    },
+    "^": {
+      "id": "hills",
+      "passable": false
+    },
+    ".": {
+      "id": "plain",
+      "passable": true
+    }
+  },
+  "rows": [
+    "~~~~~~~~~~~~~~",
+    "~.....^......~",
+    "~.....^......~",
+    "~........^...~",
+    "~.....^..^...~",
+    "~.^^^.^......~",
+    "~............~",
+    "~............~",
+    "~~~~~~~~~~~~~~"
+  ],
+  "objects": [
+    {
+      "id": "meadow-town",
+      "kind": "town",
+      "x": 1,
+      "y": 1
+    },
+    {
+      "id": "meadow-pack",
+      "kind": "encounter",
+      "x": 3,
+      "y": 3
+    },
+    {
+      "id": "meadow-company",
+      "kind": "encounter",
+      "x": 9,
+      "y": 2
+    },
+    {
+      "id": "meadow-swarm",
+      "kind": "encounter",
+      "x": 9,
+      "y": 6
+    },
+    {
+      "id": "meadow-objective",
+      "kind": "objective",
+      "x": 5,
+      "y": 7
+    }
+  ]
+}

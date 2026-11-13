@@ -30,6 +30,16 @@ pub struct Reference {
     pub switches: Switches,
 }
 
+/// What happens in a week whose upkeep the purse cannot cover.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Unpaid {
+    /// The purse is emptied and every stack stays. The reference's rule.
+    #[default]
+    Stay,
+    /// Stacks are paid in slot order, each in full or not at all; a stack not paid leaves.
+    Leave,
+}
+
 /// How many creatures of a stack answer a blow.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Answer {
@@ -56,6 +66,11 @@ pub struct Switches {
     /// B2. A stack too large for the leadership does not turn on its side; only as many of its creatures fight as
     /// the leadership covers.
     pub leadership_caps_fighters: bool,
+    /// C1. What a week does whose upkeep the purse cannot cover.
+    pub unpaid: Unpaid,
+    /// B4, cured after the battle: of each stack's creatures that fell in a battle the hero won, this many in a
+    /// hundred return, rounded down. 0 in the reference.
+    pub fallen_return_percent: u32,
 }
 
 /// Morale groups, A to E.
@@ -66,6 +81,8 @@ const GROUP_NAMES: [&str; GROUPS] = ["A", "B", "C", "D", "E"];
 #[serde(deny_unknown_fields)]
 struct File {
     schema_version: u32,
+    #[serde(default)]
+    campaign: Option<Campaign>,
     id: String,
     #[serde(rename = "status")]
     _status: String,
@@ -195,6 +212,14 @@ struct FileTroop {
     flies: bool,
     morale_group: String,
     recruit_cost: u32,
+}
+
+/// The rules of the campaign a variant may change. Absent, they are the reference's.
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Campaign {
+    unpaid_week: String,
+    fallen_of_a_won_battle_return_percent: u32,
 }
 
 fn check_switches(file: &File) -> Result<(), ContentError> {
@@ -375,7 +400,33 @@ fn switches(file: &File) -> Result<Switches, ContentError> {
         .over_leadership
         .as_deref()
         .unwrap_or("out_of_control");
+    let (unpaid, fallen) =
+        file.campaign
+            .as_ref()
+            .map_or(("purse_emptied_every_stack_stays", 0), |campaign| {
+                (
+                    campaign.unpaid_week.as_str(),
+                    campaign.fallen_of_a_won_battle_return_percent,
+                )
+            });
+    if fallen > 100 || (fallen != 0 && !vary) {
+        return Err(ContentError::Unsupported(format!(
+            "campaign.fallen_of_a_won_battle_return_percent is {fallen}, which this ruleset does not allow"
+        )));
+    }
     Ok(Switches {
+        unpaid: if switch(
+            "campaign.unpaid_week",
+            unpaid,
+            "purse_emptied_every_stack_stays",
+            "stacks_paid_in_slot_order_unpaid_leave",
+            vary,
+        )? {
+            Unpaid::Leave
+        } else {
+            Unpaid::Stay
+        },
+        fallen_return_percent: fallen,
         answer,
         two_rolls: switch("damage.rolls", rolls, "one", "mean_of_two", vary)?,
         army_view_morale: switch(

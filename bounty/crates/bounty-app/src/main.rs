@@ -1,5 +1,7 @@
-//! Bounty: a small test expedition (map, town, battles, a prize to find before time runs out), saved after every
-//! command and continued at the next start; or, with `--rules` or `--scenario`, one battle by itself. The player's
+//! Bounty: a small expedition (map, town, battles, a prize to find before time runs out), saved after every
+//! command and continued at the next start; or, with `--rules` or `--scenario` alone, one battle by itself.
+//! `--expedition demo|meadow` picks the expedition: `demo` is the test fixture, `meadow` a small one on the
+//! reference's troops, played under `--rules reference` or `--rules modern`. The player's
 //! stacks by keyboard or mouse, the enemy's by the plain pilot.
 //!
 //! Developer flags: `--rules prototype|reference|modern` and `--scenario <id>` pick one battle and `--seed <n>` its
@@ -253,7 +255,8 @@ async fn run(options: Options, mut play: Play) {
     {
         // Only now, with the languages set, can a continued game say that it is one.
         let def = Arc::clone(adventure.expedition.def_shared());
-        **adventure = Adventure::new(def, Saves::of_the_user());
+        let saves = Saves::of_the_user(&def);
+        **adventure = Adventure::new(def, saves);
     }
 
     let mut intro = (!settings.dedication_seen && options.shot.is_none()).then(Intro::default);
@@ -354,7 +357,9 @@ fn start() -> Result<(Options, Play), String> {
         stepped: steps > 0,
     };
     let (rules, scenario) = (dev::arg_after("--rules"), dev::arg_after("--scenario"));
-    let play = if rules.is_some() || scenario.is_some() {
+    let expedition = dev::arg_after("--expedition");
+    // An expedition when one is named or nothing is; one battle when only rules or a battle are named.
+    let play = if expedition.is_none() && (rules.is_some() || scenario.is_some()) {
         let rules = content::rules_named(&rules.unwrap_or_else(|| "prototype".to_owned()))?;
         let id = scenario.unwrap_or_else(|| content::first_scenario(&rules).to_owned());
         let scenario = content::scenario(&rules, &id).map_err(|e| e.to_string())?;
@@ -365,8 +370,15 @@ fn start() -> Result<(Options, Play), String> {
         }
         Play::Battle(Box::new(game))
     } else {
-        let def = content::expedition();
-        let route = dev::arg_after("--route").unwrap_or_else(|| "complete-route".to_owned());
+        let name = expedition.unwrap_or_else(|| "demo".to_owned());
+        let def = content::expedition_named(&name, rules.as_deref())?;
+        // The first route the expedition's file carries, unless one is named.
+        let first = def
+            .test_routes
+            .first()
+            .and_then(|route| route["id"].as_str());
+        let route =
+            dev::arg_after("--route").unwrap_or_else(|| first.unwrap_or_default().to_owned());
         let expedition = expedition_after(&def, &route, steps)?;
         debug_assert!(expedition.status() != Status::Battle || expedition.battle().is_some());
         Play::Expedition(Box::new(Adventure::at(expedition, Saves(None))))

@@ -11,7 +11,8 @@ use bounty_tools::expedition;
 const USAGE: &str = "usage:
   bounty-tools balance run --suite <suite.json> --out <report.json> [--case <id>]... [--revision <text>]
   bounty-tools balance compare --baseline <report.json> --candidate <report.json> [--exact]
-  bounty-tools expedition run --expedition <expedition.json> --out <report.json> [--revision <text>]
+  bounty-tools expedition run --expedition <expedition.json> [--rules <rules.json>] --out <report.json>
+                              [--revision <text>]
   bounty-tools expedition compare --baseline <report.json> --candidate <report.json>
 
 run      plays every case of the suite with every seed and writes the report. Exit 1 when the run found problems.
@@ -86,7 +87,9 @@ fn main_inner(args: &[String]) -> Result<ExitCode, String> {
             })
         }
         (Some("expedition"), Some("run")) => {
-            let def = expedition::load(Path::new(&value(args, "--expedition")?))?;
+            let rules = values(args, "--rules").pop();
+            let rules = rules.as_deref().map(Path::new);
+            let def = expedition::load_under(Path::new(&value(args, "--expedition")?), rules)?;
             let revision = values(args, "--revision")
                 .pop()
                 .unwrap_or_else(|| "unknown".to_owned());
