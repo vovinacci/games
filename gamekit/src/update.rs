@@ -143,7 +143,9 @@ impl Updater {
             let (build, status) = (self.build, Arc::clone(&self.status));
             std::thread::spawn(move || {
                 let result = match net::latest(build) {
-                    Ok(version) if is_newer(&version, build.version) => {
+                    // Offered only where it can be installed: a program run from a build folder on macOS is in
+                    // no bundle to replace, and an offer that can only fail is worse than none.
+                    Ok(version) if is_newer(&version, build.version) && net::installable(build) => {
                         Status::Available { version }
                     }
                     Ok(_) => Status::UpToDate,
@@ -389,6 +391,12 @@ mod net {
         }
     }
 
+    /// Whether this program is somewhere an update can be put: always on Linux and Windows, on macOS only inside
+    /// the game's `.app`.
+    pub fn installable(build: Build) -> bool {
+        target(build, "").is_ok()
+    }
+
     pub fn install(build: Build, version: &str) -> Result<(), String> {
         let tag = format!("v{version}");
         let target = target(build, &tag)?;
@@ -529,6 +537,17 @@ trusted comment: test
                 sha256_hex(b"abc"),
                 "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
             );
+        }
+
+        // The test program runs from a build folder, as a game built from source does.
+        #[test]
+        fn a_program_outside_its_bundle_is_offered_nothing_on_macos() {
+            let build = Build {
+                game: "bounty",
+                repo: "vovinacci/bounty-game",
+                version: "0.1.0",
+            };
+            assert_eq!(installable(build), !cfg!(target_os = "macos"));
         }
 
         #[test]
