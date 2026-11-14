@@ -338,14 +338,19 @@ fn sidebar(battle: &Battle, seen: &Observation, shown: &Shown<'_>) {
         line(&t!("key-surrender"), 18.0, LIGHTGRAY);
     }
     line("", 10.0, WHITE);
+    foot(&mut line);
+}
+
+/// The last lines of every sidebar: the keys that always work, and which build this is.
+pub fn foot(line: &mut impl FnMut(&str, f32, Color)) {
     line(&t!("key-language"), 16.0, GRAY);
     line(&t!("key-quit"), 16.0, GRAY);
+    line(&t!("version", v = crate::VERSION), 16.0, DARKGRAY);
 }
 
 fn keys_after_the_battle(line: &mut impl FnMut(&str, f32, Color)) {
     line(&t!("key-again"), 20.0, WHITE);
-    line(&t!("key-language"), 16.0, GRAY);
-    line(&t!("key-quit"), 16.0, GRAY);
+    foot(line);
 }
 
 pub fn log(lines: &[String]) {

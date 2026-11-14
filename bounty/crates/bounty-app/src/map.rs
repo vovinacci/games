@@ -9,7 +9,7 @@ use gamekit::text::{text_at, text_centered_fit, text_fit};
 use macroquad::prelude::*;
 
 use crate::adventure::Adventure;
-use crate::view::{CURSOR, ENEMY, GROUND, LINE, PANEL, PLAYER, SIDEBAR, TARGET, banner, log};
+use crate::view::{CURSOR, ENEMY, GROUND, LINE, PANEL, PLAYER, SIDEBAR, TARGET, banner, foot, log};
 use crate::words::{named, place_name, status_text};
 
 /// Side of a map cell, and where the map's top-left corner is.
@@ -216,8 +216,7 @@ fn sidebar(adventure: &Adventure) {
 
     keys(adventure, &mut line);
     line("", 10.0, WHITE);
-    line(&t!("key-language"), 16.0, GRAY);
-    line(&t!("key-quit"), 16.0, GRAY);
+    foot(&mut line);
 }
 
 /// The keys that do something now, as lines of the sidebar.

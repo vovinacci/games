@@ -14,6 +14,9 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
+  # The oldest macOS a game supports (its packaging/Info.plist), whatever the runner's version.
+  MACOSX_DEPLOYMENT_TARGET: "15.0"
+  APPIMAGETOOL_VERSION: "1.9.1"
 
 jobs:
   checks:
@@ -53,8 +56,39 @@ jobs:
           persist-credentials: false
       - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
-      - name: Build
-        run: cargo build --release --locked -p bounty-app
+      # Built and packaged the way a release is (docs/RELEASING.md), so that a break in either shows here. Nothing
+      # is uploaded.
+      - name: Install appimagetool
+        if: runner.os == 'Linux'
+        env:
+          SHA256: ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0
+        run: |
+          url="https://github.com/AppImage/appimagetool/releases/download/$APPIMAGETOOL_VERSION/appimagetool-x86_64.AppImage"
+          curl -fsSL -o "$RUNNER_TEMP/appimagetool" "$url"
+          echo "$SHA256  $RUNNER_TEMP/appimagetool" | sha256sum -c -
+          chmod +x "$RUNNER_TEMP/appimagetool"
+          echo "APPIMAGETOOL=$RUNNER_TEMP/appimagetool" >> "$GITHUB_ENV"
+      - name: Build and package (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          tools/build-linux.sh bounty
+          tools/package.sh bounty linux x86_64 v0.0.0
+      - name: Build and package (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          cargo build --release --locked -p bounty-app
+          tools/package.sh bounty windows x86_64 v0.0.0
+      - name: Build and package (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          rustup target add aarch64-apple-darwin x86_64-apple-darwin
+          cargo build --release --locked -p bounty-app --target aarch64-apple-darwin
+          cargo build --release --locked -p bounty-app --target x86_64-apple-darwin
+          tools/package.sh bounty macos v0.0.0
+      - name: What was packaged
+        shell: bash
+        run: ls -l dist
 
   deny:
     name: Dependencies
