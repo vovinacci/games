@@ -12,7 +12,8 @@
 # knows nothing of games. The channel only moves forward, so rebuilding an old release leaves it alone.
 #
 # Needs gh (GH_TOKEN, GH_REPO), minisign, and the unencrypted minisign secret key in SIGNING_KEY; the public half
-# is gamekit/assets/release-key.pub. GITHUB_SHA is where the channel's tag is put when the channel is first made.
+# is gamekit/assets/release-key.pub. Run from a checkout of the release's tag: a channel made here is put on that
+# commit.
 
 set -euf -o pipefail
 export LC_ALL="C.UTF-8"
@@ -37,7 +38,8 @@ function sign() {
 function publish-packages() {
   local tag="$1" name="$2"
   local -a files
-  readarray -t files < <(find . -maxdepth 1 -type f | sed 's|^\./||' | sort)
+  # Not the checksums of an earlier, interrupted run.
+  readarray -t files < <(find . -maxdepth 1 -type f ! -name 'SHA256SUMS*' | sed 's|^\./||' | sort)
   if [[ "${#files[@]}" -eq 0 ]]; then
     echo "no packages to publish" >&2
     exit 1
@@ -50,12 +52,13 @@ function publish-packages() {
   gh release upload --clobber "${tag}" -- "${files[@]}" SHA256SUMS SHA256SUMS.minisig
 }
 
-# Points the channel of game $1 at tag $2, unless it already names a newer one. Works in the empty directory $4.
+# Points the channel of game $1 at tag $2, unless it already names a newer one. Works in the empty directory $4;
+# a channel made here gets its own tag on commit $5.
 function publish-channel() {
-  local game="$1" tag="$2" title="$3" work="$4"
+  local game="$1" tag="$2" title="$3" work="$4" commit="$5"
   local channel="${game}-channel" assets current="" newest
   if ! gh release view "${channel}" >/dev/null 2>&1; then
-    gh release create "${channel}" --target "${GITHUB_SHA:?GITHUB_SHA must be set}" --latest=false \
+    gh release create "${channel}" --target "${commit}" --latest=false \
       --title "${title}: update channel" \
       --notes "Not a release. latest.txt names the newest release of ${title}; the game reads it to find updates."
   else
@@ -95,9 +98,11 @@ function main() {
   (umask 077 && printf '%s\n' "${SIGNING_KEY}" >"${KEY_FILE}")
   mkdir "${WORK}/channel"
 
+  local commit
+  commit="$(git rev-parse HEAD)"
   cd "${dir}"
   publish-packages "${tag}" "${title} ${version#v}"
-  publish-channel "${game}" "${tag}" "${title}" "${WORK}/channel"
+  publish-channel "${game}" "${tag}" "${title}" "${WORK}/channel" "${commit}"
 }
 
 main "$@"
