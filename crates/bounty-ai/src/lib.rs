@@ -425,6 +425,38 @@ mod tests {
         );
     }
 
+    // Every troop of the reference rules takes the field, each beside its neighbour in the table and against the
+    // same pair, so that a troop the rules or the pilot cannot handle shows here and not in a later expedition.
+    #[test]
+    fn every_reference_troop_fights_a_battle_to_its_end() {
+        let (rules, template) = reference_fight(7);
+        let ids: Vec<String> = rules.troops.iter().map(|t| t.id.clone()).collect();
+        for (place, first) in ids.iter().enumerate() {
+            let second = &ids[(place + 1) % ids.len()];
+            let mut scenario = template.clone();
+            scenario.stacks.retain(|s| s.slot < 2);
+            for stack in &mut scenario.stacks {
+                let troop = if stack.slot == 0 { first } else { second };
+                stack.troop_id.clone_from(troop);
+                // About the same health on the field whatever the troop.
+                stack.count = (200 / rules.troop(troop).unwrap().hp).max(1);
+            }
+            let mut battle = Battle::start(Arc::clone(&rules), &scenario, None).unwrap();
+            let mut tape = Tape::new(&scenario, 7);
+            while let Some(command) = approach_v1(&battle.observe()) {
+                tape.apply(&mut battle, &command)
+                    .unwrap_or_else(|e| panic!("{first} and {second}: {command:?} refused: {e}"));
+            }
+            let outcome = battle.outcome().unwrap();
+            assert_ne!(outcome, Outcome::BudgetExceeded, "{first} and {second}");
+            assert_eq!(
+                tape.replay(Arc::clone(&rules), &scenario).unwrap(),
+                battle,
+                "{first} and {second}"
+            );
+        }
+    }
+
     // With a hero whose leadership the twenty Wolves exceed (60 health against 45), they start out of control. The
     // pilot moves them like any stack: never refused, every battle ends, and the tape replays.
     #[test]

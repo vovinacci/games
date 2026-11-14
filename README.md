@@ -12,7 +12,7 @@ contract, a clue and a prize to find before time runs out, all under invented te
 command and goes on at the next start. `--expedition meadow` plays a second small expedition on the three reference
 troops, under `--rules reference` or `--rules modern`. One battle by itself:
 `cargo run -p bounty-app -- --rules prototype`, or `--rules reference` under the first rules taken from another remake
-of the original (three troops; `--scenario morale_sprites_wolves`, `loss_of_control`, `loss_of_control_deep` or
+of the original (sixteen troops so far; `--scenario morale_sprites_wolves`, `loss_of_control`, `loss_of_control_deep` or
 `overmatch` for other battles), or `--rules modern` under those rules with this game's own changes, which play the same
 battles. The campaign of the original is still to come.
 
@@ -30,7 +30,7 @@ battles. The campaign of the original is still to come.
 | `content/reference/` | the first rules and troops taken from a reimplementation of the original, and battles for them |
 | `content/modern/` | a variant of the reference rules with this project's own rule changes switched on, to be measured |
 | `content/demo/` | a small synthetic expedition used as an integration test |
-| `content/meadow/` | this project's own small expedition on the reference's three troops, for measuring the campaign's rules |
+| `content/meadow/` | this project's own small expedition on three of the reference's troops, for measuring the campaign's rules |
 | `balance/` | the fixed set of cases and seeds for before/after comparisons, and recorded baselines |
 | `schemas/` | JSON schemas of the map and save file |
 
@@ -55,9 +55,9 @@ Version 0.3 of 12 November 2026, with the changes in `docs/spec/CHANGELOG.md`. R
 game's data and say nothing about its balance.
 
 The original's maps, texts and numbers are not in this repository, with one small exception: `content/reference/` holds
-the rules of battle and the numbers of three troops, taken from another reimplementation and marked as such, so that
-those rules can be tested. For everything else the plan is an optional importer that reads it from the player's own copy
-of the DOS game. `docs/spec/07-RULES-REGISTER.md` says where each rule comes from and what is still in doubt.
+the rules of battle and the table of troops, taken from another reimplementation and marked as such, so that those rules
+can be tested. For everything else the plan is an optional importer that reads it from the player's own copy of the DOS
+game. `docs/spec/07-RULES-REGISTER.md` says where each rule comes from and what is still in doubt.
 
 ## Dedication
 

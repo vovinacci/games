@@ -2,9 +2,22 @@
   "schema_version": 2,
   "metric_set_id": "small-battle-metrics-v2",
   "reference_prices": {
+    "peasants": 10,
     "sprites": 15,
+    "militia": 50,
     "wolves": 40,
-    "archers": 250
+    "gnomes": 60,
+    "orcs": 75,
+    "archers": 250,
+    "elves": 200,
+    "pikemen": 300,
+    "nomads": 300,
+    "dwarves": 350,
+    "knights": 1000,
+    "ogres": 750,
+    "barbarians": 750,
+    "cavalry": 800,
+    "giants": 2000
   },
   "note": "Prices for valuing losses: the troops' recruit costs in content/reference/rules.json, frozen here. The other definitions are those of metrics.json."
 }
