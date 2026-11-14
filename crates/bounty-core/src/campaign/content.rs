@@ -34,6 +34,8 @@ fn read<T: for<'de> Deserialize<'de>>(text: &str) -> Result<T, ContentError> {
 #[serde(rename_all = "lowercase")]
 pub enum ObjectKind {
     Town,
+    /// The king's castle, where the hero is given his ranks.
+    Castle,
     Encounter,
     Objective,
 }
@@ -253,6 +255,14 @@ pub struct Recovery {
     pub count: u32,
 }
 
+/// The king the hero serves: where he holds court, and the class whose ranks he gives.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct King {
+    pub castle: Cell,
+    /// Place of the hero's class in the rules.
+    pub class: usize,
+}
+
 /// An expedition: a map, where it starts, and its rules of time, trade, fighting and recovery.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ExpeditionDef {
@@ -274,6 +284,9 @@ pub struct ExpeditionDef {
     /// The object searched for. Its place is hidden until a clue names it; a search there wins with or without.
     pub objective_id: String,
     pub recovery: Recovery,
+    /// With a king the hero has a class and rises through its ranks; without one, leadership and income stay
+    /// what the expedition starts with.
+    pub king: Option<King>,
     /// The routes a fixture file carries for the tests, as written. Nothing in play reads them.
     pub test_routes: Vec<serde_json::Value>,
     /// SHA-256 over the three files the expedition was read from: its own, its map's and its rules'. A save
@@ -300,7 +313,16 @@ struct File {
     objective: Objective,
     recovery: RecoveryFile,
     #[serde(default)]
+    king: Option<KingFile>,
+    #[serde(default)]
     tests: Vec<serde_json::Value>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct KingFile {
+    castle_object_id: String,
+    hero_class: String,
 }
 
 #[derive(Deserialize)]
@@ -561,6 +583,38 @@ fn recovery(file: &RecoveryFile, map: &Map, rules: &Rules) -> Result<Recovery, C
     })
 }
 
+/// The king's castle is on the map and the hero's class in the rules. What the expedition starts with must be
+/// what the class's first rank gives, so that the file says one thing: the ranks add to it from there.
+fn check_king(
+    king: &KingFile,
+    file: &File,
+    map: &Map,
+    rules: &Rules,
+) -> Result<King, ContentError> {
+    let castle = place(
+        map,
+        &king.castle_object_id,
+        ObjectKind::Castle,
+        "the king's castle",
+    )?;
+    let Some(class) = rules.classes.iter().position(|c| c.id == king.hero_class) else {
+        return invalid(format!(
+            "the hero's class {:?} is not in the rules",
+            king.hero_class
+        ));
+    };
+    let first = &rules.classes[class].ranks[0];
+    if file.start.leadership != first.leadership
+        || file.clock.weekly_income != u64::from(first.commission)
+    {
+        return invalid(format!(
+            "a {} sets out with leadership {} and a weekly income of {}",
+            rules.classes[class].name, first.leadership, first.commission
+        ));
+    }
+    Ok(King { castle, class })
+}
+
 fn known(rules: &Rules, troop: &str, what: &str) -> Result<(), ContentError> {
     match rules.troop(troop) {
         Some(_) => Ok(()),
@@ -627,6 +681,10 @@ impl ExpeditionDef {
         )?;
         check_layout(&file.battle_layout, &file.encounters, &rules)?;
         let recovery = recovery(&file.recovery, &map, &rules)?;
+        let king = match &file.king {
+            Some(king) => Some(check_king(king, &file, &map, &rules)?),
+            None => None,
+        };
 
         Ok(Self {
             id: file.id,
@@ -644,6 +702,7 @@ impl ExpeditionDef {
             layout: file.battle_layout,
             objective_id: file.objective.object_id,
             recovery,
+            king,
             test_routes: file.tests,
             content_sha256,
         })

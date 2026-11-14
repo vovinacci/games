@@ -12,13 +12,13 @@ use std::fmt;
 use std::sync::Arc;
 
 pub use content::{
-    ArmyStart, BandStack, BattleLayout, Clock, Encounter, ExpeditionDef, Map, MapObject,
+    ArmyStart, BandStack, BattleLayout, Clock, Encounter, ExpeditionDef, King, Map, MapObject,
     ObjectKind, Recovery, Terrain, Upkeep,
 };
 
 use crate::battle::{self, Battle, Outcome};
 use crate::canon::Value;
-use crate::content::{Cell, Profile, Scenario, Side, StackStart, Switches, Unpaid};
+use crate::content::{Cell, Profile, Rank, Scenario, Side, StackStart, Switches, Unpaid};
 use crate::save::{Reader, SaveError, invalid};
 
 /// How an expedition stands.
@@ -89,6 +89,8 @@ pub enum Action {
     Battle(battle::Command),
     /// Give the battle up.
     Surrender,
+    /// Ask the king, in his castle, for the rank the villains caught have earned.
+    Promote,
 }
 
 /// A request to change the expedition. It names what should happen, never the price or the result.
@@ -132,6 +134,10 @@ pub enum Refused {
     ArmyFull,
     /// No such band to take a contract on, or it is already beaten.
     NoSuchContract { id: String },
+    /// Only possible in the king's castle; an expedition without a king has none.
+    NotAtCastle,
+    /// The king has no rank to give: `needed` villains earn the next, or there is none above the hero's.
+    NoPromotion { caught: u32, needed: Option<u32> },
 }
 
 impl fmt::Display for Refused {
@@ -169,6 +175,15 @@ impl fmt::Display for Refused {
             }
             Self::ArmyFull => f.write_str("every slot of the army holds another troop"),
             Self::NoSuchContract { id } => write!(f, "no contract to take on {id:?}"),
+            Self::NotAtCastle => f.write_str("only possible in the king's castle"),
+            Self::NoPromotion {
+                caught,
+                needed: Some(needed),
+            } => write!(
+                f,
+                "the next rank asks for {needed} villains, {caught} are caught"
+            ),
+            Self::NoPromotion { needed: None, .. } => f.write_str("there is no higher rank"),
         }
     }
 }
@@ -230,6 +245,19 @@ pub enum Event {
     ClueGained {
         object: String,
     },
+    /// A band was beaten while its contract was held: a villain caught. `caught` is how many there are now.
+    VillainCaught {
+        band: String,
+        caught: u32,
+    },
+    /// The king gave the hero a rank, or several at once: `rank` is the one he holds now, `ranks` how many he
+    /// rose, and the rest what he has with them.
+    Promoted {
+        rank: String,
+        ranks: u32,
+        leadership: u32,
+        commission: u64,
+    },
     /// The battle ran out of rounds with nobody winning; the hero stays where he stood and the band remains.
     BattleStalled {
         band: String,
@@ -264,6 +292,19 @@ struct Engagement {
     arrival: Cell,
 }
 
+/// Where a hero who serves a king stands with him.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Standing {
+    /// Place of the hero's rank in his class.
+    pub rank: usize,
+    /// What the ranks reached give together.
+    pub leadership: u32,
+    /// Gold from the king every week, likewise.
+    pub commission: u64,
+    /// Bands beaten while their contract was held.
+    pub villains: u32,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Expedition {
     def: Arc<ExpeditionDef>,
@@ -285,6 +326,8 @@ pub struct Expedition {
     cleared: BTreeSet<String>,
     /// The battle being fought, with the band and the cell the hero arrives on if he wins.
     engagement: Option<Engagement>,
+    /// Only in an expedition with a king.
+    standing: Option<Standing>,
     status: Status,
 }
 
@@ -300,7 +343,14 @@ impl Expedition {
                 count: s.count,
             })
             .collect();
+        let standing = def.king.as_ref().map(|_| Standing {
+            rank: 0,
+            leadership: def.leadership,
+            commission: def.clock.weekly_income,
+            villains: 0,
+        });
         Self {
+            standing,
             hero: def.start,
             gold: def.start_gold,
             stock: def.stock.clone(),
@@ -345,6 +395,35 @@ impl Expedition {
     #[must_use]
     pub const fn gold(&self) -> u64 {
         self.gold
+    }
+
+    /// The hero's standing with the king, in an expedition that has one.
+    #[must_use]
+    pub const fn standing(&self) -> Option<&Standing> {
+        self.standing.as_ref()
+    }
+
+    /// The hero's rank, where there is a king to give one.
+    #[must_use]
+    pub fn rank(&self) -> Option<&Rank> {
+        let (king, standing) = (self.def.king.as_ref()?, self.standing.as_ref()?);
+        self.def.rules.classes[king.class].ranks.get(standing.rank)
+    }
+
+    /// The hero's leadership now: what his ranks give, or what the expedition starts with.
+    #[must_use]
+    pub fn leadership(&self) -> u32 {
+        self.standing
+            .as_ref()
+            .map_or(self.def.leadership, |s| s.leadership)
+    }
+
+    /// The gold a week brings now.
+    #[must_use]
+    pub fn weekly_income(&self) -> u64 {
+        self.standing
+            .as_ref()
+            .map_or(self.def.clock.weekly_income, |s| s.commission)
     }
 
     #[must_use]
@@ -518,7 +597,44 @@ impl Expedition {
                 self.search(events);
                 Ok(())
             }
+            Action::Promote => self.promote(events),
         }
+    }
+
+    /// The king's audience: every rank the villains caught have earned is given at once, each adding its
+    /// leadership and commission to what the hero has. It takes no time.
+    fn promote(&mut self, events: &mut Vec<Event>) -> Result<(), Refused> {
+        let def = Arc::clone(&self.def);
+        let (Some(king), Some(standing)) = (&def.king, &mut self.standing) else {
+            return Err(Refused::NotAtCastle);
+        };
+        if self.hero != king.castle {
+            return Err(Refused::NotAtCastle);
+        }
+        let ranks = &def.rules.classes[king.class].ranks;
+        let from = standing.rank;
+        while let Some(next) = ranks.get(standing.rank + 1)
+            && next.villains_needed <= standing.villains
+        {
+            standing.rank += 1;
+            standing.leadership = standing.leadership.saturating_add(next.leadership);
+            standing.commission = standing
+                .commission
+                .saturating_add(u64::from(next.commission));
+        }
+        if standing.rank == from {
+            return Err(Refused::NoPromotion {
+                caught: standing.villains,
+                needed: ranks.get(from + 1).map(|next| next.villains_needed),
+            });
+        }
+        events.push(Event::Promoted {
+            rank: ranks[standing.rank].id.clone(),
+            ranks: u32::try_from(standing.rank - from).unwrap_or(u32::MAX),
+            leadership: standing.leadership,
+            commission: standing.commission,
+        });
+        Ok(())
     }
 
     fn step(&mut self, dx: i32, dy: i32, events: &mut Vec<Event>) -> Result<(), Refused> {
@@ -611,7 +727,7 @@ impl Expedition {
             hero_charges: BTreeMap::new(),
             // Only the rules that know leadership are told the hero's.
             leadership: matches!(def.rules.profile, Profile::Reference(_))
-                .then_some(def.leadership),
+                .then_some(self.leadership()),
             stacks,
         };
         // The loader has checked the layout and every troop, so the battle starts; if it did not, the hero would
@@ -696,6 +812,13 @@ impl Expedition {
         });
         if self.contract.as_deref() == Some(band.as_str()) {
             self.contract = None;
+            if let Some(standing) = &mut self.standing {
+                standing.villains += 1;
+                events.push(Event::VillainCaught {
+                    band: band.clone(),
+                    caught: standing.villains,
+                });
+            }
             if encounter.grants_clue && self.clues.insert(def.objective_id.clone()) {
                 events.push(Event::ClueGained {
                     object: def.objective_id.clone(),
@@ -764,10 +887,10 @@ impl Expedition {
         let already = slot.map_or(0, |i| self.army[i].count);
         // The whole stack, old and new, must be within the leadership; exactly the leadership is within it.
         let health = (u64::from(already) + u64::from(quantity)) * u64::from(troop.hp);
-        if health > u64::from(self.def.leadership) {
+        if health > u64::from(self.leadership()) {
             return Err(Refused::OverLeadership {
                 health,
-                leadership: self.def.leadership,
+                leadership: self.leadership(),
             });
         }
         if slot.is_none() && self.army.len() >= self.def.rules.board.max_stacks_per_side as usize {
@@ -828,7 +951,7 @@ impl Expedition {
     fn pass(&mut self, ticks: u32, events: &mut Vec<Event>) -> Passed {
         let clock = &self.def.clock;
         let (week_ticks, deadline) = (clock.week_ticks, clock.deadline_ticks);
-        let income = clock.weekly_income;
+        let income = self.weekly_income();
         let from = self.ticks;
         let mut passed = Passed::All;
         for done in 1..=ticks {
@@ -913,6 +1036,18 @@ impl Expedition {
             ("stock", Value::Object(stock)),
             ("ticks", self.ticks.into()),
         ]);
+        // Written only where there is a king, so every other expedition is encoded as before.
+        if let (Some(standing), Value::Object(members)) = (&self.standing, &mut value) {
+            members.insert(
+                "standing".to_owned(),
+                Value::object([
+                    ("commission", standing.commission.into()),
+                    ("leadership", standing.leadership.into()),
+                    ("rank", (standing.rank as u64).into()),
+                    ("villains", standing.villains.into()),
+                ]),
+            );
+        }
         // The battle being fought is part of the state, with where it leads.
         if let (Some(engagement), Value::Object(members)) = (&self.engagement, &mut value) {
             members.insert("battle".to_owned(), engagement.battle.to_canon());
@@ -973,7 +1108,20 @@ impl Expedition {
                 arrival: cell("arrival")?,
             }),
         };
+        // Only an expedition with a king has a standing, and it always has.
+        let standing = if def.king.is_some() {
+            let from = state.object("standing")?;
+            Some(Standing {
+                rank: usize::try_from(from.u64("rank")?).unwrap_or(usize::MAX),
+                leadership: from.u32("leadership")?,
+                commission: from.u64("commission")?,
+                villains: from.u32("villains")?,
+            })
+        } else {
+            None
+        };
         let expedition = Self {
+            standing,
             revision: state.u64("revision")?,
             hero: cell("hero")?,
             ticks: state.u32("ticks")?,
@@ -1030,6 +1178,7 @@ impl Expedition {
         if !self.cleared.iter().all(band) || !self.contract.iter().all(band) {
             return invalid("a beaten band or the contract names no band");
         }
+        self.check_standing()?;
         if let Some(unknown) = self.clues.iter().find(|id| def.map.object(id).is_none()) {
             return invalid(format!("a clue names {unknown:?}, which is not on the map"));
         }
@@ -1051,6 +1200,35 @@ impl Expedition {
             }
             (None, _) => Ok(()),
         }
+    }
+
+    /// A standing is what its rank makes it: the leadership and commission of the ranks reached, and at least
+    /// the villains the rank asks for, none of them more than the bands beaten.
+    fn check_standing(&self) -> Result<(), SaveError> {
+        let (Some(king), Some(standing)) = (&self.def.king, &self.standing) else {
+            return if self.def.king.is_none() && self.standing.is_none() {
+                Ok(())
+            } else {
+                invalid("a hero stands with a king exactly when the expedition has one")
+            };
+        };
+        let ranks = &self.def.rules.classes[king.class].ranks;
+        let Some(reached) = ranks.get(..=standing.rank) else {
+            return invalid("the hero holds a rank his class does not have");
+        };
+        let leadership: u64 = reached.iter().map(|r| u64::from(r.leadership)).sum();
+        let commission: u64 = reached.iter().map(|r| u64::from(r.commission)).sum();
+        let earned = reached
+            .last()
+            .is_some_and(|r| r.villains_needed <= standing.villains);
+        if u64::from(standing.leadership) != leadership
+            || standing.commission != commission
+            || !earned
+            || standing.villains as usize > self.cleared.len()
+        {
+            return invalid("the hero's standing is not what his rank and his villains make it");
+        }
+        Ok(())
     }
 
     /// The digest of [`Expedition::to_canon`].

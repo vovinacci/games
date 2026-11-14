@@ -113,6 +113,8 @@ repeat) is a defect to fix, not a result.
   battle being fought, in the canonical encoding, with a checksum, the rules' ID and a hash of the three content files.
   `decode` gives an expedition or one reason (`SaveError`): not a save, another version, damaged, other content, or a
   state the rules cannot reach. Nothing is half loaded.
+- State that only some content has (what a leech began with, the hero's standing with a king) is written only for that
+  content, so that everything else is encoded, and digested, as before.
 - A new field of `Expedition` or `Battle` goes into `to_canon`, `from_canon` and `check` together; the round-trip tests
   (`save/tests.rs`, `bounty-ai/tests/save_battles.rs`, `expedition_routes.rs`) fail when one is forgotten. A change to
   what is written is a new `SCHEMA_VERSION`; there is no migration yet, an older save is refused by its version.
