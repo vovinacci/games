@@ -207,6 +207,19 @@ pub fn describe(event: &Event, battle: &Battle) -> Option<String> {
             gained = *gained,
             count = *count
         ),
+        Event::Scythed {
+            attacker,
+            target,
+            creatures,
+        } => t!(
+            "log-scythed",
+            name = name(attacker),
+            target = name(target),
+            n = *creatures
+        ),
+        Event::Fizzled { attacker, target } => {
+            t!("log-fizzled", name = name(attacker), target = name(target))
+        }
         Event::ControlRegained { stack } => t!("log-control", name = name(stack)),
         Event::SideStarted { .. }
         | Event::ActivationStarted { .. }

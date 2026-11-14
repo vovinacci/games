@@ -155,11 +155,9 @@ Files read: `assets/kings-bounty/game.json` (troop table, morale chart), `docs/O
 
 ### Troops
 
-Twenty-one of the twenty-five: every troop whose rules are here. The other four (Druids, Archmages, Demons, Dragons)
-have an ability that changes the blow itself (the magic shot, the scythe, immunity) and come with it; a troop is never
-fielded without an ability it has. The first three in the repository were Sprites, Wolves and Archers, chosen to cover
-the three roles and to make Low morale reachable (groups A, B and C never give Low among themselves; it needs a troop of
-group D or E).
+All twenty-five. A troop is never fielded without an ability it has: a rules file that names one the rules lack is
+refused. The first three in the repository were Sprites, Wolves and Archers, chosen to cover the three roles and to make
+Low morale reachable (groups A, B and C never give Low among themselves; it needs a troop of group D or E).
 
 | Troop | Role | Skill | Health | Movement | Melee | Shot | Shots | Flies | Abilities | Group | Cost |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -182,8 +180,15 @@ group D or E).
 | Barbarians | melee | 4 | 40 | 3 | 1-6 |  | 0 | no |  | C | 750 |
 | Trolls | melee | 4 | 50 | 1 | 2-5 |  | 0 | no | regeneration | D | 1000 |
 | Cavalry | melee | 4 | 20 | 4 | 3-5 |  | 0 | no |  | B | 800 |
+| Druids | ranged | 5 | 25 | 2 | 2-3 | 10 | 3 | no | magic shot | C | 700 |
+| Archmages | flying | 5 | 25 | 1 | 2-3 | 25 | 2 | yes | magic shot | C | 1200 |
 | Vampires | flying | 5 | 30 | 1 | 3-6 |  | 0 | yes | leech, undead | E | 1500 |
 | Giants | ranged | 5 | 60 | 3 | 10-20 | 5-10 | 6 | no |  | C | 2000 |
+| Demons | flying | 6 | 50 | 1 | 5-7 |  | 0 | yes | scythe | E | 3000 |
+| Dragons | flying | 6 | 200 | 1 | 25-50 |  | 0 | yes | immune | D | 5000 |
+
+A flying troop that also shoots is listed as flying. The reference writes a magic shot as three numbers of which it
+reads the first; here it is that one number.
 
 The troop table is an exception to the rule that the original's numbers stay out of the repository. The maintainer
 allowed it first for three troops, so that the reference rules could be tested in CI, and on 14 November 2026 for the
@@ -208,6 +213,9 @@ campaign reads them). Maps, texts, pictures and the rest of the catalogue stay o
 | U-12 | Absorb (Ghosts): after a blow of the stack, struck back included, the creatures the blow killed join it. There is no limit, so the stack can outgrow the hero's leadership and go out of control. | No abilities. | Where the blow kills the whole target the reference counts the target's number at the start of the turn, not the number the blow killed; here it is what the blow killed, as for U-10. |
 | U-12 | Leech (Vampires): after a blow of the stack, one creature returns for every whole health of its own in what the blow took, which is counted as the full health of the creatures killed plus the injury now on the target. Above the number the stack began the battle with, it has that number and no injury; at or below it, the injury stays. | No abilities. | That the target's earlier injury counts as taken by this blow reads like an accident of the reference's sum; kept, as it is what the reference does. The same doubt about a target killed whole as for Absorb. |
 | U-12 | Undead (Skeletons, Zombies, Ghosts, Vampires): a mark that one spell reads. Nothing else in a battle does; morale treats the undead like any troop. | No abilities. | None known. |
+| U-12 | Scythe (Demons): before every blow of the stack, struck back included, a number from 1 to 100 is rolled; above 89 the scythe takes half the target as it stands, rounded up, at full health each, on top of the blow. It is rolled for before the blow's damage and added after morale has scaled the blow. | No abilities. | The reference's text calls it 11 in 100, which the roll gives; nothing says what the original rolls. |
+| U-12 | Magic shot (Druids, Archmages): the shot's number is fixed and nothing is rolled; skill and morale scale it like any shot. Against an immune troop it does nothing at all, and the shot is spent. | No abilities. | None known. |
+| U-12 | Immune (Dragons): magic shots, and the spells that are not here yet, do nothing to the troop. Arrows and blows do. | No abilities. | None known. |
 | U-06 | A stack is out of control when health of one x count is more than the hero's leadership (equal is still in control). It keeps its turns and counts as an enemy of its own side, until losses bring it back under; checked before every stack acts. | No leadership in battle. | Who moves it during the player's turn is the reference's choice (its computer player). |
 | | Random numbers: a 64-bit generator, state x 25214903917 + 11, the top 32 bits taken modulo the size of the range; a range of one number draws nothing. | A 32-bit generator with rejection. | The modulo favours low numbers slightly; kept as the reference has it. |
 
@@ -223,7 +231,7 @@ campaign reads them). Maps, texts, pictures and the rest of the catalogue stay o
 
 Everything in the table above: turn order by sides with the renewal of flags, the step rule, flight, shots, damage
 scaled by skill with the count from before the exchange, morale by the ported rule, loss and return of control, and the
-reference generator; and the abilities regeneration, absorb and leech.
+reference generator; and every ability of a troop.
 
 A stack that grew by absorbing keeps its number after the battle: the army has what the battle left. What a leech began
 with is part of a saved battle, for the troops that leech and no others, so that every other battle is encoded as it
@@ -260,9 +268,8 @@ decides what the player is told against what the dice do.
 
 ### Not in this subset
 
-Refused on load, not approximated: hero spells in battle, the abilities that change the blow itself (the demon's scythe,
-magic shots and immunity), artefact powers, siege layout, the random field obstacles of an encounter, spoils. Each comes
-with the first troop or encounter that needs it.
+Refused on load, not approximated: hero spells in battle, artefact powers, siege layout, the random field obstacles of
+an encounter, spoils. Each comes with the first troop or encounter that needs it.
 
 ## A variant, not a source: `modern-v0.1`
 

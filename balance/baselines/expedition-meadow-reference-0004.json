@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "identity": {
+    "engine_revision": "7f32da6",
+    "expedition_id": "meadow-expedition-v1",
+    "ruleset_id": "reference-v0.1",
+    "content_sha256": "3b5c12d6f212e5b5a6127e2b59c15922214a42b65f9908c185b2ee9ca97f7b78",
+    "pilot_version": "approach-v1"
+  },
+  "rows": [
+    {
+      "route_id": "errand",
+      "status": "victory",
+      "elapsed_ticks": 24,
+      "weeks_settled": 1,
+      "gold_start": 3000,
+      "gold_end": 3025,
+      "income": 500,
+      "rewards": 2300,
+      "upkeep": 75,
+      "recruiting": 2700,
+      "lost_in_recovery": 0,
+      "recruited": {
+        "archers": 10,
+        "wolves": 5
+      },
+      "left_unpaid": {},
+      "returned": {},
+      "battles": 2,
+      "battles_won": 2,
+      "battles_stalled": 0,
+      "recoveries": 0,
+      "casualties": {
+        "archers": 7,
+        "sprites": 20,
+        "wolves": 5
+      },
+      "casualties_cost": 2250,
+      "army_end": {
+        "archers": 3
+      },
+      "accepted_commands": 81,
+      "final_digest": "79abf6aaf53d60f0373df1da82c3335818331c6662c17cc03ce3539079a8120f"
+    }
+  ],
+  "problems": []
+}

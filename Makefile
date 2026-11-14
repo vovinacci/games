@@ -26,8 +26,8 @@ BALANCE_SUITES = suite:bounty-balance:prototype-0001 reference-suite:bounty-bala
 	modern-suite:bounty-balance-modern:modern-0001
 # The expeditions whose routes are played: the folder under content/, the rules it is played under (a folder
 # under content/, or - for the rules the expedition names) and the baseline.
-BALANCE_EXPEDITIONS = demo:-:expedition-demo-0001 meadow:reference:expedition-meadow-reference-0003 \
-	meadow:modern:expedition-meadow-modern-0003
+BALANCE_EXPEDITIONS = demo:-:expedition-demo-0001 meadow:reference:expedition-meadow-reference-0004 \
+	meadow:modern:expedition-meadow-modern-0004
 
 .PHONY: balance
 balance: ## Play the fixed battles and expedition routes; reports in target/bounty-*.json

@@ -21,8 +21,12 @@
     "barbarians": 750,
     "trolls": 1000,
     "cavalry": 800,
+    "druids": 700,
+    "archmages": 1200,
     "vampires": 1500,
-    "giants": 2000
+    "giants": 2000,
+    "demons": 3000,
+    "dragons": 5000
   },
   "note": "Prices for valuing losses: the troops' recruit costs in content/reference/rules.json, frozen here. The other definitions are those of metrics.json."
 }

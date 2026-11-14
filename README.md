@@ -12,7 +12,7 @@ contract, a clue and a prize to find before time runs out, all under invented te
 command and goes on at the next start. `--expedition meadow` plays a second small expedition on the three reference
 troops, under `--rules reference` or `--rules modern`. One battle by itself:
 `cargo run -p bounty-app -- --rules prototype`, or `--rules reference` under the first rules taken from another remake
-of the original (twenty-one troops so far; `--scenario morale_sprites_wolves`, `loss_of_control`, `loss_of_control_deep`
+of the original (all twenty-five troops; `--scenario morale_sprites_wolves`, `loss_of_control`, `loss_of_control_deep`
 or `overmatch` for other battles), or `--rules modern` under those rules with this game's own changes, which play the
 same battles. The campaign of the original is still to come.
 

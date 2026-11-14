@@ -4,7 +4,7 @@
 
 use std::collections::BTreeMap;
 
-use super::reference::stack;
+use super::reference::{damage_events, stack};
 use super::*;
 use crate::content::{Ability, StackStart};
 
@@ -47,6 +47,9 @@ fn the_troops_carry_their_abilities() {
     assert_eq!(of("ghosts"), [Ability::Absorb, Ability::Undead]);
     assert_eq!(of("vampires"), [Ability::Leech, Ability::Undead]);
     assert_eq!(of("skeletons"), [Ability::Undead]);
+    assert_eq!(of("demons"), [Ability::Scythe]);
+    assert_eq!(of("druids"), [Ability::MagicShot]);
+    assert_eq!(of("dragons"), [Ability::Immune]);
     assert_eq!(of("wolves"), []);
 }
 
@@ -178,4 +181,101 @@ fn the_number_a_leech_began_with_is_saved() {
     assert_eq!(text.matches("began_with").count(), 1, "only the Vampires'");
     let without = Value::parse(&text.replace(r#""began_with":20,"#, "")).unwrap();
     assert!(Battle::from_canon(rules(), &without).is_err());
+}
+
+fn scythed(events: &[Event]) -> Vec<(&str, u32)> {
+    events
+        .iter()
+        .filter_map(|e| match e {
+            Event::Scythed {
+                target, creatures, ..
+            } => Some((target.as_str(), *creatures)),
+            _ => None,
+        })
+        .collect()
+}
+
+// Demons (skill 6): before each of their blows a number from 1 to 100 is rolled, and above 89 the scythe takes
+// half the target, rounded up, on top of the blow. Struck back, they roll for it as well.
+#[test]
+fn the_scythe_takes_half_the_target_on_a_roll_above_89() {
+    let demons_on_militia = || {
+        fight(vec![
+            stack("p0", "demons", 2, 1, 2),
+            stack("e0", "militia", 21, 2, 2),
+        ])
+    };
+    // 89 is not enough: the blow alone, 5 x 2 x (6 + 5 - 2) / 10 = 9, four Militia and an injury of 1.
+    // The answer, from 21: 1 x 21 x (2 + 5 - 6) / 10 = 2.
+    let mut b = demons_on_militia();
+    let events = apply_forced(&mut b, melee("e0"), &[89, 5, 1]).unwrap();
+    assert_eq!(scythed(&events), []);
+    assert_eq!(
+        (count_and_injury(&b, "p0"), count_and_injury(&b, "e0")),
+        ((2, 2), (17, 1))
+    );
+    // The Militia's turn: 1 x 17 x 1 / 10 = 1, an injury of 3 now. The Demons answer and roll 100: half of 17 is
+    // 9, eighteen health, with the blow's 9 and the 1 from before 28: fourteen Militia die.
+    let events = apply_forced(&mut b, melee("p0"), &[1, 100, 5]).unwrap();
+    assert_eq!(scythed(&events), [("e0", 9)]);
+    assert_eq!(
+        (count_and_injury(&b, "p0"), count_and_injury(&b, "e0")),
+        ((2, 3), (3, 0))
+    );
+
+    // 90 is: half of 21 is 11, twenty-two health, with the blow's 9 thirty-one: fifteen die, one is hurt by 1.
+    let mut b = demons_on_militia();
+    let events = apply_forced(&mut b, melee("e0"), &[90, 5, 1]).unwrap();
+    assert_eq!(scythed(&events), [("e0", 11)]);
+    assert_eq!(
+        damage_events(&events)[0],
+        (5, 2, 31, 15, 6, 1, false),
+        "the blow's damage has the scythe's in it"
+    );
+    let fell = events
+        .iter()
+        .position(|e| matches!(e, Event::Scythed { .. }));
+    let blow = events
+        .iter()
+        .position(|e| matches!(e, Event::Damage { .. }));
+    assert!(fell < blow, "the scythe is told before the blow");
+}
+
+// Druids (skill 5): a magic shot is one number, with nothing rolled: 10 x 3 x (5 + 5 - 2) / 10 = 24, twelve Militia.
+#[test]
+fn a_magic_shot_is_a_fixed_number() {
+    let mut b = fight(vec![
+        stack("p0", "druids", 3, 0, 0),
+        stack("e0", "militia", 30, 5, 4),
+    ]);
+    let drawn = b.rng_state();
+    let events = act(&mut b, shoot("e0")).unwrap();
+    assert_eq!(damage_events(&events), [(10, 3, 24, 12, 18, 0, false)]);
+    assert_eq!(b.rng_state(), drawn, "nothing was rolled");
+    assert_eq!(b.stack("p0").unwrap().shots, 2);
+}
+
+// Dragons: magic does nothing to them. The shot is spent all the same and the turn is over. An arrow is no magic.
+#[test]
+fn a_magic_shot_does_nothing_to_the_immune_and_an_arrow_does() {
+    let mut b = fight(vec![
+        stack("p0", "druids", 3, 0, 0),
+        stack("p1", "archers", 10, 0, 2),
+        stack("e0", "dragons", 2, 5, 4),
+    ]);
+    let events = act(&mut b, shoot("e0")).unwrap();
+    assert!(
+        events.contains(&Event::Fizzled {
+            attacker: "p0".to_owned(),
+            target: "e0".to_owned(),
+        }),
+        "{events:?}"
+    );
+    assert_eq!(damage_events(&events), []);
+    assert_eq!(b.stack("p0").unwrap().shots, 2, "the shot is spent");
+    assert_eq!(count_and_injury(&b, "e0"), (2, 0));
+    assert_eq!(b.active().unwrap().stack, "p1", "and the turn is over");
+    // Ten Archers (skill 2): 3 x 10 x (2 + 5 - 6) / 10 = 3.
+    let events = apply_forced(&mut b, shoot("e0"), &[3]).unwrap();
+    assert_eq!(damage_events(&events), [(3, 10, 3, 0, 2, 3, false)]);
 }

@@ -507,8 +507,7 @@ fn troop(from: FileTroop, flights: u32) -> Result<Troop, ContentError> {
     let mut abilities = Vec::new();
     for name in &from.abilities {
         let Some(ability) = Ability::ALL.into_iter().find(|a| a.name() == name) else {
-            // The abilities that change the blow itself (the scythe, magic shots, immunity) are not here yet;
-            // a troop with one is refused, not fielded without it.
+            // A troop is refused, not fielded without an ability its file gives it.
             return invalid(format!(
                 "troop {id:?} has the ability {name:?}, which these rules do not have"
             ));
@@ -517,6 +516,14 @@ fn troop(from: FileTroop, flights: u32) -> Result<Troop, ContentError> {
             return invalid(format!("troop {id:?} names the ability {name:?} twice"));
         }
         abilities.push(ability);
+    }
+    // The reference keeps a magic shot as one number; a range would ask for a roll it never makes.
+    if abilities.contains(&Ability::MagicShot)
+        && !matches!((from.ranged_min, from.ranged_max), (Some(min), Some(max)) if min == max)
+    {
+        return invalid(format!(
+            "troop {id:?} has a magic shot, which is one number: ranged_min and ranged_max the same"
+        ));
     }
     Ok(Troop {
         id: from.id,
@@ -597,23 +604,22 @@ mod tests {
         Rules::from_json(&REFERENCE.replacen(old, new, 1))
     }
 
-    // Every troop but the four whose ability changes the blow itself (Druids, Archmages, Demons, Dragons): those
-    // come with the scythe, the magic shot and immunity.
+    // The whole table of the original's troops.
     #[test]
-    fn the_reference_file_has_the_troops_whose_rules_exist() {
+    fn the_reference_file_has_all_twenty_five_troops() {
         let rules = Rules::from_json(REFERENCE).unwrap();
-        assert_eq!(rules.troops.len(), 21);
+        assert_eq!(rules.troops.len(), 25);
         let ids = |keep: &dyn Fn(&Troop) -> bool| -> Vec<&str> {
             let kept = rules.troops.iter().filter(|t| keep(t));
             kept.map(|t| t.id.as_str()).collect()
         };
         assert_eq!(
             ids(&|t| t.ranged().is_some()),
-            ["orcs", "archers", "elves", "giants"]
+            ["orcs", "archers", "elves", "druids", "archmages", "giants"]
         );
         assert_eq!(
             ids(&|t| t.flights_per_activation > 0),
-            ["sprites", "vampires"]
+            ["sprites", "archmages", "vampires", "demons", "dragons"]
         );
         assert_eq!(
             ids(&|t| t.has(Ability::Undead)),
@@ -631,11 +637,25 @@ mod tests {
     // A troop is never fielded without an ability its file gives it: one these rules do not have is refused.
     #[test]
     fn an_ability_the_rules_do_not_have_is_refused() {
-        for unknown in ["scythe", "magic_shot", "immune", "Regeneration"] {
+        for unknown in ["breath", "Regeneration", "fly"] {
             let error = with(r#""regeneration""#, &format!("{unknown:?}")).unwrap_err();
             assert!(error.to_string().contains(unknown), "{error}");
         }
         assert!(with(r#""regeneration""#, r#""regeneration", "regeneration""#).is_err());
+    }
+
+    // A magic shot is one number: with a range, or on a troop that does not shoot, the file is refused.
+    #[test]
+    fn a_magic_shot_needs_one_number_to_shoot_with() {
+        assert!(with(r#""regeneration""#, r#""magic_shot""#).is_err());
+        let error = with(
+            r#""ranged_min": 10,
+      "ranged_max": 10,"#,
+            r#""ranged_min": 10,
+      "ranged_max": 12,"#,
+        )
+        .unwrap_err();
+        assert!(error.to_string().contains("magic shot"), "{error}");
     }
 
     #[test]
