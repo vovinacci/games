@@ -100,4 +100,5 @@ to get past 0.1.0, means the next release PR releases that number.
 
 ## Not here yet
 
-Nothing has been released: neither the workflow nor the game updating itself has met a real release.
+The game updating itself has been seen working on macOS only, with `bounty --update` from a released package (0.1.1 to
+0.1.2). The plain program on Linux and Windows, the AppImage and the key in the window are untried.

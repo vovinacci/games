@@ -580,6 +580,30 @@ mod tests {
         Rules::from_json(&REFERENCE.replacen(old, new, 1))
     }
 
+    // The troops that need no rule beyond flying: the nine with other abilities come with those abilities, and
+    // with them the whole of morale group E.
+    #[test]
+    fn the_reference_file_has_the_sixteen_troops_without_special_abilities() {
+        let rules = Rules::from_json(REFERENCE).unwrap();
+        assert_eq!(rules.troops.len(), 16);
+        let ids = |keep: &dyn Fn(&Troop) -> bool| -> Vec<&str> {
+            let kept = rules.troops.iter().filter(|t| keep(t));
+            kept.map(|t| t.id.as_str()).collect()
+        };
+        assert_eq!(
+            ids(&|t| t.ranged().is_some()),
+            ["orcs", "archers", "elves", "giants"]
+        );
+        assert_eq!(ids(&|t| t.flights_per_activation > 0), ["sprites"]);
+        let groups: std::collections::BTreeSet<usize> =
+            rules.troops.iter().filter_map(|t| t.morale_group).collect();
+        assert_eq!(
+            groups.into_iter().collect::<Vec<_>>(),
+            [0, 1, 2, 3],
+            "A to D"
+        );
+    }
+
     #[test]
     fn the_reference_file_loads_with_its_troops_and_chart() {
         let rules = Rules::from_json(REFERENCE).unwrap();

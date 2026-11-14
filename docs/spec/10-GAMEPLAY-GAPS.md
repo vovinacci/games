@@ -22,7 +22,7 @@ Limits of the measurements, which matter:
 - Rules read from a reimplementation, not observed in the DOS game.
 - No campaign exists yet, so everything about the campaign is Rules or Opinion.
 
-The original's numbers stay out of this document, as out of the repository, except those of the three troops already
+The original's numbers stay out of this document, as out of the repository, except those of the troop table already
 allowed. Where a number would help, the reference's section is named instead.
 
 ## What works, and must survive

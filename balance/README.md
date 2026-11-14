@@ -75,7 +75,7 @@ route whose gold does not add up, that is refused a command or that does not rep
 These are the fixture's own numbers, synthetic like its rules: they pin the engine down and say nothing about the
 original's economy.
 
-`baselines/expedition-meadow-reference-0001.json` and `expedition-meadow-modern-0001.json`: the one route of
+`baselines/expedition-meadow-reference-0002.json` and `expedition-meadow-modern-0002.json`: the one route of
 `content/meadow/`, which hands the whole expedition to the pilot `errand-v1`, under the reference rules and under the
 variant (`--rules` names the rules file; without it the expedition's own are used).
 

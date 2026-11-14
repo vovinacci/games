@@ -155,17 +155,36 @@ Files read: `assets/kings-bounty/game.json` (troop table, morale chart), `docs/O
 
 ### Troops
 
-Three, chosen to cover the three roles and to make Low morale reachable (groups A, B and C never give Low among
-themselves; it needs a troop of group D or E).
+Sixteen of the twenty-five: every troop that needs no rule beyond flying, which is the only ability in this subset. The
+other nine (Skeletons, Zombies, Ghosts, Trolls, Druids, Archmages, Vampires, Demons, Dragons) each have an ability that
+changes a battle, and come with it; so does the whole of morale group E, which is theirs alone. The first three in the
+repository were Sprites, Wolves and Archers, chosen to cover the three roles and to make Low morale reachable (groups A,
+B and C never give Low among themselves; it needs a troop of group D or E).
 
 | Troop | Role | Skill | Health | Movement | Melee | Shot | Shots | Flies | Group | Cost |
 |---|---|---|---|---|---|---|---|---|---|---|
-| Sprites | flying | 1 | 1 | 1 | 1-2 | | 0 | yes | C | 15 |
-| Wolves | melee | 2 | 3 | 3 | 1-3 | | 0 | no | D | 40 |
+| Peasants | melee | 1 | 1 | 1 | 1-1 |  | 0 | no | A | 10 |
+| Sprites | flying | 1 | 1 | 1 | 1-2 |  | 0 | yes | C | 15 |
+| Militia | melee | 2 | 2 | 2 | 1-2 |  | 0 | no | A | 50 |
+| Wolves | melee | 2 | 3 | 3 | 1-3 |  | 0 | no | D | 40 |
+| Gnomes | melee | 2 | 5 | 1 | 1-3 |  | 0 | no | C | 60 |
+| Orcs | ranged | 2 | 5 | 2 | 2-3 | 1-2 | 10 | no | D | 75 |
 | Archers | ranged | 2 | 10 | 2 | 1-2 | 1-3 | 12 | no | B | 250 |
+| Elves | ranged | 3 | 10 | 3 | 1-2 | 2-4 | 24 | no | C | 200 |
+| Pikemen | melee | 3 | 10 | 2 | 2-4 |  | 0 | no | B | 300 |
+| Nomads | melee | 3 | 15 | 2 | 2-4 |  | 0 | no | C | 300 |
+| Dwarves | melee | 3 | 20 | 1 | 2-4 |  | 0 | no | C | 350 |
+| Knights | melee | 5 | 35 | 1 | 6-10 |  | 0 | no | B | 1000 |
+| Ogres | melee | 4 | 40 | 1 | 3-5 |  | 0 | no | D | 750 |
+| Barbarians | melee | 4 | 40 | 3 | 1-6 |  | 0 | no | C | 750 |
+| Cavalry | melee | 4 | 20 | 4 | 3-5 |  | 0 | no | B | 800 |
+| Giants | ranged | 5 | 60 | 3 | 10-20 | 5-10 | 6 | no | C | 2000 |
 
-These numbers are an exception to the rule that the original's numbers stay out of the repository, allowed by the
-maintainer for these three troops so that the reference rules can be tested in CI. The rest of the catalogue stays out.
+The troop table is an exception to the rule that the original's numbers stay out of the repository. The maintainer
+allowed it first for three troops, so that the reference rules could be tested in CI, and on 14 November 2026 for the
+whole table: without it neither the rules nor a troop's ability can be tested or measured on what they are for. It
+covers what a battle and a recruiter need of a troop (the columns above; dwelling, population and growth when the
+campaign reads them). Maps, texts, pictures and the rest of the catalogue stay out.
 
 ### Rules, and how they differ from the prototype
 
