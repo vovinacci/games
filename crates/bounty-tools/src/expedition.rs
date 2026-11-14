@@ -531,7 +531,7 @@ mod tests {
             let report = run(&meadow, "test");
             assert_eq!(report.identity.ruleset_id, format!("{rules}-v0.1"));
             let difference = compare(
-                &recorded(&format!("expedition-meadow-{rules}-0003")),
+                &recorded(&format!("expedition-meadow-{rules}-0004")),
                 &report,
             );
             assert_eq!(difference, Vec::<String>::new(), "{rules}");

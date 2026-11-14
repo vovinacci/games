@@ -358,6 +358,42 @@
       "recruit_cost": 800
     },
     {
+      "id": "druids",
+      "name": "Druids",
+      "skill": 5,
+      "hp": 25,
+      "movement": 2,
+      "melee_min": 2,
+      "melee_max": 3,
+      "ranged_min": 10,
+      "ranged_max": 10,
+      "shots": 3,
+      "flies": false,
+      "abilities": [
+        "magic_shot"
+      ],
+      "morale_group": "C",
+      "recruit_cost": 700
+    },
+    {
+      "id": "archmages",
+      "name": "Archmages",
+      "skill": 5,
+      "hp": 25,
+      "movement": 1,
+      "melee_min": 2,
+      "melee_max": 3,
+      "ranged_min": 25,
+      "ranged_max": 25,
+      "shots": 2,
+      "flies": true,
+      "abilities": [
+        "magic_shot"
+      ],
+      "morale_group": "C",
+      "recruit_cost": 1200
+    },
+    {
       "id": "vampires",
       "name": "Vampires",
       "skill": 5,
@@ -388,6 +424,38 @@
       "flies": false,
       "morale_group": "C",
       "recruit_cost": 2000
+    },
+    {
+      "id": "demons",
+      "name": "Demons",
+      "skill": 6,
+      "hp": 50,
+      "movement": 1,
+      "melee_min": 5,
+      "melee_max": 7,
+      "shots": 0,
+      "flies": true,
+      "abilities": [
+        "scythe"
+      ],
+      "morale_group": "E",
+      "recruit_cost": 3000
+    },
+    {
+      "id": "dragons",
+      "name": "Dragons",
+      "skill": 6,
+      "hp": 200,
+      "movement": 1,
+      "melee_min": 25,
+      "melee_max": 50,
+      "shots": 0,
+      "flies": true,
+      "abilities": [
+        "immune"
+      ],
+      "morale_group": "D",
+      "recruit_cost": 5000
     }
   ],
   "spells": []

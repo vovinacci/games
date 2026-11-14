@@ -974,7 +974,7 @@ fn the_meadow_loads_and_its_mistakes_are_refused() {
         "a flat upkeep and a rule together"
     );
     assert!(
-        refused(r#""troop": "sprites""#, r#""troop": "dragons""#),
+        refused(r#""troop": "sprites""#, r#""troop": "griffins""#),
         "an unknown troop in a band"
     );
     assert!(

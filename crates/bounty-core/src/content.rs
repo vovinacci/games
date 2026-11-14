@@ -136,6 +136,12 @@ pub enum Ability {
     Absorb,
     /// The stack regains creatures by the health its blow takes, up to the number it began the battle with.
     Leech,
+    /// Now and then a blow also takes half the target stack.
+    Scythe,
+    /// The shot is magic: one fixed number with no roll, and nothing at all against the immune.
+    MagicShot,
+    /// Magic does nothing to the troop.
+    Immune,
 }
 
 impl Ability {
@@ -147,10 +153,21 @@ impl Ability {
             Self::Regeneration => "regeneration",
             Self::Absorb => "absorb",
             Self::Leech => "leech",
+            Self::Scythe => "scythe",
+            Self::MagicShot => "magic_shot",
+            Self::Immune => "immune",
         }
     }
 
-    pub const ALL: [Self; 4] = [Self::Undead, Self::Regeneration, Self::Absorb, Self::Leech];
+    pub const ALL: [Self; 7] = [
+        Self::Undead,
+        Self::Regeneration,
+        Self::Absorb,
+        Self::Leech,
+        Self::Scythe,
+        Self::MagicShot,
+        Self::Immune,
+    ];
 }
 
 /// What a troop is; how many there are and how hurt they are is in `battle::Stack`.

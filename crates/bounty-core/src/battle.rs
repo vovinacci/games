@@ -256,6 +256,17 @@ pub enum Event {
         removed: u32,
         injury: u32,
     },
+    /// The scythe fell: on top of the blow that follows, `creatures` of the target die, half of it rounded up.
+    Scythed {
+        attacker: String,
+        target: String,
+        creatures: u32,
+    },
+    /// A magic shot at a troop that magic does nothing to: the shot is spent and nothing else happens.
+    Fizzled {
+        attacker: String,
+        target: String,
+    },
     /// Creatures joined a stack after its blow: those it killed (absorb) or as many as the health it took
     /// restores (leech). `count` and `injury` are the stack's afterwards.
     Grew {
@@ -293,6 +304,8 @@ struct Blow {
     damage: u64,
     retaliation: bool,
     morale: Option<Morale>,
+    /// Creatures of the target the scythe takes on top; their health is already in `damage`.
+    scythed: u32,
 }
 
 /// Whether two stacks fight each other: stacks of different sides do, and a stack out of control fights everyone.
@@ -774,6 +787,15 @@ impl Battle {
             return Err(RuleError::EnemyAdjacent);
         }
         self.stacks[actor].shots -= 1;
+        let has = |stack: usize, ability| self.rules.troops[self.stacks[stack].troop].has(ability);
+        if has(actor, Ability::MagicShot) && has(defender, Ability::Immune) {
+            events.push(Event::Fizzled {
+                attacker: self.stacks[actor].id.clone(),
+                target: self.stacks[defender].id.clone(),
+            });
+            self.end_activation(events);
+            return Ok(());
+        }
         let count = self.stacks[actor].count;
         let blow = self.blow(actor, defender, count, false, (lo, hi), rolls);
         self.hurt_by(Some(actor), defender, blow, events);
@@ -881,6 +903,7 @@ impl Battle {
                     damage: u64::from(amount),
                     retaliation: false,
                     morale: None,
+                    scythed: 0,
                 };
                 self.hurt_by(None, to, blow, events);
             }
@@ -965,6 +988,16 @@ impl Battle {
         (lo, hi): (u32, u32),
         rolls: Rolls<'_>,
     ) -> Blow {
+        // The scythe is rolled for before the blow, as the reference does it: above 89 of 100 it takes half the
+        // target, rounded up, as the target stands now.
+        let has_scythe = self.rules.troops[self.stacks[from].troop].has(Ability::Scythe);
+        let scythed = if has_scythe && rolls(&mut self.rng, 1, 100) > 89 {
+            self.stacks[to].count.div_ceil(2)
+        } else {
+            0
+        };
+        let taken_whole =
+            u64::from(scythed) * u64::from(self.rules.troops[self.stacks[to].troop].hp);
         let dice = if self.switches().two_rolls { 2 } else { 1 };
         let roll = (0..dice).map(|_| rolls(&mut self.rng, lo, hi)).sum::<u32>();
         let attackers = self.fighters(from, count);
@@ -974,9 +1007,10 @@ impl Battle {
                 roll,
                 rolls: dice,
                 attackers,
-                damage: base,
+                damage: base + taken_whole,
                 retaliation,
                 morale: None,
+                scythed,
             };
         }
         let skill = |stack: usize| self.rules.troops[self.stacks[stack].troop].skill;
@@ -993,9 +1027,10 @@ impl Battle {
             roll,
             rolls: dice,
             attackers,
-            damage,
+            damage: damage + taken_whole,
             retaliation,
             morale,
+            scythed,
         }
     }
 
@@ -1119,9 +1154,17 @@ impl Battle {
             damage,
             retaliation,
             morale,
+            scythed,
         } = blow;
         let hp = self.rules.troops[self.stacks[to].troop].hp;
         let attacker = from.map_or_else(|| "hero".to_owned(), |i| self.stacks[i].id.clone());
+        if scythed > 0 {
+            events.push(Event::Scythed {
+                attacker: attacker.clone(),
+                target: self.stacks[to].id.clone(),
+                creatures: scythed,
+            });
+        }
         let target = &mut self.stacks[to];
         let before = target.count;
         (target.count, target.injury) = health_after(hp, target.count, target.injury, damage);
