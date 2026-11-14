@@ -1,6 +1,6 @@
 [package]
 name = "gamekit"
-version = "0.1.1"
+version = "0.1.2"
 description = "What the games here share around their rules: screen, text, translations, files, the dedication"
 edition.workspace = true
 license.workspace = true
