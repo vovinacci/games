@@ -10,6 +10,7 @@ game only.
 | `gamekit/` | what the games share around their rules: virtual screen, text and font, translations, a game's own files, the dedication, developer aids. Only a game's application depends on it |
 | `tools/` | scripts used by the hooks, CI and releases; `build-linux.sh` and `package.sh` take the game as their first argument |
 | `docs/REPOSITORY.md` | GitHub settings, rulesets, CI and Dependabot |
+| `docs/RELEASING.md` | how a game is released: tag, workflow, files, update channel, signing key |
 
 ## Rules for every change
 
@@ -99,10 +100,13 @@ for the AppImage, and the icon as PNGs in `icon/` (`<game>-16.png` to `<game>-10
 rest for any game, and name every file `<game>-vX.Y.Z-<system>-<arch>`. The CI build jobs build and package each game as
 a release does, so a broken package shows in a pull request, not on release day.
 
+A release is started by hand from its tag and published by `tools/publish.sh`; `docs/RELEASING.md` has the steps.
+
 ## Not here yet
 
 - NixOS: `shell.nix` is copied from Scorch and has not been run from this repository; there is no flake yet.
-- Releases: packages are built, nothing is published yet. The release workflow, signing and the update channel are next.
+- Releases: the workflow publishes and signs, but no game reads its update channel yet, and nothing has been released.
+  Changelogs and release pull requests are not set up (`docs/RELEASING.md`).
 
 ## Rejected Findings
 

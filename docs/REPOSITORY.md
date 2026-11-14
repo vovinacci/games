@@ -1,8 +1,8 @@
 # GitHub, CI and repository settings
 
-Files: `.github/workflows/ci.yml`, `pr-title.yml`, `.github/dependabot.yml`, the issue templates. There is no pull
-request template on purpose: whatever it held would end up in every commit message. The settings below are made by hand
-(or `gh api`); this page is their record. Change the setting and this page together.
+Files: `.github/workflows/ci.yml`, `release.yml`, `pr-title.yml`, `.github/dependabot.yml`, the issue templates. There
+is no pull request template on purpose: whatever it held would end up in every commit message. The settings below are
+made by hand (or `gh api`); this page is their record. Change the setting and this page together.
 
 ## Repository
 
@@ -38,7 +38,7 @@ request template on purpose: whatever it held would end up in every commit messa
 Weekly, grouped, with a seven-day cooldown: Cargo (`build:`), the Python tools in `requirements.txt` (`build:`) and
 GitHub Actions (`ci:`).
 
-## Not here yet
+## Releases
 
-Release workflow, signing key and per-game channel files: they come with the first application that has something to
-ship.
+`docs/RELEASING.md`: the `Release` workflow, the files of a release, the update channel and the signing key. The
+repository secret `RELEASE_SIGNING_KEY` holds the minisign secret key.
