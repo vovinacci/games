@@ -101,5 +101,9 @@ Only for a change that is meant to move results, in the same pull request as tha
 4. Say in the pull request description what moved and why, with the numbers. That text becomes the commit message, so
    the reason travels with the baseline.
 
+Not for a change that leaves every row as it was. A comparison notes another revision, another rules file or, for an
+expedition, another hash of its content ("run differs: ...") and is still a pass: a troop added to the rules that no
+battle or route meets needs no new baseline.
+
 Never replace a baseline to make a failing check pass without having read why it fails. A report that lists problems (a
 refused command, an outcome the case does not allow, a run that does not repeat) cannot become a baseline.

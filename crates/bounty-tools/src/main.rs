@@ -124,7 +124,11 @@ fn main_inner(args: &[String]) -> Result<ExitCode, String> {
                 let text = fs::read_to_string(&path).map_err(|e| format!("{path}: {e}"))?;
                 serde_json::from_str(&text).map_err(|e| format!("{path}: {e}"))
             };
-            let lines = expedition::compare(&read("--baseline")?, &read("--candidate")?);
+            let (baseline, candidate) = (read("--baseline")?, read("--candidate")?);
+            for note in expedition::notes(&baseline, &candidate) {
+                println!("{note}");
+            }
+            let lines = expedition::compare(&baseline, &candidate);
             for line in &lines {
                 println!("{line}");
             }
