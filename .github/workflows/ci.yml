@@ -71,21 +71,21 @@ jobs:
       - name: Build and package (Linux)
         if: runner.os == 'Linux'
         run: |
-          tools/build-linux.sh bounty
-          tools/package.sh bounty linux x86_64 v0.0.0
+          tools/build-linux.sh
+          tools/package.sh linux x86_64 v0.0.0
       - name: Build and package (Windows)
         if: runner.os == 'Windows'
         shell: bash
         run: |
           cargo build --release --locked -p bounty-app
-          tools/package.sh bounty windows x86_64 v0.0.0
+          tools/package.sh windows x86_64 v0.0.0
       - name: Build and package (macOS)
         if: runner.os == 'macOS'
         run: |
           rustup target add aarch64-apple-darwin x86_64-apple-darwin
           cargo build --release --locked -p bounty-app --target aarch64-apple-darwin
           cargo build --release --locked -p bounty-app --target x86_64-apple-darwin
-          tools/package.sh bounty macos v0.0.0
+          tools/package.sh macos v0.0.0
       - name: What was packaged
         shell: bash
         run: ls -l dist

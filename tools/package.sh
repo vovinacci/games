@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
 #
-# Packages the release build of a game into dist/ for the release workflow.
+# Packages the release build of the game into dist/ for the release workflow.
 #
-#   tools/package.sh <game> linux   <arch> <version>   # target/release/<game> -> tar.gz, AppImage, plain program
-#   tools/package.sh <game> windows <arch> <version>   # target/release/<game>.exe -> zip, plain program
-#   tools/package.sh <game> macos   <version>          # universal <Game>.app from both Apple targets -> zip
+#   tools/package.sh linux   <arch> <version>   # target/release/bounty -> tar.gz, AppImage, plain program
+#   tools/package.sh windows <arch> <version>   # target/release/bounty.exe -> zip, plain program
+#   tools/package.sh macos   <version>          # universal Bounty.app from both Apple targets -> zip
 #
 # <arch> is x86_64 or aarch64; <version> is the version with its v, e.g. v0.1.0, so that every file is named
-# <game>-vX.Y.Z-<os>-<arch>, the name of the release tag with the system after it. What is particular to a game is
-# in packaging/: Info.plist, <game>.desktop and the icon's PNGs. Needs appimagetool for the AppImage
+# bounty-vX.Y.Z-<os>-<arch>. What the packages need is in packaging/: Info.plist, bounty.desktop and the icon's PNGs. Needs appimagetool for the AppImage
 # (APPIMAGETOOL, default "appimagetool"), 7z on Windows, and lipo/iconutil/ditto/codesign on macOS.
 
 set -euf -o pipefail
 export LC_ALL="C.UTF-8"
 PS4='+ $(date -u +%Y-%m-%dT%H:%M:%S%z) ${BASH_SOURCE[0]##*/}:${LINENO}: '
 
-readonly USAGE="usage: package.sh <game> linux|windows <arch> <version> | <game> macos <version>"
+readonly USAGE="usage: package.sh linux|windows <arch> <version> | macos <version>"
+readonly GAME="bounty"
 
 # The game's name as a title: bounty -> Bounty.
 function title-of() {
@@ -104,16 +104,11 @@ function package-macos() {
 }
 
 function main() {
-  local game="${1:?${USAGE}}"
-  if [[ ! -f "packaging/${game}.desktop" ]]; then
-    echo "no game ${game}: packaging/${game}.desktop is missing" >&2
-    exit 1
-  fi
   mkdir -p dist
-  case "${2:-}" in
-    linux) package-linux "${game}" "${@:3}" ;;
-    windows) package-windows "${game}" "${@:3}" ;;
-    macos) package-macos "${game}" "${@:3}" ;;
+  case "${1:-}" in
+    linux) package-linux "${GAME}" "${@:2}" ;;
+    windows) package-windows "${GAME}" "${@:2}" ;;
+    macos) package-macos "${GAME}" "${@:2}" ;;
     *)
       echo "${USAGE}" >&2
       exit 1

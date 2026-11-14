@@ -6,13 +6,13 @@ specification is in `docs/spec/`, and `README.md` gives the reading order.
 | Folder | Contents |
 |---|---|
 | `crates/` | `bounty-core` (rules and state), `bounty-ai` (computer players), `bounty-tools` (developer tools), `bounty-app` (the game: window, keyboard, drawing). Only the application may use graphics and sound |
-| `gamekit/` | what a game needs around its rules, kept apart so that another game can take it: virtual screen, text and font, translations, the game's own files, the dedication, developer aids. Only the application depends on it |
+| `gamekit/` | what a game needs around its rules, kept apart so that another game can take it: virtual screen, text and font, translations, the game's own files, the dedication, the game updating itself, developer aids. Only the application depends on it |
 | `content/`, `prototype/`, `balance/`, `schemas/` | rules and expeditions as data, the engine's test fixtures, the fixed cases with their baselines, JSON schemas |
 | `packaging/` | what the packages need: `Info.plist`, desktop entry, icon |
 | `tools/` | scripts used by the hooks, CI and releases |
 | `docs/spec/` | the specification |
 | `docs/REPOSITORY.md` | GitHub settings, rulesets, CI and Dependabot |
-| `docs/RELEASING.md` | how a release is made: tag, workflow, files, signing key |
+| `docs/RELEASING.md` | how a release is made: release-plz, workflow, files, signing key, the game updating itself |
 
 ## Rules for every change
 
@@ -183,10 +183,11 @@ and ends with `main "$@"`, an empty line and `# EOF` (a truncated file then show
 
 What the packages need is in `packaging/`: `Info.plist` for the macOS bundle, `bounty.desktop` for the AppImage, and the
 icon as PNGs in `icon/` (`bounty-16.png` to `bounty-1024.png`). The scripts in `tools/` do the rest and name every file
-`bounty-vX.Y.Z-<system>-<arch>`; they still take the game's name as their first argument. The CI build jobs build and
-package the game as a release does, so a broken package shows in a pull request, not on release day.
+`bounty-vX.Y.Z-<system>-<arch>`. The CI build jobs build and package the game as a release does, so a broken package
+shows in a pull request, not on release day.
 
-A release is started by hand from its tag and published by `tools/publish.sh`; `docs/RELEASING.md` has the steps.
+Releases are made by release-plz from the Conventional Commits; all crates carry one version, and only the application
+is tagged. `docs/RELEASING.md` has the steps and the reasons.
 
 ## Not here yet
 
@@ -195,8 +196,7 @@ A release is started by hand from its tag and published by `tools/publish.sh`; `
   recruiting, contract, battles with their reward and clue, surrender and recovery, search, save and continue.
   Dwellings, castles, spells on the map, the original's world: not yet.
 - NixOS: `shell.nix` is copied from Scorch and has not been run from this repository; there is no flake yet.
-- Releases: the workflow publishes and signs, but the game does not look for updates yet, and nothing has been released.
-  Changelogs and release pull requests are not set up (`docs/RELEASING.md`).
+- Releases: nothing has been released, so neither the workflow nor the game updating itself has met a real release.
 
 ## Rejected Findings
 

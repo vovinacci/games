@@ -1,5 +1,5 @@
 # NixOS: miniquad loads libGL, libX11, libXi and libxkbcommon at run time (dlopen), so they must be on
-# LD_LIBRARY_PATH. Use: `nix-shell --run "cargo run -p <game>"`; the Makefile does this by itself on NixOS.
+# LD_LIBRARY_PATH. Use: `nix-shell --run "cargo run -p bounty-app"`; the Makefile does this by itself on NixOS.
 #
 # Copied from Scorch and not yet run on NixOS from this repository.
 { pkgs ? import <nixpkgs> { } }:

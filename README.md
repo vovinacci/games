@@ -1,6 +1,6 @@
 # Bounty
 
-[![CI](https://github.com/vovinacci/games/actions/workflows/ci.yml/badge.svg)](https://github.com/vovinacci/games/actions/workflows/ci.yml)
+[![CI](https://github.com/vovinacci/bounty-game/actions/workflows/ci.yml/badge.svg)](https://github.com/vovinacci/bounty-game/actions/workflows/ci.yml)
 [![Licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
 
 A tribute to King's Bounty (1990, DOS): explore, recruit, fight, find the sceptre before time runs out. Rust; the

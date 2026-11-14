@@ -1,0 +1,58 @@
+# Releases: https://release-plz.dev. A release PR bumps the version and writes CHANGELOG.md from Conventional Commits;
+# merging it tags vX.Y.Z and creates the GitHub Release. Nothing is published to crates.io.
+#
+# What is released is the application, but most changes land in the crates it is built from. So all crates carry one
+# version (a version group) and are measured against the same tag: a change in any of them moves the version of all,
+# by what the change is (a feature in the rules is a feature of the game). Only the application has a tag, a GitHub
+# Release and a changelog, which takes the commits of the others in.
+[workspace]
+git_only = true
+git_tag_name = "v{{ version }}"
+git_tag_enable = false
+git_release_enable = false
+changelog_update = false
+release_always = false
+semver_check = false
+# Before 1.0 a new feature still bumps the minor version (0.2.0), so the number shows when something new arrived.
+# Nothing depends on Bounty as a crate, so Cargo's 0.x library convention doesn't apply.
+features_always_increment_minor = true
+# Only features, fixes and performance changes open a release PR; docs, CI and chores wait for the next one.
+release_commits = "^(feat|fix|perf)[(:!]"
+pr_labels = ["release"]
+
+[[package]]
+name = "bounty-app"
+version_group = "bounty"
+git_tag_enable = true
+git_release_enable = true
+git_release_name = "Bounty {{ version }}"
+changelog_update = true
+changelog_path = "CHANGELOG.md"
+changelog_include = ["bounty-ai", "bounty-core", "bounty-tools", "gamekit"]
+
+[[package]]
+name = "bounty-ai"
+version_group = "bounty"
+
+[[package]]
+name = "bounty-core"
+version_group = "bounty"
+
+[[package]]
+name = "bounty-tools"
+version_group = "bounty"
+
+[[package]]
+name = "gamekit"
+version_group = "bounty"
+
+[changelog]
+protect_breaking_commits = true
+commit_parsers = [
+    { message = "^feat", group = "Features" },
+    { message = "^fix", group = "Fixes" },
+    { message = "^perf", group = "Changed" },
+    { message = "^revert", group = "Changed" },
+    { message = "^docs", group = "Documentation" },
+    { message = "^(refactor|style|test|ci|build|chore)", skip = true },
+]
