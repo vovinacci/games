@@ -38,15 +38,14 @@ changelog takes in the commits of the others. The crates' own version numbers me
 
 ### The first release
 
-release-plz finds the last release by its tag. With no tag yet it would keep the version it finds and write notes from
-only a part of the history, so the first tag is made by hand: set the version of every crate in a pull request, then
+There is no release 0.1.0. The tag `v0.1.0` was pushed while the crates still said 0.0.0, on a commit that would have
+built a game calling itself 0.0.0, and tags cannot be moved; so it stays as the mark release-plz counts commits from,
+and the first release is 0.1.1.
 
-```sh
-git fetch origin
-git tag -s v0.1.0 -m "Bounty 0.1.0" origin/main
-git push origin v0.1.0
-gh workflow run release.yml -f tag=v0.1.0
-```
+What that showed about release-plz: it reads the last release from the tag (its commit and the version in `Cargo.toml`
+there), and when `Cargo.toml` on `main` already carries another version than the tagged commit, it proposes exactly that
+version and counts nothing up. So a version is only ever set by the release PR. Setting it by hand, as was needed once
+to get past 0.1.0, means the next release PR releases that number.
 
 ## Files of a release
 

@@ -1,6 +1,6 @@
 [package]
 name = "bounty-ai"
-version = "0.1.0"
+version = "0.1.1"
 description = "Computer players of Bounty: they see what a player sees and answer with a command"
 edition.workspace = true
 license.workspace = true
