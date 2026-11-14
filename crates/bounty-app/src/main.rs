@@ -388,6 +388,13 @@ fn start() -> Result<(Options, Play), String> {
         shot,
         stepped: steps > 0,
     };
+    // The commands played before the first frame are told in the log, so the languages are needed already. A
+    // run with steps reads no settings: the language is the one named, or the system's.
+    if steps > 0 {
+        i18n::init(&words::LANGUAGES);
+        let named = options.language.as_deref().map(i18n::place_of);
+        i18n::set_language(named.unwrap_or_else(i18n::detect));
+    }
     let (rules, scenario) = (dev::arg_after("--rules"), dev::arg_after("--scenario"));
     let expedition = dev::arg_after("--expedition");
     // An expedition when one is named or nothing is; one battle when only rules or a battle are named.
