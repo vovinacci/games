@@ -4,6 +4,9 @@
 //! reference's troops, played under `--rules reference` or `--rules modern`. The player's
 //! stacks by keyboard or mouse, the enemy's by the plain pilot.
 //!
+//! `--update` looks for a newer release, installs it and quits, without a window; a released build also looks at
+//! every start and offers what it finds in the sidebar (key U).
+//!
 //! Developer flags: `--rules prototype|reference|modern` and `--scenario <id>` pick one battle and `--seed <n>` its
 //! seed; `--route <id>` picks a route of the expedition's file for `--steps`; `--lang <id>` the language;
 //! `--steps <n>` plays that many commands first (the pilot's in a battle, the route's in the expedition);
@@ -20,13 +23,14 @@ mod settings;
 mod view;
 mod words;
 
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use bounty_ai::approach_v1;
 use bounty_core::battle::{Action, Battle, Command};
 use bounty_core::campaign::{self, Expedition, ExpeditionDef, Status};
 use bounty_core::content::{Cell, Rules, Scenario, Side};
 use gamekit::dedication::Intro;
+use gamekit::update::{self, Build, Updater};
 use gamekit::{dev, i18n, screen};
 use macroquad::prelude::*;
 
@@ -37,6 +41,20 @@ use crate::settings::Store;
 
 /// The version of this build, as the sidebar shows it and a release is named.
 const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+/// This build, for the updater.
+const BUILD: Build = Build {
+    game: "bounty",
+    version: VERSION,
+};
+
+/// Looks for a newer release while the game runs; the sidebars ask it for its line.
+static UPDATER: OnceLock<Updater> = OnceLock::new();
+
+/// What the sidebar says about updates; nothing while there is no news.
+fn update_line() -> Option<String> {
+    UPDATER.get().and_then(Updater::line)
+}
 
 /// One battle by itself.
 struct Game {
@@ -262,6 +280,11 @@ async fn run(options: Options, mut play: Play) {
         **adventure = Adventure::new(def, saves);
     }
 
+    // A developer's run asks the network nothing.
+    if options.shot.is_none() && !options.stepped {
+        UPDATER.get_or_init(|| Updater::new(BUILD)).check();
+    }
+
     let mut intro = (!settings.dedication_seen && options.shot.is_none()).then(Intro::default);
     let mut frame = 0_u32;
     loop {
@@ -280,6 +303,11 @@ async fn run(options: Options, mut play: Play) {
                 i18n::set_language(next);
                 settings.language = Some(words::LANGUAGES[next].id.to_owned());
                 store.save(&settings);
+            }
+            if is_key_pressed(KeyCode::U)
+                && let Some(updater) = UPDATER.get()
+            {
+                updater.act();
             }
             match &mut play {
                 Play::Battle(game) => {
@@ -390,6 +418,9 @@ fn start() -> Result<(Options, Play), String> {
 }
 
 fn main() {
+    if dev::has_flag("--update") {
+        std::process::exit(update::command_line(BUILD));
+    }
     match start() {
         Ok((options, play)) => {
             macroquad::Window::from_config(screen::window("Bounty"), run(options, play));

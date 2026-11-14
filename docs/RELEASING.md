@@ -75,6 +75,26 @@ One minisign key signs for every game in the repository. The secret half is the 
   game must check those names, and take only a version newer than its own.
 - Losing the key means players update by hand once, to a release that carries a new public key.
 
+## A game updating itself
+
+`gamekit::update` does it for every game; a game gives its name and version and shows one line.
+
+- **Check:** at every start of a released build, in the background: `latest.txt` of the game's channel and its
+  signature. A tag of this game with a newer version shows "Version X is out. U: update" at the foot of the sidebar; a
+  check that fails says nothing. There is no question before the first check and no setting to turn it off yet: Bounty
+  has no settings screen to hold the answer.
+- **Update** (key U, or `<game> --update` without a window): `SHA256SUMS` of that release and its signature, then this
+  system's file, checked against its SHA-256. Only then is the game replaced, and U starts it again.
+  - Linux and Windows: the plain program, swapped in with `self-replace` (which copes with a running program on
+    Windows).
+  - AppImage: the new AppImage replaces the file in `$APPIMAGE`.
+  - macOS: the zip is unpacked next to the `.app` with `ditto`, then the bundles are swapped. A bundle the game
+    downloaded itself carries no quarantine mark.
+- **Off** for a build that is not a release (version `0.0.0`, or one with `+`), for a developer's run (`--shot`,
+  `--steps`), and without `gamekit`'s `self-update` feature, for a packager with updates of its own. HTTPS is rustls
+  with Mozilla's root certificates built in: no OpenSSL, no certificate store of the system.
+- Not tried against a real release yet: the first two releases of Bounty are that test.
+
 ## Supply chain
 
 - Every GitHub Action is pinned to a full commit SHA; the build tools (zig, cargo-zigbuild) are pinned with hashes in
@@ -86,6 +106,5 @@ One minisign key signs for every game in the repository. The secret half is the 
 
 ## Not here yet
 
-- The game does not yet look at its channel; the updater comes next, in `gamekit`.
 - Release notes: a release is created with empty notes. A changelog written from the Conventional Commits, and a release
   pull request that sets the version (release-plz, as Scorch has), are not set up.

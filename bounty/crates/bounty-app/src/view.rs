@@ -346,6 +346,9 @@ pub fn foot(line: &mut impl FnMut(&str, f32, Color)) {
     line(&t!("key-language"), 16.0, GRAY);
     line(&t!("key-quit"), 16.0, GRAY);
     line(&t!("version", v = crate::VERSION), 16.0, DARKGRAY);
+    if let Some(news) = crate::update_line() {
+        line(&news, 16.0, YELLOW);
+    }
 }
 
 fn keys_after_the_battle(line: &mut impl FnMut(&str, f32, Color)) {

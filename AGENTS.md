@@ -7,7 +7,7 @@ game only.
 | Folder | Contents |
 |---|---|
 | `bounty/` | Bounty, a tribute to King's Bounty (1990). Crates under `bounty/crates/`; only the application may use graphics and sound; see `bounty/AGENTS.md` |
-| `gamekit/` | what the games share around their rules: virtual screen, text and font, translations, a game's own files, the dedication, developer aids. Only a game's application depends on it |
+| `gamekit/` | what the games share around their rules: virtual screen, text and font, translations, a game's own files, the dedication, a game updating itself, developer aids. Only a game's application depends on it |
 | `tools/` | scripts used by the hooks, CI and releases; `build-linux.sh` and `package.sh` take the game as their first argument |
 | `docs/REPOSITORY.md` | GitHub settings, rulesets, CI and Dependabot |
 | `docs/RELEASING.md` | how a game is released: tag, workflow, files, update channel, signing key |
@@ -105,7 +105,7 @@ A release is started by hand from its tag and published by `tools/publish.sh`; `
 ## Not here yet
 
 - NixOS: `shell.nix` is copied from Scorch and has not been run from this repository; there is no flake yet.
-- Releases: the workflow publishes and signs, but no game reads its update channel yet, and nothing has been released.
+- Releases: nothing has been released, so neither the workflow nor a game updating itself has met a real release.
   Changelogs and release pull requests are not set up (`docs/RELEASING.md`).
 
 ## Rejected Findings
