@@ -1,6 +1,6 @@
 """Draws Bounty's icon and writes it as PNGs of every size the packages need, into icon/ beside this file.
 
-    python3 bounty/packaging/make_icon.py
+    python3 packaging/make_icon.py
 
 A placeholder made of the game's own marks: the hero's filled circle, a band's hollow square, the prize's diamond.
 Standard library only, so that it runs anywhere; replace the PNGs by an artist's when there are any.

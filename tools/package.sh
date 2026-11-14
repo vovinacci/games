@@ -8,7 +8,7 @@
 #
 # <arch> is x86_64 or aarch64; <version> is the version with its v, e.g. v0.1.0, so that every file is named
 # <game>-vX.Y.Z-<os>-<arch>, the name of the release tag with the system after it. What is particular to a game is
-# in <game>/packaging/: Info.plist, <game>.desktop and the icon's PNGs. Needs appimagetool for the AppImage
+# in packaging/: Info.plist, <game>.desktop and the icon's PNGs. Needs appimagetool for the AppImage
 # (APPIMAGETOOL, default "appimagetool"), 7z on Windows, and lipo/iconutil/ditto/codesign on macOS.
 
 set -euf -o pipefail
@@ -30,7 +30,7 @@ function stage() {
   local game="$1" name="$2"
   rm -rf "dist/${name}"
   mkdir -p "dist/${name}"
-  cp "${game}/README.md" LICENSE "dist/${name}/"
+  cp README.md LICENSE "dist/${name}/"
 }
 
 function package-linux() {
@@ -51,8 +51,8 @@ function package-linux() {
   rm -rf "${app}"
   mkdir -p "${app}/usr/bin"
   cp "target/release/${game}" "${app}/usr/bin/"
-  cp "${game}/packaging/${game}.desktop" "${app}/"
-  cp "${game}/packaging/icon/${game}-256.png" "${app}/${game}.png"
+  cp "packaging/${game}.desktop" "${app}/"
+  cp "packaging/icon/${game}-256.png" "${app}/${game}.png"
   ln -s "usr/bin/${game}" "${app}/AppRun"
   ARCH="${arch}" APPIMAGE_EXTRACT_AND_RUN=1 "${APPIMAGETOOL:-appimagetool}" --no-appstream "${app}" \
     "dist/${title}-${version}-${arch}.AppImage"
@@ -83,14 +83,14 @@ function package-macos() {
   mkdir -p "${app}/Contents/MacOS" "${app}/Contents/Resources"
   lipo -create -output "${app}/Contents/MacOS/${game}" \
     "target/aarch64-apple-darwin/release/${game}" "target/x86_64-apple-darwin/release/${game}"
-  sed "s/@VERSION@/${version#v}/" "${game}/packaging/Info.plist" >"${app}/Contents/Info.plist"
+  sed "s/@VERSION@/${version#v}/" "packaging/Info.plist" >"${app}/Contents/Info.plist"
 
   local iconset="dist/${title}.iconset" size
   rm -rf "${iconset}"
   mkdir -p "${iconset}"
   for size in 16 32 128 256 512; do
-    cp "${game}/packaging/icon/${game}-${size}.png" "${iconset}/icon_${size}x${size}.png"
-    cp "${game}/packaging/icon/${game}-$((size * 2)).png" "${iconset}/icon_${size}x${size}@2x.png"
+    cp "packaging/icon/${game}-${size}.png" "${iconset}/icon_${size}x${size}.png"
+    cp "packaging/icon/${game}-$((size * 2)).png" "${iconset}/icon_${size}x${size}@2x.png"
   done
   iconutil -c icns "${iconset}" -o "${app}/Contents/Resources/${title}.icns"
   rm -rf "${iconset}"
@@ -105,8 +105,8 @@ function package-macos() {
 
 function main() {
   local game="${1:?${USAGE}}"
-  if [[ ! -d "${game}/packaging" ]]; then
-    echo "no game ${game}: ${game}/packaging/ is missing" >&2
+  if [[ ! -f "packaging/${game}.desktop" ]]; then
+    echo "no game ${game}: packaging/${game}.desktop is missing" >&2
     exit 1
   fi
   mkdir -p dist

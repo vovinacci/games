@@ -1,4 +1,4 @@
-# Games: `make` alone lists the targets. Targets are in alphabetical order; each has its .PHONY line beside it.
+# Bounty: `make` alone lists the targets. Targets are in alphabetical order; each has its .PHONY line beside it.
 # Every target works on the whole workspace; pick one crate with cargo's -p (cargo test -p bounty-core).
 
 # On NixOS, cargo runs inside nix-shell so a game finds the libraries it loads at run time (GL, X11). Elsewhere, cargo
@@ -24,37 +24,37 @@ ascii-check: ## Check that code and config are ASCII (see tools/check_ascii.sh)
 # The suites of Bounty: the report each writes under target/ and the baseline it is held to.
 BALANCE_SUITES = suite:bounty-balance:prototype-0001 reference-suite:bounty-balance-reference:reference-0001 \
 	modern-suite:bounty-balance-modern:modern-0001
-# The expeditions whose routes are played: the folder under bounty/content/, the rules it is played under (a
-# folder under bounty/content/, or - for the rules the expedition names) and the baseline.
+# The expeditions whose routes are played: the folder under content/, the rules it is played under (a folder
+# under content/, or - for the rules the expedition names) and the baseline.
 BALANCE_EXPEDITIONS = demo:-:expedition-demo-0001 meadow:reference:expedition-meadow-reference-0001 \
 	meadow:modern:expedition-meadow-modern-0001
 
 .PHONY: balance
-balance: ## Bounty: play the fixed battles and expedition routes; reports in target/bounty-*.json
+balance: ## Play the fixed battles and expedition routes; reports in target/bounty-*.json
 	@for entry in $(BALANCE_SUITES); do \
 		suite=$${entry%%:*}; rest=$${entry#*:}; report=$${rest%%:*}; \
-		cargo run --quiet --release -p bounty-tools -- balance run --suite bounty/balance/$$suite.json \
+		cargo run --quiet --release -p bounty-tools -- balance run --suite balance/$$suite.json \
 			--out target/$$report.json --revision "$$(git describe --always --dirty)" $(BALANCE_ARGS) || exit 1; \
 	done
 	@for entry in $(BALANCE_EXPEDITIONS); do \
 		name=$${entry%%:*}; rest=$${entry#*:}; rules=$${rest%%:*}; baseline=$${rest#*:}; \
-		under=""; [ "$$rules" = - ] || under="--rules bounty/content/$$rules/rules.json"; \
+		under=""; [ "$$rules" = - ] || under="--rules content/$$rules/rules.json"; \
 		cargo run --quiet --release -p bounty-tools -- expedition run \
-			--expedition bounty/content/$$name/expedition.json $$under --out target/bounty-$$baseline.json \
+			--expedition content/$$name/expedition.json $$under --out target/bounty-$$baseline.json \
 			--revision "$$(git describe --always --dirty)" || exit 1; \
 	done
 
 .PHONY: balance-check
-balance-check: balance ## Bounty: compare the fresh reports with the recorded baselines; anything that moved fails
+balance-check: balance ## Compare the fresh reports with the recorded baselines; anything that moved fails
 	@for entry in $(BALANCE_SUITES); do \
 		rest=$${entry#*:}; report=$${rest%%:*}; baseline=$${rest#*:}; \
 		cargo run --quiet --release -p bounty-tools -- balance compare --exact \
-			--baseline bounty/balance/baselines/$$baseline.json --candidate target/$$report.json || exit 1; \
+			--baseline balance/baselines/$$baseline.json --candidate target/$$report.json || exit 1; \
 	done
 	@for entry in $(BALANCE_EXPEDITIONS); do \
 		baseline=$${entry##*:}; \
 		cargo run --quiet --release -p bounty-tools -- expedition compare \
-			--baseline bounty/balance/baselines/$$baseline.json \
+			--baseline balance/baselines/$$baseline.json \
 			--candidate target/bounty-$$baseline.json || exit 1; \
 	done
 

@@ -48,7 +48,7 @@ schema version 2; do not consume old schema-1 reports without an explicit conver
 From repository root:
 
 ```sh
-cargo run -p bounty-tools -- balance run --suite bounty/balance/suite.json --out /tmp/bounty-current.json
+cargo run -p bounty-tools -- balance run --suite balance/suite.json --out /tmp/bounty-current.json
 cargo run -p bounty-tools -- balance compare --baseline <saved-report.json> --candidate /tmp/bounty-current.json
 ```
 

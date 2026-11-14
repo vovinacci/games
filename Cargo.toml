@@ -1,8 +1,7 @@
-# One workspace for all games and the shared kit. Each game lives in its own folder and is released on its own;
-# nothing is published to crates.io.
+# One workspace: the game's crates and the kit it shares with other games. Nothing is published to crates.io.
 [workspace]
 resolver = "3"
-members = ["bounty/crates/bounty-ai", "bounty/crates/bounty-app", "bounty/crates/bounty-core", "bounty/crates/bounty-tools", "gamekit"]
+members = ["crates/bounty-ai", "crates/bounty-app", "crates/bounty-core", "crates/bounty-tools", "gamekit"]
 
 [workspace.package]
 edition = "2024"
@@ -12,9 +11,9 @@ publish = false
 
 # Versions of dependencies are set here once; a crate takes one with `{ workspace = true }`.
 [workspace.dependencies]
-bounty-ai = { path = "bounty/crates/bounty-ai" }
-bounty-core = { path = "bounty/crates/bounty-core" }
-bounty-tools = { path = "bounty/crates/bounty-tools" }
+bounty-ai = { path = "crates/bounty-ai" }
+bounty-core = { path = "crates/bounty-core" }
+bounty-tools = { path = "crates/bounty-tools" }
 fluent-bundle = "0.16.0"
 gamekit = { path = "gamekit" }
 # Without the default "audio" feature: no game plays a sound yet, and sound needs ALSA to build on Linux.

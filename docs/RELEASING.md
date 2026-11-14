@@ -1,14 +1,14 @@
 # Releases
 
-Files: `.github/workflows/release.yml`, `tools/build-linux.sh`, `tools/package.sh`, `tools/publish.sh`,
-`<game>/packaging/`, `gamekit/assets/release-key.pub`.
+Files: `.github/workflows/release.yml`, `tools/build-linux.sh`, `tools/package.sh`, `tools/publish.sh`, `packaging/`,
+`gamekit/assets/release-key.pub`.
 
 Each game is released on its own. A release is a tag `<game>-vX.Y.Z` on `main`, and every file of it carries that name
 with the system after it. No crate is published to crates.io.
 
 ## Making a release
 
-1. Set the version in the game's application (`bounty/crates/bounty-app/Cargo.toml`, and `Cargo.lock` with it) in a pull
+1. Set the version in the game's application (`crates/bounty-app/Cargo.toml`, and `Cargo.lock` with it) in a pull
    request, like any change. The game shows this version on screen.
 2. Tag the merged commit and push the tag. The tag is signed, as commits are:
 
