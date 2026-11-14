@@ -10,8 +10,8 @@ use std::sync::Arc;
 
 use crate::canon::Value;
 use crate::content::{
-    Answer, Cell, ContentError, Morale, Profile, Rules, Scenario, Side, SpellEffect, Switches,
-    Troop,
+    Ability, Answer, Cell, ContentError, Morale, Profile, Rules, Scenario, Side, SpellEffect,
+    Switches, Troop,
 };
 use crate::rng::{Lcg32, Lcg64, Rng};
 use crate::save::{Reader, SaveError, invalid};
@@ -39,6 +39,9 @@ pub struct Stack {
     /// Reference rules: the stack is too large for the hero's leadership. It keeps its turns but is an enemy to
     /// both sides, its own included, until its losses bring it back under.
     pub out_of_control: bool,
+    /// For a troop that regains creatures by leeching: the number it began the battle with, beyond which it
+    /// regains none. `None` for every other troop, which has no use for it.
+    pub began_with: Option<u32>,
 }
 
 impl Stack {
@@ -253,6 +256,14 @@ pub enum Event {
         removed: u32,
         injury: u32,
     },
+    /// Creatures joined a stack after its blow: those it killed (absorb) or as many as the health it took
+    /// restores (leech). `count` and `injury` are the stack's afterwards.
+    Grew {
+        stack: String,
+        gained: u32,
+        count: u32,
+        injury: u32,
+    },
     BattleEnded {
         outcome: Outcome,
     },
@@ -399,6 +410,9 @@ impl Battle {
                 shots: rules.troops[troop].shots,
                 retaliated: false,
                 waited: false,
+                began_with: rules.troops[troop]
+                    .has(Ability::Leech)
+                    .then_some(start.count),
                 out_of_control: start.side == Side::Player
                     && matches!(&rules.profile, Profile::Reference(r) if !r.switches.leadership_caps_fighters)
                     && scenario
@@ -1113,6 +1127,7 @@ impl Battle {
         (target.count, target.injury) = health_after(hp, target.count, target.injury, damage);
         let (id, count, injury, side) =
             (target.id.clone(), target.count, target.injury, target.side);
+        let losses = before - count;
         events.push(Event::Damage {
             attacker,
             target: id.clone(),
@@ -1120,12 +1135,18 @@ impl Battle {
             rolls,
             attackers,
             damage,
-            losses: before - count,
+            losses,
             count,
             injury,
             retaliation,
             morale,
         });
+        if let Some(from) = from {
+            // What the blow took, counted as the reference counts it: the creatures killed, at their full
+            // health, and the injury now on the one left hurt.
+            let taken = u64::from(losses) * u64::from(hp) + u64::from(injury);
+            self.grow_by_the_blow(from, losses, taken, events);
+        }
         if count > 0 {
             return;
         }
@@ -1139,6 +1160,60 @@ impl Battle {
                 Outcome::EnemyWin
             };
             self.finish(outcome, events);
+        }
+    }
+
+    /// What a blow gives back to the stack that struck it, struck back included. Absorb: the creatures it killed
+    /// join the stack, without limit. Leech: one creature for each whole health of its own in what it took; past
+    /// the number it began the battle with it stops there and its injury is gone, as the reference has it.
+    fn grow_by_the_blow(&mut self, from: usize, killed: u32, taken: u64, events: &mut Vec<Event>) {
+        let troop = &self.rules.troops[self.stacks[from].troop];
+        let (absorbs, leeches, hp) = (
+            troop.has(Ability::Absorb),
+            troop.has(Ability::Leech),
+            troop.hp,
+        );
+        let stack = &mut self.stacks[from];
+        if !stack.alive() {
+            return;
+        }
+        let before = stack.count;
+        if absorbs {
+            stack.count = stack.count.saturating_add(killed);
+        }
+        if let (true, Some(most)) = (leeches, stack.began_with) {
+            let regained = u32::try_from(taken / u64::from(hp)).unwrap_or(u32::MAX);
+            let grown = stack.count.saturating_add(regained);
+            if grown > most {
+                // Never fewer than it has: a stack that also absorbed may stand above the number it began with.
+                stack.count = stack.count.max(most);
+                stack.injury = 0;
+            } else {
+                stack.count = grown;
+            }
+        }
+        if stack.count > before {
+            events.push(Event::Grew {
+                stack: stack.id.clone(),
+                gained: stack.count - before,
+                count: stack.count,
+                injury: stack.injury,
+            });
+        }
+    }
+
+    /// Reference rules: when a round begins, a troop that regenerates has no injury left, on either side.
+    fn regenerate(&mut self, events: &mut Vec<Event>) {
+        for stack in &mut self.stacks {
+            let regenerates = self.rules.troops[stack.troop].has(Ability::Regeneration);
+            if regenerates && stack.alive() && stack.injury > 0 {
+                events.push(Event::Healed {
+                    target: stack.id.clone(),
+                    removed: stack.injury,
+                    injury: 0,
+                });
+                stack.injury = 0;
+            }
         }
     }
 
@@ -1210,6 +1285,7 @@ impl Battle {
             }
             self.fill_queue();
             events.push(Event::RoundStarted { round: self.round });
+            self.regenerate(events);
         }
     }
 
@@ -1249,6 +1325,10 @@ impl Battle {
                 ]);
                 if let (true, Value::Object(members)) = (reference, &mut stack) {
                     members.insert("out_of_control".to_owned(), s.out_of_control.into());
+                }
+                // Written only for the troops that have one, so every other battle is encoded as before.
+                if let (Some(began), Value::Object(members)) = (s.began_with, &mut stack) {
+                    members.insert("began_with".to_owned(), began.into());
                 }
                 stack
             })
@@ -1352,6 +1432,12 @@ fn saved_stacks(
                 from.flag("out_of_control")?
             } else {
                 false
+            },
+            // Only a troop that leeches has the number, and it always has.
+            began_with: if rules.troops[troop].has(Ability::Leech) {
+                Some(from.u32("began_with")?)
+            } else {
+                None
             },
         });
     }
@@ -1472,6 +1558,15 @@ impl Battle {
                 return invalid(format!(
                     "stack {id:?} has more shots than its troop starts with"
                 ));
+            }
+            match stack.began_with {
+                Some(began) if troop.has(Ability::Leech) && (began > 0 || !stack.alive()) => {}
+                None if !troop.has(Ability::Leech) => {}
+                _ => {
+                    return invalid(format!(
+                        "stack {id:?} has the number it began with, or lacks it, against its troop"
+                    ));
+                }
             }
             if !stack.alive() {
                 if stack.injury != 0 {

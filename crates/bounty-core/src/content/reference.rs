@@ -6,8 +6,8 @@
 use serde::Deserialize;
 
 use super::{
-    Board, ContentError, MODERN_RULESET, Profile, REFERENCE_RULESET, Rules, Troop, check_board,
-    invalid, only, read, unique,
+    Ability, Board, ContentError, MODERN_RULESET, Profile, REFERENCE_RULESET, Rules, Troop,
+    check_board, invalid, only, read, unique,
 };
 
 /// What a stack's morale does to the damage it deals.
@@ -210,6 +210,8 @@ struct FileTroop {
     ranged_max: Option<u32>,
     shots: u32,
     flies: bool,
+    #[serde(default)]
+    abilities: Vec<String>,
     morale_group: String,
     recruit_cost: u32,
 }
@@ -502,6 +504,20 @@ fn troop(from: FileTroop, flights: u32) -> Result<Troop, ContentError> {
             from.morale_group
         ));
     };
+    let mut abilities = Vec::new();
+    for name in &from.abilities {
+        let Some(ability) = Ability::ALL.into_iter().find(|a| a.name() == name) else {
+            // The abilities that change the blow itself (the scythe, magic shots, immunity) are not here yet;
+            // a troop with one is refused, not fielded without it.
+            return invalid(format!(
+                "troop {id:?} has the ability {name:?}, which these rules do not have"
+            ));
+        };
+        if abilities.contains(&ability) {
+            return invalid(format!("troop {id:?} names the ability {name:?} twice"));
+        }
+        abilities.push(ability);
+    }
     Ok(Troop {
         id: from.id,
         name: from.name,
@@ -516,6 +532,7 @@ fn troop(from: FileTroop, flights: u32) -> Result<Troop, ContentError> {
         recruit_cost: from.recruit_cost,
         skill: from.skill,
         morale_group: Some(group),
+        abilities,
     })
 }
 
@@ -580,12 +597,12 @@ mod tests {
         Rules::from_json(&REFERENCE.replacen(old, new, 1))
     }
 
-    // The troops that need no rule beyond flying: the nine with other abilities come with those abilities, and
-    // with them the whole of morale group E.
+    // Every troop but the four whose ability changes the blow itself (Druids, Archmages, Demons, Dragons): those
+    // come with the scythe, the magic shot and immunity.
     #[test]
-    fn the_reference_file_has_the_sixteen_troops_without_special_abilities() {
+    fn the_reference_file_has_the_troops_whose_rules_exist() {
         let rules = Rules::from_json(REFERENCE).unwrap();
-        assert_eq!(rules.troops.len(), 16);
+        assert_eq!(rules.troops.len(), 21);
         let ids = |keep: &dyn Fn(&Troop) -> bool| -> Vec<&str> {
             let kept = rules.troops.iter().filter(|t| keep(t));
             kept.map(|t| t.id.as_str()).collect()
@@ -594,14 +611,31 @@ mod tests {
             ids(&|t| t.ranged().is_some()),
             ["orcs", "archers", "elves", "giants"]
         );
-        assert_eq!(ids(&|t| t.flights_per_activation > 0), ["sprites"]);
+        assert_eq!(
+            ids(&|t| t.flights_per_activation > 0),
+            ["sprites", "vampires"]
+        );
+        assert_eq!(
+            ids(&|t| t.has(Ability::Undead)),
+            ["skeletons", "zombies", "ghosts", "vampires"]
+        );
         let groups: std::collections::BTreeSet<usize> =
             rules.troops.iter().filter_map(|t| t.morale_group).collect();
         assert_eq!(
             groups.into_iter().collect::<Vec<_>>(),
-            [0, 1, 2, 3],
-            "A to D"
+            [0, 1, 2, 3, 4],
+            "A to E"
         );
+    }
+
+    // A troop is never fielded without an ability its file gives it: one these rules do not have is refused.
+    #[test]
+    fn an_ability_the_rules_do_not_have_is_refused() {
+        for unknown in ["scythe", "magic_shot", "immune", "Regeneration"] {
+            let error = with(r#""regeneration""#, &format!("{unknown:?}")).unwrap_err();
+            assert!(error.to_string().contains(unknown), "{error}");
+        }
+        assert!(with(r#""regeneration""#, r#""regeneration", "regeneration""#).is_err());
     }
 
     #[test]

@@ -660,8 +660,9 @@ impl Expedition {
         };
         for stack in &mut self.army {
             let fought = engagement.battle.stack(&stack.id);
-            let survivors = fought.map_or(0, |fought| fought.count).min(stack.count);
-            let fallen = u64::from(stack.count - survivors);
+            // More than went in, for a stack that grew by what it killed: it keeps them.
+            let survivors = fought.map_or(0, |fought| fought.count);
+            let fallen = u64::from(stack.count.saturating_sub(survivors));
             // At most the fallen, so it fits.
             let back = u32::try_from(fallen * u64::from(returning) / 100).unwrap_or(0);
             stack.count = survivors + back;
