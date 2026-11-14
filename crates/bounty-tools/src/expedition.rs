@@ -393,8 +393,23 @@ pub fn run(def: &Arc<ExpeditionDef>, engine_revision: &str) -> Report {
     report
 }
 
+/// What changed around two runs without being a difference between them: the content they were played on. The
+/// hash covers the whole rules file, so it moves when a troop is added that no route meets; whether a route went
+/// another way is for [`compare`] to say, row by row.
+#[must_use]
+pub fn notes(baseline: &Report, candidate: &Report) -> Vec<String> {
+    let (old, new) = (
+        &baseline.identity.content_sha256,
+        &candidate.identity.content_sha256,
+    );
+    if old == new {
+        return Vec::new();
+    }
+    vec![format!("run differs: content: {old} -> {new}")]
+}
+
 /// What differs between two reports, a line for each; empty when every route went the same way. The engine
-/// revision is expected to differ and is not listed.
+/// revision and the content's hash are expected to differ and are not listed here; [`notes`] tells the second.
 #[must_use]
 pub fn compare(baseline: &Report, candidate: &Report) -> Vec<String> {
     let mut lines = Vec::new();
@@ -406,6 +421,7 @@ pub fn compare(baseline: &Report, candidate: &Report) -> Vec<String> {
     }
     let identity = |report: &Report| Identity {
         engine_revision: String::new(),
+        content_sha256: String::new(),
         ..report.identity.clone()
     };
     if identity(baseline) != identity(candidate) {
@@ -544,6 +560,15 @@ mod tests {
         let mut candidate = baseline.clone();
         candidate.identity.engine_revision = "other".to_owned();
         assert_eq!(compare(&baseline, &candidate), Vec::<String>::new());
+        assert_eq!(notes(&baseline, &candidate), Vec::<String>::new());
+
+        // Other content with the same rows is noted and is no difference; another pilot is one.
+        candidate.identity.content_sha256 = "other".to_owned();
+        assert_eq!(compare(&baseline, &candidate), Vec::<String>::new());
+        assert_eq!(notes(&baseline, &candidate).len(), 1);
+        let mut piloted = baseline.clone();
+        piloted.identity.pilot_version = "other".to_owned();
+        assert_eq!(compare(&baseline, &piloted).len(), 1);
 
         candidate.rows[0].gold_end += 5;
         candidate.rows.remove(1);
