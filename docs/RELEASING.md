@@ -69,9 +69,10 @@ to get past 0.1.0, means the next release PR releases that number.
 `gamekit::update` does it; the game gives its name, repository and version and shows one line.
 
 - **Check:** at every start of a released build, in the background: one request to
-  `github.com/vovinacci/bounty-game/releases/latest`, whose redirect names the latest tag. A newer version shows
-  "Version X is out. U: update" at the foot of the sidebar; a check that fails says nothing. There is no question before
-  the first check and no setting to turn it off yet: the game has no settings screen to hold the answer.
+  `github.com/vovinacci/bounty-game/releases/latest`, whose redirect names the latest tag. A newer version that can be
+  installed (on macOS the game has to run from `Bounty.app`) shows "Version X is out. U: update" at the foot of the
+  sidebar; a check that fails says nothing. There is no question before the first check and no setting to turn it off
+  yet: the game has no settings screen to hold the answer.
 - **Update** (key U, or `bounty --update` without a window): `SHA256SUMS` of that release and its signature, verified
   with the public key built into the game, then this system's file, checked against its SHA-256. Only then is the game
   replaced, and U starts it again.
