@@ -458,5 +458,247 @@
       "recruit_cost": 5000
     }
   ],
-  "spells": []
+  "spells": [],
+  "classes": [
+    {
+      "id": "knight",
+      "name": "Knight",
+      "starting_gold": 7500,
+      "starting_troops": [
+        {
+          "troop": "militia",
+          "count": 20
+        },
+        {
+          "troop": "archers",
+          "count": 2
+        }
+      ],
+      "ranks": [
+        {
+          "id": "knight",
+          "name": "Knight",
+          "villains_needed": 0,
+          "leadership": 100,
+          "max_spells": 2,
+          "spell_power": 1,
+          "commission": 1000,
+          "knows_magic": false,
+          "instant_army": "peasants"
+        },
+        {
+          "id": "general",
+          "name": "General",
+          "villains_needed": 2,
+          "leadership": 100,
+          "max_spells": 3,
+          "spell_power": 1,
+          "commission": 1000,
+          "knows_magic": false,
+          "instant_army": "militia"
+        },
+        {
+          "id": "marshal",
+          "name": "Marshal",
+          "villains_needed": 8,
+          "leadership": 300,
+          "max_spells": 4,
+          "spell_power": 1,
+          "commission": 2000,
+          "knows_magic": false,
+          "instant_army": "archers"
+        },
+        {
+          "id": "lord",
+          "name": "Lord",
+          "villains_needed": 14,
+          "leadership": 500,
+          "max_spells": 5,
+          "spell_power": 2,
+          "commission": 4000,
+          "knows_magic": false,
+          "instant_army": "knights"
+        }
+      ]
+    },
+    {
+      "id": "paladin",
+      "name": "Paladin",
+      "starting_gold": 10000,
+      "starting_troops": [
+        {
+          "troop": "peasants",
+          "count": 20
+        },
+        {
+          "troop": "militia",
+          "count": 20
+        }
+      ],
+      "ranks": [
+        {
+          "id": "paladin",
+          "name": "Paladin",
+          "villains_needed": 0,
+          "leadership": 80,
+          "max_spells": 3,
+          "spell_power": 1,
+          "commission": 1000,
+          "knows_magic": false,
+          "instant_army": "peasants"
+        },
+        {
+          "id": "crusader",
+          "name": "Crusader",
+          "villains_needed": 2,
+          "leadership": 80,
+          "max_spells": 3,
+          "spell_power": 1,
+          "commission": 1000,
+          "knows_magic": false,
+          "instant_army": "militia"
+        },
+        {
+          "id": "avenger",
+          "name": "Avenger",
+          "villains_needed": 7,
+          "leadership": 240,
+          "max_spells": 6,
+          "spell_power": 2,
+          "commission": 2000,
+          "knows_magic": false,
+          "instant_army": "archers"
+        },
+        {
+          "id": "champion",
+          "name": "Champion",
+          "villains_needed": 13,
+          "leadership": 400,
+          "max_spells": 5,
+          "spell_power": 2,
+          "commission": 4000,
+          "knows_magic": false,
+          "instant_army": "cavalry"
+        }
+      ]
+    },
+    {
+      "id": "sorceress",
+      "name": "Sorceress",
+      "starting_gold": 10000,
+      "starting_troops": [
+        {
+          "troop": "peasants",
+          "count": 30
+        },
+        {
+          "troop": "sprites",
+          "count": 10
+        }
+      ],
+      "ranks": [
+        {
+          "id": "sorceress",
+          "name": "Sorceress",
+          "villains_needed": 0,
+          "leadership": 60,
+          "max_spells": 5,
+          "spell_power": 2,
+          "commission": 3000,
+          "knows_magic": true,
+          "instant_army": "sprites"
+        },
+        {
+          "id": "magician",
+          "name": "Magician",
+          "villains_needed": 3,
+          "leadership": 60,
+          "max_spells": 8,
+          "spell_power": 3,
+          "commission": 1000,
+          "knows_magic": false,
+          "instant_army": "gnomes"
+        },
+        {
+          "id": "mage",
+          "name": "Mage",
+          "villains_needed": 6,
+          "leadership": 180,
+          "max_spells": 10,
+          "spell_power": 5,
+          "commission": 1000,
+          "knows_magic": false,
+          "instant_army": "elves"
+        },
+        {
+          "id": "archmage",
+          "name": "Archmage",
+          "villains_needed": 12,
+          "leadership": 300,
+          "max_spells": 12,
+          "spell_power": 5,
+          "commission": 1000,
+          "knows_magic": false,
+          "instant_army": "druids"
+        }
+      ]
+    },
+    {
+      "id": "barbarian",
+      "name": "Barbarian",
+      "starting_gold": 7500,
+      "starting_troops": [
+        {
+          "troop": "wolves",
+          "count": 20
+        }
+      ],
+      "ranks": [
+        {
+          "id": "barbarian",
+          "name": "Barbarian",
+          "villains_needed": 0,
+          "leadership": 100,
+          "max_spells": 2,
+          "spell_power": 0,
+          "commission": 2000,
+          "knows_magic": false,
+          "instant_army": "peasants"
+        },
+        {
+          "id": "chieftain",
+          "name": "Chieftain",
+          "villains_needed": 1,
+          "leadership": 100,
+          "max_spells": 2,
+          "spell_power": 1,
+          "commission": 2000,
+          "knows_magic": false,
+          "instant_army": "wolves"
+        },
+        {
+          "id": "warlord",
+          "name": "Warlord",
+          "villains_needed": 5,
+          "leadership": 300,
+          "max_spells": 3,
+          "spell_power": 1,
+          "commission": 2000,
+          "knows_magic": false,
+          "instant_army": "orcs"
+        },
+        {
+          "id": "overlord",
+          "name": "Overlord",
+          "villains_needed": 10,
+          "leadership": 500,
+          "max_spells": 3,
+          "spell_power": 1,
+          "commission": 2000,
+          "knows_magic": false,
+          "instant_army": "ogres"
+        }
+      ]
+    }
+  ]
 }

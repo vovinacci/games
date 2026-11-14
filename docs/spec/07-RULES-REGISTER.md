@@ -190,11 +190,61 @@ Low morale reachable (groups A, B and C never give Low among themselves; it need
 A flying troop that also shoots is listed as flying. The reference writes a magic shot as three numbers of which it
 reads the first; here it is that one number.
 
-The troop table is an exception to the rule that the original's numbers stay out of the repository. The maintainer
-allowed it first for three troops, so that the reference rules could be tested in CI, and on 14 November 2026 for the
-whole table: without it neither the rules nor a troop's ability can be tested or measured on what they are for. It
-covers what a battle and a recruiter need of a troop (the columns above; dwelling, population and growth when the
-campaign reads them). Maps, texts, pictures and the rest of the catalogue stay out.
+The troop table, and the table of the heroes' classes below, are exceptions to the rule that the original's numbers stay
+out of the repository. The maintainer allowed three troops first, so that the reference rules could be tested in CI; on
+14 November 2026 the whole troop table, and on the same day the classes and their ranks: without them neither the rules,
+nor a troop's ability, nor a hero's promotion can be tested or measured on what they are for. The exception covers what
+a battle and a recruiter need of a troop (the columns above; dwelling, population and growth when the campaign reads
+them) and what the king gives a hero. Maps, texts, pictures and the rest of the catalogue stay out.
+
+### The hero's classes and ranks
+
+Four classes of four ranks each (U-02), read from the reference's `game.json` and its text, section 8. Every number of a
+rank but the villains it asks for is what the rank adds: a hero has the leadership, commission, spells and spell power
+of all the ranks reached, together with whatever was gained elsewhere. The king gives a rank at an audience, once the
+hero has caught the villains it asks for; with enough of them, more than one rank at once.
+
+**Knight**: sets out with 7500 gold and 20 Militia, 2 Archers.
+
+| Rank | Villains | Leadership | Spells | Spell power | Commission | Knows magic | Instant army |
+|---|---|---|---|---|---|---|---|
+| Knight | 0 | 100 | 2 | 1 | 1000 | no | Peasants |
+| General | 2 | 100 | 3 | 1 | 1000 | no | Militia |
+| Marshal | 8 | 300 | 4 | 1 | 2000 | no | Archers |
+| Lord | 14 | 500 | 5 | 2 | 4000 | no | Knights |
+
+**Paladin**: sets out with 10000 gold and 20 Peasants, 20 Militia.
+
+| Rank | Villains | Leadership | Spells | Spell power | Commission | Knows magic | Instant army |
+|---|---|---|---|---|---|---|---|
+| Paladin | 0 | 80 | 3 | 1 | 1000 | no | Peasants |
+| Crusader | 2 | 80 | 3 | 1 | 1000 | no | Militia |
+| Avenger | 7 | 240 | 6 | 2 | 2000 | no | Archers |
+| Champion | 13 | 400 | 5 | 2 | 4000 | no | Cavalry |
+
+**Sorceress**: sets out with 10000 gold and 30 Peasants, 10 Sprites.
+
+| Rank | Villains | Leadership | Spells | Spell power | Commission | Knows magic | Instant army |
+|---|---|---|---|---|---|---|---|
+| Sorceress | 0 | 60 | 5 | 2 | 3000 | yes | Sprites |
+| Magician | 3 | 60 | 8 | 3 | 1000 | no | Gnomes |
+| Mage | 6 | 180 | 10 | 5 | 1000 | no | Elves |
+| Archmage | 12 | 300 | 12 | 5 | 1000 | no | Druids |
+
+**Barbarian**: sets out with 7500 gold and 20 Wolves.
+
+| Rank | Villains | Leadership | Spells | Spell power | Commission | Knows magic | Instant army |
+|---|---|---|---|---|---|---|---|
+| Barbarian | 0 | 100 | 2 | 0 | 2000 | no | Peasants |
+| Chieftain | 1 | 100 | 2 | 1 | 2000 | no | Wolves |
+| Warlord | 5 | 300 | 3 | 1 | 2000 | no | Orcs |
+| Overlord | 10 | 500 | 3 | 1 | 2000 | no | Ogres |
+
+"Knows magic" is set by one class's first rank only; the others learn it at a place on the map. "Instant army" names the
+troop a spell of that name raises at the rank. Neither is read by anything yet: they wait for the spells.
+
+Only the data is here so far. The hero's state, the audience and the promotion come with the expedition that has a
+king's castle.
 
 ### Rules, and how they differ from the prototype
 

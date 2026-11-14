@@ -6,8 +6,8 @@
 use serde::Deserialize;
 
 use super::{
-    Ability, Board, ContentError, MODERN_RULESET, Profile, REFERENCE_RULESET, Rules, Troop,
-    check_board, invalid, only, read, unique,
+    Ability, Board, ContentError, HeroClass, MODERN_RULESET, Profile, REFERENCE_RULESET, Rules,
+    Troop, check_board, invalid, only, read, unique,
 };
 
 /// What a stack's morale does to the damage it deals.
@@ -103,6 +103,7 @@ struct File {
     hero_magic: HeroMagic,
     troops: Vec<FileTroop>,
     spells: Vec<serde_json::Value>,
+    classes: Vec<HeroClass>,
 }
 
 /// Where the values come from. Required, so a reference file cannot lose its source.
@@ -575,6 +576,7 @@ pub(super) fn load(text: &str) -> Result<Rules, ContentError> {
         .into_iter()
         .map(|t| troop(t, flights))
         .collect::<Result<Vec<_>, _>>()?;
+    check_classes(&file.classes, &troops)?;
     Ok(Rules {
         id: file.id,
         battles_id,
@@ -586,7 +588,54 @@ pub(super) fn load(text: &str) -> Result<Rules, ContentError> {
         round_limit: file.round_limit,
         troops,
         spells: Vec::new(),
+        classes: file.classes,
     })
+}
+
+/// A class starts with troops the rules have and rises through ranks that each ask for more villains than the
+/// one before; the first asks for none, being the rank the hero sets out with.
+fn check_classes(classes: &[HeroClass], troops: &[Troop]) -> Result<(), ContentError> {
+    unique("class", classes.iter().map(|c| c.id.as_str()))?;
+    let known = |id: &str| troops.iter().any(|t| t.id == id);
+    for class in classes {
+        let id = &class.id;
+        unique("rank", class.ranks.iter().map(|r| r.id.as_str()))?;
+        unique(
+            "starting troop",
+            class.starting_troops.iter().map(|s| s.troop.as_str()),
+        )?;
+        if class.starting_troops.is_empty()
+            || class
+                .starting_troops
+                .iter()
+                .any(|start| start.count == 0 || !known(&start.troop))
+        {
+            return invalid(format!(
+                "class {id:?} needs starting troops, each known and at least one strong"
+            ));
+        }
+        if class.ranks.first().is_none_or(|r| r.villains_needed != 0) {
+            return invalid(format!(
+                "class {id:?} needs a first rank that asks for no villains"
+            ));
+        }
+        let rising = class
+            .ranks
+            .windows(2)
+            .all(|pair| pair[0].villains_needed < pair[1].villains_needed);
+        if !rising {
+            return invalid(format!(
+                "class {id:?}: each rank must ask for more villains than the one before"
+            ));
+        }
+        if let Some(rank) = class.ranks.iter().find(|r| !known(&r.instant_army)) {
+            return invalid(format!(
+                "rank {:?} of class {id:?} raises the unknown troop {:?}",
+                rank.id, rank.instant_army
+            ));
+        }
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -656,6 +705,61 @@ mod tests {
         )
         .unwrap_err();
         assert!(error.to_string().contains("magic shot"), "{error}");
+    }
+
+    // U-02: four classes of four ranks. A rank's numbers are what it adds; only the villains it asks for stand
+    // as they are.
+    #[test]
+    fn the_reference_file_has_the_four_classes_and_their_ranks() {
+        let rules = Rules::from_json(REFERENCE).unwrap();
+        let ids: Vec<&str> = rules.classes.iter().map(|c| c.id.as_str()).collect();
+        assert_eq!(ids, ["knight", "paladin", "sorceress", "barbarian"]);
+        let knight = rules.class("knight").unwrap();
+        assert_eq!(knight.starting_gold, 7500);
+        let asked: Vec<u32> = knight.ranks.iter().map(|r| r.villains_needed).collect();
+        assert_eq!(asked, [0, 2, 8, 14]);
+        let leadership: u32 = knight.ranks.iter().map(|r| r.leadership).sum();
+        assert_eq!(leadership, 1000, "a Lord's, all four ranks together");
+        let magic = |class: &HeroClass| class.ranks[0].knows_magic;
+        let casters: Vec<&str> = rules
+            .classes
+            .iter()
+            .filter(|c| magic(c))
+            .map(|c| c.id.as_str())
+            .collect();
+        assert_eq!(casters, ["sorceress"]);
+        assert!(rules.class("druid").is_none());
+        assert_eq!(Rules::from_json(PROTOTYPE).unwrap().classes, []);
+    }
+
+    #[test]
+    fn a_class_that_cannot_be_is_refused() {
+        let refused = |old: &str, new: &str, why: &str| {
+            let error = with(old, new).unwrap_err().to_string();
+            assert!(error.contains(why), "{error}");
+        };
+        refused(
+            r#""villains_needed": 0"#,
+            r#""villains_needed": 1"#,
+            "no villains",
+        );
+        refused(
+            r#""villains_needed": 2"#,
+            r#""villains_needed": 0"#,
+            "more villains",
+        );
+        refused(
+            r#""troop": "militia""#,
+            r#""troop": "griffins""#,
+            "starting troops",
+        );
+        refused(r#""count": 20"#, r#""count": 0"#, "starting troops");
+        refused(
+            r#""instant_army": "peasants""#,
+            r#""instant_army": "griffins""#,
+            "unknown troop",
+        );
+        refused(r#""id": "paladin""#, r#""id": "knight""#, "twice");
     }
 
     #[test]
