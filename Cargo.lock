@@ -49,14 +49,14 @@ dependencies = [
 
 [[package]]
 name = "bounty-ai"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "bounty-core",
 ]
 
 [[package]]
 name = "bounty-app"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "bounty-ai",
  "bounty-core",
@@ -67,7 +67,7 @@ dependencies = [
 
 [[package]]
 name = "bounty-core"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -76,7 +76,7 @@ dependencies = [
 
 [[package]]
 name = "bounty-tools"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "bounty-ai",
  "bounty-core",
@@ -289,7 +289,7 @@ dependencies = [
 
 [[package]]
 name = "gamekit"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "fluent-bundle",
  "macroquad",
