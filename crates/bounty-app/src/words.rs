@@ -98,6 +98,18 @@ pub fn describe_campaign(event: &campaign::Event, battle: Option<&Battle>) -> Op
         E::Battle(event) => return describe(event, battle?),
         E::BattleWon { band, reward } => t!("log-won", name = place_name(band), reward = *reward),
         E::ClueGained { .. } => t!("log-clue"),
+        E::VillainCaught { caught, .. } => t!("log-villain", n = *caught),
+        E::Promoted {
+            rank,
+            leadership,
+            commission,
+            ..
+        } => t!(
+            "log-promoted",
+            rank = named("rank", rank),
+            leadership = *leadership,
+            commission = *commission
+        ),
         E::BattleStalled { band } => t!("log-stalled", name = place_name(band)),
         E::Recovered { gold } => t!("log-recovered", gold = *gold),
         E::Ended { status } => status_text(*status),
@@ -129,6 +141,12 @@ pub fn refusal_text(refused: &Refused) -> String {
         ),
         Refused::ArmyFull => t!("refused-army-full"),
         Refused::NoSuchContract { .. } => t!("refused-no-contract"),
+        Refused::NotAtCastle => t!("refused-not-at-castle"),
+        Refused::NoPromotion {
+            caught,
+            needed: Some(needed),
+        } => t!("refused-no-promotion", needed = *needed, caught = *caught),
+        Refused::NoPromotion { needed: None, .. } => t!("refused-top-rank"),
         Refused::Over => t!("refused-over"),
         _ => t!("refused-other"),
     }
@@ -277,6 +295,8 @@ mod tests {
             let expedition = content::expedition_named(name, None).unwrap();
             let objects = expedition.map.objects.iter();
             needed.extend(objects.map(|o| format!("object-{}", o.id)));
+            let ranks = expedition.rules.classes.iter().flat_map(|c| &c.ranks);
+            needed.extend(ranks.map(|r| format!("rank-{}", r.id)));
         }
         needed.extend(
             [Status::Victory, Status::Timeout, Status::Insolvent]

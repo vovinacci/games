@@ -85,6 +85,7 @@
           "kind": {
             "enum": [
               "town",
+              "castle",
               "encounter",
               "objective"
             ]

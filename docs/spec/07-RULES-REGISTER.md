@@ -243,8 +243,25 @@ hero has caught the villains it asks for; with enough of them, more than one ran
 "Knows magic" is set by one class's first rank only; the others learn it at a place on the map. "Instant army" names the
 troop a spell of that name raises at the rank. Neither is read by anything yet: they wait for the spells.
 
-Only the data is here so far. The hero's state, the audience and the promotion come with the expedition that has a
-king's castle.
+How it is carried out here, in an expedition whose file names a king (his castle on the map, the hero's class):
+
+- The hero sets out with what the first rank gives. The file must say the same leadership and weekly income, so that
+  there is one answer to what a Knight starts with.
+- A band beaten while its contract is held is a villain caught; beaten without the contract it is only beaten (gap C4 of
+  `10-GAMEPLAY-GAPS.md` is the reference's rule, kept).
+- In the king's castle the hero asks for his rank. Every rank the villains caught have earned is given at once, each
+  adding its leadership and commission; the commission is the week's income from then on, and recruiting and battles use
+  the new leadership. Asked elsewhere, or with too few villains, or at the highest rank, the command is refused and
+  nothing changes.
+- An audience takes no time. Status: `adopted_deviation`; the reference does not say what an audience costs, and nothing
+  on the way to the castle is free.
+- Spell limit and spell power of a rank are not kept in the hero's state yet. They come with the spells.
+
+An expedition without a king is as it was: leadership and income stay what it starts with, and its saved state is
+written as before. The hero's standing (rank, leadership, commission, villains caught) is written only where there is a
+king, and a save whose standing is not what its rank and villains make it is refused.
+
+No expedition in the repository has a king yet, and the game has no key for the audience: both come next.
 
 ### Rules, and how they differ from the prototype
 

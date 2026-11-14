@@ -934,6 +934,8 @@ fn the_digest_follows_the_state() {
     );
 }
 
+mod king;
+
 const MEADOW: &str = include_str!("../../../../content/meadow/expedition.json");
 const MEADOW_MAP: &str = include_str!("../../../../content/meadow/map.json");
 const REFERENCE: &str = include_str!("../../../../content/reference/rules.json");
