@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.1](https://github.com/vovinacci/bounty-game/compare/v0.0.0...v0.1.1) - 2026-11-14
+## [0.1.1](https://github.com/vovinacci/bounty-game/compare/v0.1.0...v0.1.1) - 2026-11-14
 
 ### Fixes
 
