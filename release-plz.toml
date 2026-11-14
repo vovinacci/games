@@ -19,6 +19,12 @@ features_always_increment_minor = true
 # Only features, fixes and performance changes open a release PR; docs, CI and chores wait for the next one.
 release_commits = "^(feat|fix|perf)[(:!]"
 pr_labels = ["release"]
+# The release PR is squashed like any other, so its description becomes the commit on main and has to pass the same
+# check (tools/check_pr_message.sh): the notes of the release as Markdown, in place of release-plz's own description,
+# which is HTML around a list of five crates with one version.
+pr_body = """
+{% for release in releases %}{% if release.package == "bounty-app" and release.changelog %}{{ release.changelog }}{% endif %}{% endfor %}
+"""
 
 [[package]]
 name = "bounty-app"
