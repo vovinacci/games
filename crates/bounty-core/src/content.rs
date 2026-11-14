@@ -125,6 +125,34 @@ impl Board {
     }
 }
 
+/// What a troop does that the others do not, beyond flying. Reference rules only.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Ability {
+    /// A mark some spells read; nothing in a battle without them does.
+    Undead,
+    /// Injury is gone when a round begins.
+    Regeneration,
+    /// The stack grows by the creatures its blow kills.
+    Absorb,
+    /// The stack regains creatures by the health its blow takes, up to the number it began the battle with.
+    Leech,
+}
+
+impl Ability {
+    /// The name in a rules file.
+    #[must_use]
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Undead => "undead",
+            Self::Regeneration => "regeneration",
+            Self::Absorb => "absorb",
+            Self::Leech => "leech",
+        }
+    }
+
+    pub const ALL: [Self; 4] = [Self::Undead, Self::Regeneration, Self::Absorb, Self::Leech];
+}
+
 /// What a troop is; how many there are and how hurt they are is in `battle::Stack`.
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -152,9 +180,17 @@ pub struct Troop {
     /// Place of the troop's morale group in the morale chart (0 is A). `None` in the prototype.
     #[serde(skip)]
     pub morale_group: Option<usize>,
+    /// Empty in the prototype, whose file cannot set it.
+    #[serde(skip)]
+    pub abilities: Vec<Ability>,
 }
 
 impl Troop {
+    #[must_use]
+    pub fn has(&self, ability: Ability) -> bool {
+        self.abilities.contains(&ability)
+    }
+
     /// The damage range of a shot, for a troop that can shoot at all.
     #[must_use]
     pub fn ranged(&self) -> Option<(u32, u32)> {

@@ -6,6 +6,8 @@
     "sprites": 15,
     "militia": 50,
     "wolves": 40,
+    "skeletons": 40,
+    "zombies": 50,
     "gnomes": 60,
     "orcs": 75,
     "archers": 250,
@@ -13,10 +15,13 @@
     "pikemen": 300,
     "nomads": 300,
     "dwarves": 350,
+    "ghosts": 400,
     "knights": 1000,
     "ogres": 750,
     "barbarians": 750,
+    "trolls": 1000,
     "cavalry": 800,
+    "vampires": 1500,
     "giants": 2000
   },
   "note": "Prices for valuing losses: the troops' recruit costs in content/reference/rules.json, frozen here. The other definitions are those of metrics.json."

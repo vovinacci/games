@@ -196,7 +196,8 @@ is tagged. `docs/RELEASING.md` has the steps and the reasons.
   recruiting, contract, battles with their reward and clue, surrender and recovery, search, save and continue.
   Dwellings, castles, spells on the map, the original's world: not yet.
 - NixOS: `shell.nix` is copied from Scorch and has not been run from this repository; there is no flake yet.
-- The nine troops with an ability other than flying, and with them morale group E (`docs/spec/07-RULES-REGISTER.md`).
+- The four troops whose ability changes the blow itself: Druids, Archmages, Demons, Dragons
+  (`docs/spec/07-RULES-REGISTER.md`).
 - Updating itself is proven on macOS only, from the command line; Linux, Windows and the key in the window are untried.
 
 ## Rejected Findings

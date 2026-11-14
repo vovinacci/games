@@ -127,6 +127,38 @@
       "recruit_cost": 40
     },
     {
+      "id": "skeletons",
+      "name": "Skeletons",
+      "skill": 2,
+      "hp": 3,
+      "movement": 2,
+      "melee_min": 1,
+      "melee_max": 2,
+      "shots": 0,
+      "flies": false,
+      "abilities": [
+        "undead"
+      ],
+      "morale_group": "E",
+      "recruit_cost": 40
+    },
+    {
+      "id": "zombies",
+      "name": "Zombies",
+      "skill": 2,
+      "hp": 5,
+      "movement": 1,
+      "melee_min": 2,
+      "melee_max": 2,
+      "shots": 0,
+      "flies": false,
+      "abilities": [
+        "undead"
+      ],
+      "morale_group": "E",
+      "recruit_cost": 50
+    },
+    {
       "id": "gnomes",
       "name": "Gnomes",
       "skill": 2,
@@ -224,6 +256,23 @@
       "recruit_cost": 350
     },
     {
+      "id": "ghosts",
+      "name": "Ghosts",
+      "skill": 4,
+      "hp": 10,
+      "movement": 3,
+      "melee_min": 3,
+      "melee_max": 4,
+      "shots": 0,
+      "flies": false,
+      "abilities": [
+        "absorb",
+        "undead"
+      ],
+      "morale_group": "E",
+      "recruit_cost": 400
+    },
+    {
       "id": "knights",
       "name": "Knights",
       "skill": 5,
@@ -263,6 +312,22 @@
       "recruit_cost": 750
     },
     {
+      "id": "trolls",
+      "name": "Trolls",
+      "skill": 4,
+      "hp": 50,
+      "movement": 1,
+      "melee_min": 2,
+      "melee_max": 5,
+      "shots": 0,
+      "flies": false,
+      "abilities": [
+        "regeneration"
+      ],
+      "morale_group": "D",
+      "recruit_cost": 1000
+    },
+    {
       "id": "cavalry",
       "name": "Cavalry",
       "skill": 4,
@@ -274,6 +339,23 @@
       "flies": false,
       "morale_group": "B",
       "recruit_cost": 800
+    },
+    {
+      "id": "vampires",
+      "name": "Vampires",
+      "skill": 5,
+      "hp": 30,
+      "movement": 1,
+      "melee_min": 3,
+      "melee_max": 6,
+      "shots": 0,
+      "flies": true,
+      "abilities": [
+        "leech",
+        "undead"
+      ],
+      "morale_group": "E",
+      "recruit_cost": 1500
     },
     {
       "id": "giants",

@@ -196,6 +196,17 @@ pub fn describe(event: &Event, battle: &Battle) -> Option<String> {
         Event::Healed {
             target, removed, ..
         } => t!("log-healed", name = name(target), removed = *removed),
+        Event::Grew {
+            stack,
+            gained,
+            count,
+            ..
+        } => t!(
+            "log-grew",
+            name = name(stack),
+            gained = *gained,
+            count = *count
+        ),
         Event::ControlRegained { stack } => t!("log-control", name = name(stack)),
         Event::SideStarted { .. }
         | Event::ActivationStarted { .. }

@@ -438,8 +438,9 @@ mod tests {
             for stack in &mut scenario.stacks {
                 let troop = if stack.slot == 0 { first } else { second };
                 stack.troop_id.clone_from(troop);
-                // About the same health on the field whatever the troop.
-                stack.count = (200 / rules.troop(troop).unwrap().hp).max(1);
+                // About the same health on the field whatever the troop, and enough of it that a blow kills: a
+                // handful of Trolls that only hurt each other heal every round and never finish.
+                stack.count = (2000 / rules.troop(troop).unwrap().hp).max(1);
             }
             let mut battle = Battle::start(Arc::clone(&rules), &scenario, None).unwrap();
             let mut tape = Tape::new(&scenario, 7);

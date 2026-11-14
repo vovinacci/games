@@ -155,30 +155,35 @@ Files read: `assets/kings-bounty/game.json` (troop table, morale chart), `docs/O
 
 ### Troops
 
-Sixteen of the twenty-five: every troop that needs no rule beyond flying, which is the only ability in this subset. The
-other nine (Skeletons, Zombies, Ghosts, Trolls, Druids, Archmages, Vampires, Demons, Dragons) each have an ability that
-changes a battle, and come with it; so does the whole of morale group E, which is theirs alone. The first three in the
-repository were Sprites, Wolves and Archers, chosen to cover the three roles and to make Low morale reachable (groups A,
-B and C never give Low among themselves; it needs a troop of group D or E).
+Twenty-one of the twenty-five: every troop whose rules are here. The other four (Druids, Archmages, Demons, Dragons)
+have an ability that changes the blow itself (the magic shot, the scythe, immunity) and come with it; a troop is never
+fielded without an ability it has. The first three in the repository were Sprites, Wolves and Archers, chosen to cover
+the three roles and to make Low morale reachable (groups A, B and C never give Low among themselves; it needs a troop of
+group D or E).
 
-| Troop | Role | Skill | Health | Movement | Melee | Shot | Shots | Flies | Group | Cost |
-|---|---|---|---|---|---|---|---|---|---|---|
-| Peasants | melee | 1 | 1 | 1 | 1-1 |  | 0 | no | A | 10 |
-| Sprites | flying | 1 | 1 | 1 | 1-2 |  | 0 | yes | C | 15 |
-| Militia | melee | 2 | 2 | 2 | 1-2 |  | 0 | no | A | 50 |
-| Wolves | melee | 2 | 3 | 3 | 1-3 |  | 0 | no | D | 40 |
-| Gnomes | melee | 2 | 5 | 1 | 1-3 |  | 0 | no | C | 60 |
-| Orcs | ranged | 2 | 5 | 2 | 2-3 | 1-2 | 10 | no | D | 75 |
-| Archers | ranged | 2 | 10 | 2 | 1-2 | 1-3 | 12 | no | B | 250 |
-| Elves | ranged | 3 | 10 | 3 | 1-2 | 2-4 | 24 | no | C | 200 |
-| Pikemen | melee | 3 | 10 | 2 | 2-4 |  | 0 | no | B | 300 |
-| Nomads | melee | 3 | 15 | 2 | 2-4 |  | 0 | no | C | 300 |
-| Dwarves | melee | 3 | 20 | 1 | 2-4 |  | 0 | no | C | 350 |
-| Knights | melee | 5 | 35 | 1 | 6-10 |  | 0 | no | B | 1000 |
-| Ogres | melee | 4 | 40 | 1 | 3-5 |  | 0 | no | D | 750 |
-| Barbarians | melee | 4 | 40 | 3 | 1-6 |  | 0 | no | C | 750 |
-| Cavalry | melee | 4 | 20 | 4 | 3-5 |  | 0 | no | B | 800 |
-| Giants | ranged | 5 | 60 | 3 | 10-20 | 5-10 | 6 | no | C | 2000 |
+| Troop | Role | Skill | Health | Movement | Melee | Shot | Shots | Flies | Abilities | Group | Cost |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| Peasants | melee | 1 | 1 | 1 | 1-1 |  | 0 | no |  | A | 10 |
+| Sprites | flying | 1 | 1 | 1 | 1-2 |  | 0 | yes |  | C | 15 |
+| Militia | melee | 2 | 2 | 2 | 1-2 |  | 0 | no |  | A | 50 |
+| Wolves | melee | 2 | 3 | 3 | 1-3 |  | 0 | no |  | D | 40 |
+| Skeletons | melee | 2 | 3 | 2 | 1-2 |  | 0 | no | undead | E | 40 |
+| Zombies | melee | 2 | 5 | 1 | 2-2 |  | 0 | no | undead | E | 50 |
+| Gnomes | melee | 2 | 5 | 1 | 1-3 |  | 0 | no |  | C | 60 |
+| Orcs | ranged | 2 | 5 | 2 | 2-3 | 1-2 | 10 | no |  | D | 75 |
+| Archers | ranged | 2 | 10 | 2 | 1-2 | 1-3 | 12 | no |  | B | 250 |
+| Elves | ranged | 3 | 10 | 3 | 1-2 | 2-4 | 24 | no |  | C | 200 |
+| Pikemen | melee | 3 | 10 | 2 | 2-4 |  | 0 | no |  | B | 300 |
+| Nomads | melee | 3 | 15 | 2 | 2-4 |  | 0 | no |  | C | 300 |
+| Dwarves | melee | 3 | 20 | 1 | 2-4 |  | 0 | no |  | C | 350 |
+| Ghosts | melee | 4 | 10 | 3 | 3-4 |  | 0 | no | absorb, undead | E | 400 |
+| Knights | melee | 5 | 35 | 1 | 6-10 |  | 0 | no |  | B | 1000 |
+| Ogres | melee | 4 | 40 | 1 | 3-5 |  | 0 | no |  | D | 750 |
+| Barbarians | melee | 4 | 40 | 3 | 1-6 |  | 0 | no |  | C | 750 |
+| Trolls | melee | 4 | 50 | 1 | 2-5 |  | 0 | no | regeneration | D | 1000 |
+| Cavalry | melee | 4 | 20 | 4 | 3-5 |  | 0 | no |  | B | 800 |
+| Vampires | flying | 5 | 30 | 1 | 3-6 |  | 0 | yes | leech, undead | E | 1500 |
+| Giants | ranged | 5 | 60 | 3 | 10-20 | 5-10 | 6 | no |  | C | 2000 |
 
 The troop table is an exception to the rule that the original's numbers stay out of the repository. The maintainer
 allowed it first for three troops, so that the reference rules could be tested in CI, and on 14 November 2026 for the
@@ -199,6 +204,10 @@ campaign reads them). Maps, texts, pictures and the rest of the catalogue stay o
 | U-10 | Morale then scales the damage of a stack that is on the hero's side and under control: Low halves, High adds half. The enemy has no hero, so no morale. | No morale. | See below. |
 | U-11 | One answer per stack between renewals; none to a shot. Injury carries over inside a battle, as a health pool. | The same pool; one answer a round. | None known. |
 | U-12 | A stack cannot shoot with an enemy in one of the eight cells around it. A shot uses one of the troop's shots whatever it does. | The same. | None known. |
+| U-12 | Regeneration (Trolls): when a round begins, a stack that regenerates has no injury, on either side. Not when the enemy's part of the round begins. | No abilities. | None known. |
+| U-12 | Absorb (Ghosts): after a blow of the stack, struck back included, the creatures the blow killed join it. There is no limit, so the stack can outgrow the hero's leadership and go out of control. | No abilities. | Where the blow kills the whole target the reference counts the target's number at the start of the turn, not the number the blow killed; here it is what the blow killed, as for U-10. |
+| U-12 | Leech (Vampires): after a blow of the stack, one creature returns for every whole health of its own in what the blow took, which is counted as the full health of the creatures killed plus the injury now on the target. Above the number the stack began the battle with, it has that number and no injury; at or below it, the injury stays. | No abilities. | That the target's earlier injury counts as taken by this blow reads like an accident of the reference's sum; kept, as it is what the reference does. The same doubt about a target killed whole as for Absorb. |
+| U-12 | Undead (Skeletons, Zombies, Ghosts, Vampires): a mark that one spell reads. Nothing else in a battle does; morale treats the undead like any troop. | No abilities. | None known. |
 | U-06 | A stack is out of control when health of one x count is more than the hero's leadership (equal is still in control). It keeps its turns and counts as an enemy of its own side, until losses bring it back under; checked before every stack acts. | No leadership in battle. | Who moves it during the player's turn is the reference's choice (its computer player). |
 | | Random numbers: a 64-bit generator, state x 25214903917 + 11, the top 32 bits taken modulo the size of the range; a range of one number draws nothing. | A 32-bit generator with rejection. | The modulo favours low numbers slightly; kept as the reference has it. |
 
@@ -214,7 +223,11 @@ campaign reads them). Maps, texts, pictures and the rest of the catalogue stay o
 
 Everything in the table above: turn order by sides with the renewal of flags, the step rule, flight, shots, damage
 scaled by skill with the count from before the exchange, morale by the ported rule, loss and return of control, and the
-reference generator.
+reference generator; and the abilities regeneration, absorb and leech.
+
+A stack that grew by absorbing keeps its number after the battle: the army has what the battle left. What a leech began
+with is part of a saved battle, for the troops that leech and no others, so that every other battle is encoded as it
+was.
 
 How loss of control is carried out here:
 
@@ -247,9 +260,9 @@ decides what the player is told against what the dice do.
 
 ### Not in this subset
 
-Refused on load, not approximated: hero spells in battle, troop abilities other than flying (regeneration, leech,
-absorption, the demon's scythe, magic shots and immunity, undead), artefact powers, siege layout, the random field
-obstacles of an encounter, spoils. Each comes with the first troop or encounter that needs it.
+Refused on load, not approximated: hero spells in battle, the abilities that change the blow itself (the demon's scythe,
+magic shots and immunity), artefact powers, siege layout, the random field obstacles of an encounter, spoils. Each comes
+with the first troop or encounter that needs it.
 
 ## A variant, not a source: `modern-v0.1`
 
