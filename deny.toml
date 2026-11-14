@@ -15,6 +15,11 @@ ignore = [
 # Licences compatible with shipping the games under MIT.
 allow = ["MIT", "Apache-2.0", "BSD-3-Clause", "ISC", "Unicode-3.0", "Zlib"]
 confidence-threshold = 0.9
+# Allowed for one crate each, not in general.
+exceptions = [
+    # Mozilla's root certificates as data (a game updating itself over HTTPS).
+    { allow = ["CDLA-Permissive-2.0"], crate = "webpki-roots" },
+]
 
 [bans]
 multiple-versions = "warn"

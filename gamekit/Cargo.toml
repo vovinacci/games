@@ -10,8 +10,18 @@ publish.workspace = true
 [lints]
 workspace = true
 
+# A game updating itself from its releases (update.rs). A packager with updates of its own (Nix, a distribution)
+# builds without it: --no-default-features.
+[features]
+default = ["self-update"]
+self-update = ["dep:minisign-verify", "dep:self-replace", "dep:sha2", "dep:ureq"]
+
 [dependencies]
 fluent-bundle = { workspace = true }
 macroquad = { workspace = true }
+minisign-verify = { workspace = true, optional = true }
+self-replace = { workspace = true, optional = true }
+sha2 = { workspace = true, optional = true }
 sys-locale = { workspace = true }
 unic-langid = { workspace = true }
+ureq = { workspace = true, optional = true }

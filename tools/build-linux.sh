@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 #
-# Release build of a game for Linux that runs on any distribution with glibc GLIBC_FLOOR or newer, whatever the build
+# Release build of the game for Linux that runs on any distribution with glibc GLIBC_FLOOR or newer, whatever the build
 # machine has: cargo-zigbuild links against that glibc version (tools pinned in requirements-build.txt). Then checks
-# the program and fails if it needs a newer glibc. The result goes to target/release/<game>, where tools/package.sh
+# the program and fails if it needs a newer glibc. The result goes to target/release/bounty, where tools/package.sh
 # expects it.
 #
-#   tools/build-linux.sh <game>   # needs python3 and objdump
+#   tools/build-linux.sh   # needs python3 and objdump
 #
-# No game plays a sound yet. The first that does needs ALSA linked here the way Scorch's script of the same name
+# The game plays no sound yet. When it does, ALSA has to be linked here the way Scorch's script of the same name
 # does it: only libasound offered to the linker, never the build machine's own glibc.
 
 set -euf -o pipefail
@@ -15,6 +15,7 @@ export LC_ALL="C.UTF-8"
 PS4='+ $(date -u +%Y-%m-%dT%H:%M:%S%z) ${BASH_SOURCE[0]##*/}:${LINENO}: '
 
 readonly GLIBC_FLOOR="2.35"
+readonly GAME="bounty"
 
 # Installs zig and cargo-zigbuild into a venv under $1 and puts them on PATH.
 function install-zigbuild() {
@@ -37,18 +38,17 @@ function check-glibc() {
 }
 
 function main() {
-  local game="${1:?usage: build-linux.sh <game>}"
   local target tmp out
   target="$(uname -m)-unknown-linux-gnu"
   tmp="${RUNNER_TEMP:-$(mktemp -d)}"
   out="${CARGO_TARGET_DIR:-target}"
 
   install-zigbuild "${tmp}"
-  cargo zigbuild --release --locked -p "${game}-app" --target "${target}.${GLIBC_FLOOR}"
-  check-glibc "${out}/${target}/release/${game}"
+  cargo zigbuild --release --locked -p "${GAME}-app" --target "${target}.${GLIBC_FLOOR}"
+  check-glibc "${out}/${target}/release/${GAME}"
 
   mkdir -p "${out}/release"
-  cp "${out}/${target}/release/${game}" "${out}/release/${game}"
+  cp "${out}/${target}/release/${GAME}" "${out}/release/${GAME}"
 }
 
 main "$@"
