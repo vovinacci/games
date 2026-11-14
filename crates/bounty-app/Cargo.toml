@@ -1,6 +1,6 @@
 [package]
 name = "bounty-app"
-version = "0.1.0"
+version = "0.1.1"
 description = "Bounty, a tribute to King's Bounty (1990): the game itself, with window and keyboard"
 edition.workspace = true
 license.workspace = true
