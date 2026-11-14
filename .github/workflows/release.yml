@@ -1,0 +1,187 @@
+name: Release
+
+# Builds, signs and publishes one release of one game, from its tag <game>-vX.Y.Z (docs/RELEASING.md). Started by
+# hand with the tag: the tag is made first, by the maintainer, and this workflow does the rest. Running it again
+# for the same tag rebuilds the files of that release.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to release, e.g. bounty-v0.1.0
+        required: true
+
+permissions: {}
+
+concurrency:
+  group: release-${{ inputs.tag }}
+
+env:
+  CARGO_TERM_COLOR: always
+  # The oldest macOS a game supports (its packaging/Info.plist), whatever the runner's version.
+  MACOSX_DEPLOYMENT_TARGET: "15.0"
+  APPIMAGETOOL_VERSION: "1.9.1"
+
+jobs:
+  plan:
+    name: Read the tag
+    runs-on: ubuntu-latest
+    permissions: {}
+    outputs:
+      game: ${{ steps.tag.outputs.game }}
+      version: ${{ steps.tag.outputs.version }}
+    steps:
+      - id: tag
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          [[ $TAG =~ ^([a-z]+)-(v[0-9]+\.[0-9]+\.[0-9]+)$ ]] || { echo "not a release tag: $TAG" >&2; exit 1; }
+          echo "game=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
+          echo "version=${BASH_REMATCH[2]}" >> "$GITHUB_OUTPUT"
+
+  linux:
+    name: Linux ${{ matrix.arch }}
+    needs: plan
+    strategy:
+      matrix:
+        include:
+          - arch: x86_64
+            os: ubuntu-latest
+            appimagetool_sha256: ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0
+          - arch: aarch64
+            os: ubuntu-24.04-arm
+            appimagetool_sha256: f0837e7448a0c1e4e650a93bb3e85802546e60654ef287576f46c71c126a9158
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    env:
+      GAME: ${{ needs.plan.outputs.game }}
+      VERSION: ${{ needs.plan.outputs.version }}
+      ARCH: ${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag }}
+          persist-credentials: false
+      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          cache: false
+      - name: Install appimagetool
+        env:
+          SHA256: ${{ matrix.appimagetool_sha256 }}
+        run: |
+          url="https://github.com/AppImage/appimagetool/releases/download/$APPIMAGETOOL_VERSION/appimagetool-$ARCH.AppImage"
+          curl -fsSL -o "$RUNNER_TEMP/appimagetool" "$url"
+          echo "$SHA256  $RUNNER_TEMP/appimagetool" | sha256sum -c -
+          chmod +x "$RUNNER_TEMP/appimagetool"
+          echo "APPIMAGETOOL=$RUNNER_TEMP/appimagetool" >> "$GITHUB_ENV"
+      # Linked against a fixed glibc, then checked.
+      - name: Build
+        run: tools/build-linux.sh "$GAME"
+      - name: Package
+        run: tools/package.sh "$GAME" linux "$ARCH" "$VERSION"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: linux-${{ matrix.arch }}
+          path: |
+            dist/*.tar.gz
+            dist/*.AppImage
+            dist/*-linux-${{ matrix.arch }}
+          if-no-files-found: error
+
+  windows:
+    name: Windows ${{ matrix.arch }}
+    needs: plan
+    strategy:
+      matrix:
+        include:
+          - { arch: x86_64, os: windows-latest }
+          - { arch: aarch64, os: windows-11-arm }
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+    env:
+      GAME: ${{ needs.plan.outputs.game }}
+      VERSION: ${{ needs.plan.outputs.version }}
+      ARCH: ${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag }}
+          persist-credentials: false
+      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          cache: false
+      - name: Build
+        run: cargo build --release --locked -p "$GAME-app"
+      - name: Package
+        run: tools/package.sh "$GAME" windows "$ARCH" "$VERSION"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: windows-${{ matrix.arch }}
+          path: |
+            dist/*.zip
+            dist/*.exe
+          if-no-files-found: error
+
+  macos:
+    name: macOS (universal)
+    needs: plan
+    runs-on: macos-latest
+    permissions:
+      contents: read
+    env:
+      GAME: ${{ needs.plan.outputs.game }}
+      VERSION: ${{ needs.plan.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag }}
+          persist-credentials: false
+      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          cache: false
+      - run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
+      - name: Build
+        run: |
+          cargo build --release --locked -p "$GAME-app" --target aarch64-apple-darwin
+          cargo build --release --locked -p "$GAME-app" --target x86_64-apple-darwin
+      - name: Package
+        run: tools/package.sh "$GAME" macos "$VERSION"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: macos
+          path: dist/*.zip
+          if-no-files-found: error
+
+  publish:
+    name: Sign and publish
+    needs: [plan, linux, windows, macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      # Only the script, as it was at the tag.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag }}
+          persist-credentials: false
+          sparse-checkout: tools
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Install minisign
+        run: sudo apt-get update && sudo apt-get install -y minisign
+      - name: Checksums, signature, upload and channel
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          GAME: ${{ needs.plan.outputs.game }}
+          VERSION: ${{ needs.plan.outputs.version }}
+          # minisign secret key (unencrypted); a game checks signatures with gamekit/assets/release-key.pub.
+          SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
+        run: tools/publish.sh "$GAME" "$VERSION" dist
