@@ -87,6 +87,9 @@ jobs:
   linux:
     name: Linux ${{ matrix.arch }}
     needs: plan
+    # Asked outright: a job is skipped when any job before it in the chain was, and started by hand the release-plz
+    # job is.
+    if: ${{ !cancelled() && needs.plan.result == 'success' }}
     strategy:
       matrix:
         include:
@@ -136,6 +139,7 @@ jobs:
   windows:
     name: Windows ${{ matrix.arch }}
     needs: plan
+    if: ${{ !cancelled() && needs.plan.result == 'success' }}
     strategy:
       matrix:
         include:
@@ -173,6 +177,7 @@ jobs:
   macos:
     name: macOS (universal)
     needs: plan
+    if: ${{ !cancelled() && needs.plan.result == 'success' }}
     runs-on: macos-latest
     permissions:
       contents: read
@@ -202,6 +207,9 @@ jobs:
   publish:
     name: Sign and publish
     needs: [plan, linux, windows, macos]
+    if: >-
+      ${{ !cancelled() && needs.linux.result == 'success' && needs.windows.result == 'success'
+      && needs.macos.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
