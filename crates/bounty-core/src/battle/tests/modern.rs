@@ -122,7 +122,7 @@ fn the_variant_is_the_reference_with_some_switches_set() {
 
     // It plays the reference's battles, and the prototype's not.
     let battles = include_str!("../../../../../content/reference/battles.json");
-    assert_eq!(scenarios_from_json(battles, &variant).unwrap().len(), 5);
+    assert_eq!(scenarios_from_json(battles, &variant).unwrap().len(), 10);
     assert!(scenarios_from_json(crate::content::tests::BATTLES, &variant).is_err());
 
     // With every switch at the reference's setting the two fight the same battle, under their own names.
