@@ -22,8 +22,8 @@ ascii-check: ## Check that code and config are ASCII (see tools/check_ascii.sh)
 	git ls-files -z | grep -zE '(\.(rs|toml|py|nix|sh)|Makefile|\.editorconfig)$$' | xargs -0 tools/check_ascii.sh
 
 # The suites of Bounty: the report each writes under target/ and the baseline it is held to.
-BALANCE_SUITES = suite:bounty-balance:prototype-0001 reference-suite:bounty-balance-reference:reference-0001 \
-	modern-suite:bounty-balance-modern:modern-0001
+BALANCE_SUITES = suite:bounty-balance:prototype-0001 reference-suite:bounty-balance-reference:reference-0002 \
+	modern-suite:bounty-balance-modern:modern-0002
 # The expeditions whose routes are played: the folder under content/, the rules it is played under (a folder
 # under content/, or - for the rules the expedition names) and the baseline.
 BALANCE_EXPEDITIONS = demo:-:expedition-demo-0001 meadow:reference:expedition-meadow-reference-0004 \

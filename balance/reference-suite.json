@@ -7,7 +7,7 @@
   "rules_path": "../content/reference/rules.json",
   "scenarios_path": "../content/reference/battles.json",
   "metrics_path": "reference-metrics.json",
-  "baseline_path": "baselines/reference-0001.json",
+  "baseline_path": "baselines/reference-0002.json",
   "pilot": {
     "id": "approach-v1",
     "status": "implemented",
@@ -64,8 +64,48 @@
         "player_win"
       ],
       "purpose": "a fight the player must win"
+    },
+    {
+      "id": "five_groups",
+      "allowed_outcomes": [
+        "player_win",
+        "enemy_win"
+      ],
+      "purpose": "equal armies with a troop of each of the five morale groups; only the player's side has a hero, so only its morale counts"
+    },
+    {
+      "id": "undead_host",
+      "allowed_outcomes": [
+        "player_win",
+        "enemy_win"
+      ],
+      "purpose": "Vampires, Ghosts and Zombies against castle troops of the same price: leech and absorb at work"
+    },
+    {
+      "id": "trolls_hold",
+      "allowed_outcomes": [
+        "player_win",
+        "enemy_win"
+      ],
+      "purpose": "regenerating Trolls against three cheaper stacks of the same price"
+    },
+    {
+      "id": "scythe",
+      "allowed_outcomes": [
+        "player_win",
+        "enemy_win"
+      ],
+      "purpose": "Demons and Cavalry against Giants, Dwarves and Gnomes of the same price: the scythe decides some of it"
+    },
+    {
+      "id": "magic_on_dragons",
+      "allowed_outcomes": [
+        "player_win",
+        "enemy_win"
+      ],
+      "purpose": "magic shots against Dragons, which they cannot hurt, and Elves, which they can"
     }
   ],
-  "planned_runs": 40,
+  "planned_runs": 80,
   "note": "Baselines of this suite are never compared with the prototype's: other rules, other troops."
 }

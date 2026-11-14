@@ -6,8 +6,8 @@ file are relative to that file. The battles test the engine; they are not a cali
 | Suite | Rules | Battles | Prices for valuing losses | Baseline |
 |---|---|---|---|---|
 | `suite.json` | prototype (`prototype/`) | 4 x 8 | `metrics.json` | `baselines/prototype-0001.json` |
-| `reference-suite.json` | reference (`content/reference/`) | 5 x 8 | `reference-metrics.json` | `baselines/reference-0001.json` |
-| `modern-suite.json` | the variant (`content/modern/`), on the reference's battles | 5 x 8 | `reference-metrics.json` | `baselines/modern-0001.json` |
+| `reference-suite.json` | reference (`content/reference/`) | 10 x 8 | `reference-metrics.json` | `baselines/reference-0002.json` |
+| `modern-suite.json` | the variant (`content/modern/`), on the reference's battles | 10 x 8 | `reference-metrics.json` | `baselines/modern-0002.json` |
 
 The prototype's numbers are never set beside the others': other rules, other troops. The reference's and the variant's
 are, on purpose and by hand, in `docs/spec/10-GAMEPLAY-GAPS.md`; the tools hold each to its own baseline.
@@ -87,6 +87,42 @@ variant (`--rules` names the rules file; without it the expedition's own are use
 One run each pins the engine down; what the rules cost over 500 runs is in `docs/spec/10-GAMEPLAY-GAPS.md`. The
 variant's battle baseline `modern-0001.json` stands: its rules file gained the campaign's section, which no battle
 reads, so the comparison notes another hash of the rules and no battle that ended differently.
+
+`baselines/reference-0002.json` and `baselines/modern-0002.json`: both suites with five more battles, on top of revision
+`fec8fd4`, once the rules had all twenty-five troops and their abilities (14 November 2026). The forty rows of the first
+five cases are those of the `-0001` baselines, unchanged. The new cases, under the reference rules:
+
+| Case | What it is | Player wins | Enemy wins | Creatures lost, player / enemy |
+|---|---|---|---|---|
+| `five_groups` | equal armies with a troop of each morale group; only the player has a hero | 7 | 1 | 1002 / 1124 |
+| `undead_host` | Vampires, Ghosts, Zombies against castle troops of the same price | 4 | 4 | 318 / 175 |
+| `trolls_hold` | Trolls and Ogres against three cheaper stacks of the same price | 8 | 0 | 2 / 288 |
+| `scythe` | Demons and Cavalry against Giants, Dwarves, Gnomes of the same price | 1 | 7 | 60 / 80 |
+| `magic_on_dragons` | Druids, Archmages, Knights against Dragons and Elves | 0 | 8 | 136 / 0 |
+
+and under the variant:
+
+| Case | What it is | Player wins | Enemy wins | Creatures lost, player / enemy |
+|---|---|---|---|---|
+| `five_groups` | equal armies with a troop of each morale group; only the player has a hero | 3 | 5 | 1109 / 1071 |
+| `undead_host` | Vampires, Ghosts, Zombies against castle troops of the same price | 4 | 4 | 308 / 187 |
+| `trolls_hold` | Trolls and Ogres against three cheaper stacks of the same price | 8 | 0 | 2 / 288 |
+| `scythe` | Demons and Cavalry against Giants, Dwarves, Gnomes of the same price | 1 | 7 | 63 / 81 |
+| `magic_on_dragons` | Druids, Archmages, Knights against Dragons and Elves | 0 | 8 | 136 / 0 |
+
+What they say, with eight seeds each and the pilot that walks up and strikes:
+
+- `trolls_hold`: not one Troll is lost in eight battles against the same gold. An injury that is gone every round means
+  a stack of large creatures is only hurt by a blow that kills one outright.
+- `magic_on_dragons`: the enemy loses nothing. The pilot shoots at the first stack it finds, the Dragons, which magic
+  cannot hurt, and so spends every magic shot there. This is the pilot's doing, recorded as it is: the case will move
+  when the pilot learns, and that change is to be measured as one.
+- `scythe`: the Demons' side loses seven of eight, six of them within three rounds without killing a Giant or a Dwarf.
+  Three Demons and five Cavalry are few against four Giants that shoot.
+- `undead_host`: four wins each under the reference rules. In three of the four wins the ten Ghosts end as 22 to 28; of
+  the six Vampires at most three are left. In the losses nothing of the side is.
+- `five_groups`: the first battle in which all five morale groups stand side by side. The player wins seven of eight
+  under the reference rules and three of eight under the variant, where morale is read from the army as it stands.
 
 ## Replacing a baseline
 

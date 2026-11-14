@@ -472,8 +472,8 @@ pub(crate) mod tests {
     fn each_suite_gives_its_recorded_baseline() {
         let suites = [
             ("suite.json", 32),
-            ("reference-suite.json", 40),
-            ("modern-suite.json", 40),
+            ("reference-suite.json", 80),
+            ("modern-suite.json", 80),
         ];
         for (file, battles) in suites {
             let path = suite_path().with_file_name(file);
@@ -501,7 +501,7 @@ pub(crate) mod tests {
         assert_eq!(report.problems, Vec::<String>::new());
         assert_eq!(
             (report.coverage.planned, report.coverage.executed),
-            (40, 40)
+            (80, 80)
         );
         assert_eq!(report.identity.ruleset_id, "reference-v0.1");
         let overmatch = report
