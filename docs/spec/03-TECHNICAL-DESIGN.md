@@ -28,24 +28,23 @@ for a demonstrated problem.
 
 ## Repository integration
 
-Use the existing repository root workspace and lockfile. Proposed game-relative tree:
+The game has a repository of its own, with the workspace and lockfile at its root:
 
 ```text
-bounty/
-  README.md
-  AGENTS.md                    # local supplement; parent remains authoritative
-  crates/{bounty-core,bounty-ai,bounty-app,bounty-tools}/
-  docs/spec/
-  prototype/
-  content/demo/
-  balance/
-  schemas/
+README.md
+AGENTS.md
+crates/{bounty-core,bounty-ai,bounty-app,bounty-tools}/
+gamekit/                       # shared with other games; leaves when a second game uses it
+docs/spec/
+prototype/
+content/demo/
+balance/
+schemas/
 ```
 
-Register the four package paths in the existing root workspace, without replacing its resolver, profiles, dependencies,
-lints or other games. Only bounty-app is a public binary release. bounty-core, bounty-ai and bounty-tools have
-`publish = false`; bounty-app may also use `publish = false` when the repository does not publish Cargo packages. Cargo
-registry publication is not the same as distributing an executable [S12].
+The four packages are members of the root workspace. Only bounty-app is a public binary release. bounty-core, bounty-ai
+and bounty-tools have `publish = false`; bounty-app may also use `publish = false` when the repository does not publish
+Cargo packages. Cargo registry publication is not the same as distributing an executable [S12].
 
 ## Shared kit boundary
 

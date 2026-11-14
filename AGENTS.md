@@ -1,16 +1,18 @@
-# Games
+# Bounty
 
-Small games in Rust, one cargo workspace. Each game has its own folder and its own releases; `gamekit` holds what the
-games share. This file holds the rules for the whole repository; a game's own `AGENTS.md` adds what is true for that
-game only.
+A tribute to King's Bounty (1990, DOS), in Rust, one cargo workspace. This file holds the rules for every change; the
+specification is in `docs/spec/`, and `README.md` gives the reading order.
 
 | Folder | Contents |
 |---|---|
-| `bounty/` | Bounty, a tribute to King's Bounty (1990). Crates under `bounty/crates/`; only the application may use graphics and sound; see `bounty/AGENTS.md` |
-| `gamekit/` | what the games share around their rules: virtual screen, text and font, translations, a game's own files, the dedication, developer aids. Only a game's application depends on it |
-| `tools/` | scripts used by the hooks, CI and releases; `build-linux.sh` and `package.sh` take the game as their first argument |
+| `crates/` | `bounty-core` (rules and state), `bounty-ai` (computer players), `bounty-tools` (developer tools), `bounty-app` (the game: window, keyboard, drawing). Only the application may use graphics and sound |
+| `gamekit/` | what a game needs around its rules, kept apart so that another game can take it: virtual screen, text and font, translations, the game's own files, the dedication, developer aids. Only the application depends on it |
+| `content/`, `prototype/`, `balance/`, `schemas/` | rules and expeditions as data, the engine's test fixtures, the fixed cases with their baselines, JSON schemas |
+| `packaging/` | what the packages need: `Info.plist`, desktop entry, icon |
+| `tools/` | scripts used by the hooks, CI and releases |
+| `docs/spec/` | the specification |
 | `docs/REPOSITORY.md` | GitHub settings, rulesets, CI and Dependabot |
-| `docs/RELEASING.md` | how a game is released: tag, workflow, files, update channel, signing key |
+| `docs/RELEASING.md` | how a release is made: tag, workflow, files, signing key |
 
 ## Rules for every change
 
@@ -20,8 +22,9 @@ game only.
   CI runs the hooks.
 - Markdown docs wrap at 120 columns: run `make docs` after editing them (`make docs-check` checks). Rust stays at
   rustfmt's 100.
-- Commits and PR titles are Conventional Commits with the game or crate as scope (`feat(bounty): ...`); changelogs are
-  generated from them. No trailers in commits or PRs (no Co-authored-by, no "Generated with").
+- Commits and PR titles are Conventional Commits, with the crate or part as scope where it helps (`feat(bounty): ...`,
+  `fix(gamekit): ...`); changelogs are generated from them. No trailers in commits or PRs (no Co-authored-by, no
+  "Generated with").
 - A pull request is squashed: its title and description become the commit on `main`. Write them as that commit message,
   see "Pull requests" below.
 - Lints, edition, licence and the Rust version are set once: `[workspace.lints]` and `[workspace.package]` in the root
@@ -29,15 +32,98 @@ game only.
   not set its own.
 - A dependency used by more than one crate is declared in `[workspace.dependencies]`. Shared code is a path dependency
   inside this repository: `deny.toml` refuses git dependencies.
-- No crate is published to crates.io (`publish = false`). A release is a game's application, tagged `<game>-vX.Y.Z`.
+- No crate is published to crates.io (`publish = false`). A release is the application, tagged `vX.Y.Z`.
 - A crate without graphics never depends on one with graphics. Rules, computer players and tools must build and test on
   a machine with no window and no sound device.
 
+## Rules of the game
+
+- Rebuild the 1990 DOS game, not a later King's Bounty or a Heroes of Might and Magic hybrid. No speed-based turn order
+  unless the rules register records evidence for it.
+- Only `bounty-core` changes game state. The application, the computer players and the tools submit commands to it. No
+  macroquad, window, sound or clock in `bounty-core`, `bounty-ai` or `bounty-tools`.
+- A refused command changes nothing: no resources, no state revision, no random draw.
+- Rules use integers and a fixed order. No floats, and no iteration over a hash map, where the result decides an
+  outcome.
+- Random numbers for rules, for a computer player's planning and for presentation come from separate generators; a
+  computer player never sees the rules' generator.
+- `content/meadow/` is this project's own scenario on the reference's troops, for measuring the campaign's rules with
+  the expedition pilot `errand-v1`. Its map and numbers are not the original's, and are never quoted as such.
+- `prototype/` and `content/demo/` test the engine. Never tune a computer player on them or quote them as the original's
+  balance, and never use their numbers where a number of the original is missing.
+- A rule taken from documentation or another reimplementation is recorded in `docs/spec/07-RULES-REGISTER.md` with its
+  source and status. Never present it as observed in the original.
+- The reference rules (`content/reference/`) never change for the sake of better play. A rule change is a switch of the
+  variant `content/modern/`, measured before and after (`docs/spec/10-GAMEPLAY-GAPS.md`), and adopted or dropped by its
+  numbers and by play.
+- A change to rules, data or a computer player comes with a before/after run of the fixed cases (`balance/`) and a
+  sentence on what moved and why. The old baseline stays in git; a missing baseline is not a pass.
+- A change in behaviour updates the requirement, its data and its test together (`docs/spec/`, IDs like `G-CMB-005`,
+  `AT-013`).
+- Files of the original game, anything extracted from them, original saves and captures never enter the repository or a
+  release.
+- Report only checks that were run.
+
+## Measuring a change
+
+`make balance` plays the cases of every suite in `balance/` (prototype, reference, the `modern` variant) with every seed
+and the routes of the expeditions (the demo's, and the meadow's under the reference rules and the variant), and writes a
+report for each under `target/` (`BALANCE_ARGS="--case melee_exchange"` picks one case). Compare two reports with
+
+```sh
+cargo run -q -p bounty-tools -- balance compare --baseline <before.json> --candidate <after.json>
+```
+
+and add `--exact` for a change that must not move any result. `make balance-check` does that against the recorded
+baseline, and so does a test, so CI fails when a battle of the suite ends differently or a route of the expedition costs
+something else (`bounty-tools expedition run|compare`; time, gold in and out, losses). Replacing the baseline:
+`balance/README.md`. A report with problems (a refused command, an outcome the case does not allow, a run that does not
+repeat) is a defect to fix, not a result.
+
+## The application
+
+- All text on screen goes through `t!("key")`, with the key in both `crates/bounty-app/assets/i18n/en-GB.ftl` (British
+  spelling) and `uk.ftl`. Never hard-code on-screen text; tests check the keys. A stack is always named with its side
+  and in one form ("your Wardens", "ваші Вартові"), and sentences are built so that the name is never declined.
+- The screen offers only what `Battle::legal_actions` lists (`control.rs`); it has no rules of its own. On the map it
+  asks `Expedition::refusal` before it offers a key, and a command refused all the same is told in the log in the
+  player's language (`words::refusal_text`).
+- Without flags the game is the expedition: `adventure.rs` holds its state, log and save and reads no key, so tests play
+  it; `map.rs` draws the map, `view.rs` the battle, alone or inside the expedition (`input.rs` reads both). It is saved
+  after every accepted command and continued at the next start; `--rules` or `--scenario` alone gives one battle
+  instead. `--expedition demo|meadow` picks the expedition, `meadow` under `--rules reference` or `modern`.
+- `--rules reference` plays under the reference rules (battles in `content/reference/battles.json`), `--rules modern`
+  under the variant on the same battles; without it the prototype's. The header always says which rules are in use.
+- What the rules do to a stack is told where it is shown: its morale with the stacks that lower it, and how many of it
+  fight where the leadership does not reach all (`Battle::morale_lowered_by`, `Battle::fighting`). The screen asks the
+  battle; it works nothing out by itself.
+- Check a changed screen in both languages by screenshot, not by eye on a window:
+  `cargo run -p bounty-app -- --lang uk --scenario flight_barrier --steps 3 --shot shot.png`. `--steps` lets the pilot
+  play that many commands first; in the expedition it plays that many commands of a route of the fixture
+  (`--route <id>`, `complete-route` unless named; 5 stands in the first battle, 99 at the end). With `--shot` or
+  `--steps` the user's files are neither read nor written.
+- Ukrainian runs longer than English: text with a fixed place uses `text_fit` or `text_wrapped` from `gamekit`.
+- A run without `--shot` reads and writes `settings.txt` and, in an expedition, `save-<expedition>-<rules>.json` with
+  its `.previous` in the user's data folder: each expedition under each rules has its own save. The user may be playing:
+  stop only your own process, by its ID.
+
+## Saving
+
+- A save is the envelope of `schemas/save-envelope.schema.json`, written by `bounty-core::save`: the expedition and the
+  battle being fought, in the canonical encoding, with a checksum, the rules' ID and a hash of the three content files.
+  `decode` gives an expedition or one reason (`SaveError`): not a save, another version, damaged, other content, or a
+  state the rules cannot reach. Nothing is half loaded.
+- A new field of `Expedition` or `Battle` goes into `to_canon`, `from_canon` and `check` together; the round-trip tests
+  (`save/tests.rs`, `bounty-ai/tests/save_battles.rs`, `expedition_routes.rs`) fail when one is forgotten. A change to
+  what is written is a new `SCHEMA_VERSION`; there is no migration yet, an older save is refused by its version.
+- The application (`saves.rs`) writes a save with `gamekit::files::write_keeping_previous` and reads it with
+  `read_newest`: one current file and the one before it. A file that cannot be read is never deleted or overwritten.
+
 ## Dedication
 
-The games are dedicated to the memory of Joseph Rivkind; the words are in `README.md`, in English and Ukrainian, and are
-not to be reworded. Every game shows them on its first run and in its About screen, with `gamekit::dedication`, so that
-no game carries a copy of its own.
+The game is dedicated to the memory of Joseph Rivkind; the words are in `README.md`, in English and Ukrainian, and are
+not to be reworded. The game shows them on its first run, with `gamekit::dedication`, which holds the words so that
+another game taking the kit carries the same ones.
 
 ## Pull requests
 
@@ -95,17 +181,21 @@ and ends with `main "$@"`, an empty line and `# EOF` (a truncated file then show
 
 ## Packaging
 
-What is particular to a game's packages is in `<game>/packaging/`: `Info.plist` for the macOS bundle, `<game>.desktop`
-for the AppImage, and the icon as PNGs in `icon/` (`<game>-16.png` to `<game>-1024.png`). The scripts in `tools/` do the
-rest for any game, and name every file `<game>-vX.Y.Z-<system>-<arch>`. The CI build jobs build and package each game as
-a release does, so a broken package shows in a pull request, not on release day.
+What the packages need is in `packaging/`: `Info.plist` for the macOS bundle, `bounty.desktop` for the AppImage, and the
+icon as PNGs in `icon/` (`bounty-16.png` to `bounty-1024.png`). The scripts in `tools/` do the rest and name every file
+`bounty-vX.Y.Z-<system>-<arch>`; they still take the game's name as their first argument. The CI build jobs build and
+package the game as a release does, so a broken package shows in a pull request, not on release day.
 
 A release is started by hand from its tag and published by `tools/publish.sh`; `docs/RELEASING.md` has the steps.
 
 ## Not here yet
 
+- Sound, a menu.
+- Most of the campaign. Two small expeditions are whole in the rules and on screen: map, clock and weekly budget,
+  recruiting, contract, battles with their reward and clue, surrender and recovery, search, save and continue.
+  Dwellings, castles, spells on the map, the original's world: not yet.
 - NixOS: `shell.nix` is copied from Scorch and has not been run from this repository; there is no flake yet.
-- Releases: the workflow publishes and signs, but no game reads its update channel yet, and nothing has been released.
+- Releases: the workflow publishes and signs, but the game does not look for updates yet, and nothing has been released.
   Changelogs and release pull requests are not set up (`docs/RELEASING.md`).
 
 ## Rejected Findings
