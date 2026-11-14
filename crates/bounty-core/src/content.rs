@@ -230,6 +230,44 @@ pub struct Spell {
     pub effect: SpellEffect,
 }
 
+/// One rank of a hero's class. Every number but `villains_needed` is what the rank adds to what the hero has:
+/// a hero of the third rank has the leadership of the first three together.
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Rank {
+    pub id: String,
+    pub name: String,
+    /// Villains the hero must have caught to be given the rank; 0 for the first.
+    pub villains_needed: u32,
+    pub leadership: u32,
+    pub max_spells: u32,
+    pub spell_power: u32,
+    /// Gold from the king every week.
+    pub commission: u32,
+    /// The hero can cast from this rank on. Only the first rank of one class says so; the others learn it.
+    pub knows_magic: bool,
+    /// The troop the spell Instant Army raises at this rank.
+    pub instant_army: String,
+}
+
+/// What a hero sets out as, and the ranks the king gives.
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct HeroClass {
+    pub id: String,
+    pub name: String,
+    pub starting_gold: u32,
+    pub starting_troops: Vec<StartingTroop>,
+    pub ranks: Vec<Rank>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct StartingTroop {
+    pub troop: String,
+    pub count: u32,
+}
+
 /// A checked ruleset.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Rules {
@@ -243,6 +281,8 @@ pub struct Rules {
     /// In file order; `troop` looks one up by ID, so the order carries no meaning.
     pub troops: Vec<Troop>,
     pub spells: Vec<Spell>,
+    /// The heroes' classes; none in the prototype, which has no hero to promote.
+    pub classes: Vec<HeroClass>,
 }
 
 mod raw {
@@ -524,6 +564,7 @@ impl Rules {
             round_limit: raw.round_limit,
             troops: raw.troops,
             spells,
+            classes: Vec::new(),
         })
     }
 
@@ -531,6 +572,12 @@ impl Rules {
     #[must_use]
     pub fn troop(&self, id: &str) -> Option<&Troop> {
         self.troops.iter().find(|t| t.id == id)
+    }
+
+    /// The hero's class with this ID.
+    #[must_use]
+    pub fn class(&self, id: &str) -> Option<&HeroClass> {
+        self.classes.iter().find(|c| c.id == id)
     }
 
     /// The spell with this ID.
