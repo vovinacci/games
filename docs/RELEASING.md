@@ -84,9 +84,9 @@ to get past 0.1.0, means the next release PR releases that number.
   (unencrypted, as the workflow cannot type a password); a release without it fails. The public half is
   `gamekit/assets/release-key.pub`. Losing the key means players update by hand once, to a release with a new public
   key.
-- **Off** for a build that is not a release (version `0.0.0`, or one with `+`), for a developer's run (`--shot`,
-  `--steps`), and without `gamekit`'s `self-update` feature, for a packager with updates of its own. HTTPS is rustls
-  with Mozilla's root certificates built in: no OpenSSL, no certificate store of the system.
+- **Off** for a build that is not a release (a debug build, version `0.0.0`, or one with `+`), for a developer's run
+  (`--shot`, `--steps`), and without `gamekit`'s `self-update` feature, for a packager with updates of its own. HTTPS is
+  rustls with Mozilla's root certificates built in: no OpenSSL, no certificate store of the system.
 
 ## Supply chain
 

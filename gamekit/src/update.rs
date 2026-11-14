@@ -10,7 +10,7 @@
 //! that is not newer than the running one is never taken.
 //!
 //! Off without the `self-update` feature (a packager updates the game by its own means) and for a build that is not
-//! a release: version `0.0.0`, or one with `+` in it.
+//! a release: a debug build, version `0.0.0`, or a version with `+` in it.
 
 #![cfg_attr(
     all(not(feature = "self-update"), not(test)),
@@ -39,7 +39,11 @@ impl Build {
     /// Whether this build can update itself.
     #[must_use]
     pub fn updates(self) -> bool {
-        cfg!(feature = "self-update") && self.version != "0.0.0" && !self.version.contains('+')
+        // A debug build is a developer's: it carries the version of the last release and is not that release.
+        cfg!(feature = "self-update")
+            && !cfg!(debug_assertions)
+            && self.version != "0.0.0"
+            && !self.version.contains('+')
     }
 
     /// The game's name as its packages write it: `Bounty`.
@@ -577,7 +581,8 @@ mod tests {
     #[test]
     fn only_a_released_build_updates_itself() {
         let build = |version| Build { version, ..BOUNTY };
-        assert_eq!(build("0.1.0").updates(), cfg!(feature = "self-update"));
+        let released = cfg!(feature = "self-update") && !cfg!(debug_assertions);
+        assert_eq!(build("0.1.0").updates(), released);
         assert!(!build("0.0.0").updates());
         assert!(!build("0.1.0+3.gabc1234").updates());
     }
